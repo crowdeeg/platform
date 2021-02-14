@@ -1,0 +1,19 @@
+#!/bin/sh
+# retrieve latest db dump in S3
+ENV_NAME=production
+DUMP_PATH=crowdeeg-db-backups-$ENV_NAME/mongolab/
+LATEST_DUMP_NAME=`aws s3 ls $DUMP_PATH | grep .tgz | sort | tail -n 1 | awk '{print $4}'`
+# download latest db dump from S3 to local directory
+LOCAL_DUMP_DIR=./.db_dumps/
+LOCAL_DUMP_NAME=${ENV_NAME}_${LATEST_DUMP_NAME}
+LOCAL_DUMP_PATH=$LOCAL_DUMP_DIR$LOCAL_DUMP_NAME
+LOCAL_DUMP_PATH_UNPACKED=${LOCAL_DUMP_PATH}_unpacked
+mkdir -p $LOCAL_DUMP_DIR
+aws s3 cp s3://$DUMP_PATH$LATEST_DUMP_NAME $LOCAL_DUMP_PATH
+mkdir -p $LOCAL_DUMP_PATH_UNPACKED
+tar zxvf $LOCAL_DUMP_PATH --strip-components=1 -C $LOCAL_DUMP_PATH_UNPACKED
+# import local db dump into local db
+mongorestore -h 127.0.0.1 --port 3001 --drop -d meteor $LOCAL_DUMP_PATH_UNPACKED/crowdeeg-production
+# delete local db dump
+rm -rf $LOCAL_DUMP_PATH_UNPACKED
+rm -rf $LOCAL_DUMP_PATH

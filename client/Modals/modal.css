@@ -1,0 +1,36 @@
+/*
+  Mostly we want Materializecss to handle the styling and try not to overwrite or modify that.
+  Exceptions are for the Loading and Full page model which are not part of Materializecss.
+*/
+
+.materialize-modal {
+  background: none;
+  box-shadow: none;
+}
+
+.materialize-modal.full-screen.modal-fixed-footer {
+  padding: 0
+}
+
+.materialize-modal.full-screen {
+  height: 100% !important;
+  position: fixed;
+  top: 0 !important;
+  right: 0px;
+  border-radius: 0;
+  max-height: 100%;
+  overflow: auto;
+  width: 100%;
+  padding: 0.5em;
+}
+
+#materialModalLoading {
+  margin-bottom: 0;
+}
+
+#loadingMessage {
+  font-size: 26px;
+  font-weight: 100;
+  margin-bottom: 20px;
+}
+

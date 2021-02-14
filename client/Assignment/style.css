@@ -1,0 +1,18 @@
+.assignment-timer-container {
+    position: absolute;
+    z-index: 999999;
+    min-width: 327px;
+    min-height: 127px;
+    right: 15px;
+    top: 22px;
+    transform: scale(0.3);
+    -moz-transform: scale(0.3);
+    transform-origin: top right;
+    -moz-transform-origin: top right;
+}
+
+.flip-clock-label {
+    display: inline-block;
+    font-size: 300%;
+    margin-right: -40px;
+}

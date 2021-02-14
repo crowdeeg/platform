@@ -1,0 +1,313 @@
+.rationale-container {
+    font-weight: bold;
+}
+
+.rationale-container .guideline {
+    background: #fff9c4;
+    color: #000000;
+    font-weight: normal;
+    font-size: 12px;
+    border-radius: 0 0 15px 15px;
+    padding: 5px;
+    box-shadow: inset 0px 0px 10px rgba(0,0,0,0.5);
+}
+
+.guideline-instructions {
+    overflow: auto;
+    resize: vertical;
+    height: 170px;
+}
+
+.guideline .filters {
+    margin: 5px 0;
+}
+
+.guideline .input-group-addon {
+    padding: 0;
+    background: none;
+    border: none;
+    font-weight: bold;
+    display: block;
+    width: 100%;
+    font-style: italic;
+}
+
+.guideline .reactive-table-input {
+    color: #009688;
+    height: 24px !important;
+    text-align: center;
+}
+
+.guideline thead {
+    display: none;
+}
+
+.guideline thead th {
+    color: #64ffda;
+    text-align: center;
+}
+
+.guideline tr td {
+    min-width: 64px;
+}
+
+.guideline tbody tr.selectable {
+    cursor: pointer;
+}
+
+.guideline tbody tr.selectable:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.guideline tbody tr.isSelected, .guideline tbody tr.isSelected:hover {
+    background: #b2dfdb;
+    color: #000000;
+}
+
+.rationale-container input.rationale-instruction {
+    margin-bottom: 2px;
+}
+
+.rationale-container input.rationale-free-form {
+    margin-top: 10px;
+}
+
+.rationale-container .guideline-link {
+    display: block;
+    text-align: center;
+}
+
+.rationale-container input {
+    color: #000000;
+    font-weight: bold;
+}
+
+.rationale-container input::placeholder {
+    color: #777777;
+    font-weight: bold;
+    font-style: italic;
+}
+
+.rationale-container .collection-item .instruction-text {
+    position: relative;
+    padding-right: 20px;
+    margin-bottom: 15px;
+}
+
+.rationale-container .delete {
+    position: absolute;
+    top: 0;
+    right: -10px;
+    font-size: 30px;
+}
+
+.rationale-container .instruction-link {
+    position: absolute;
+    bottom: 0;
+    right: -10px;
+    font-size: 24px;
+}
+
+.rationale-container .condition .card-content {
+    padding: 10px 0 0 0;
+    text-align: center;
+}
+
+.rationale-container .condition .description {
+    padding: 0 15px;
+}
+
+.rationale-container .condition .belief {
+    margin-top: 10px;
+}
+
+.rationale-container .condition .belief .btn {
+    width: 100px;
+    margin: 0;
+    padding: 0;
+    font-size: 7pt;
+    font-weight: bold;
+    margin-left: -4px !important;
+    margin-right: -3px !important;
+    box-shadow: none;
+}
+
+.rationale-container .condition .belief .btn.selected {
+    border: 5px solid #000000;
+    line-height: 26px;
+    color: #000000;
+    text-decoration: none;
+}
+
+.rationales .rationales {
+    height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0 -19px -19px -19px;
+    padding: 15px 15px;
+    position: relative;
+}
+
+.rationales .rationale {
+    color: #000;
+    clear: both;
+    line-height: 18px;
+    font-size: 15px;
+    padding: 8px;
+    position: relative;
+    margin: 8px 0;
+    max-width: 85%;
+    word-wrap: break-word;
+}
+
+.rationales .rationale:after {
+    position: absolute;
+    content: "";
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+.rationales .rationale.own {
+    background: #e1ffc7;
+    border-radius: 5px 0px 5px 5px;
+    float: right;
+}
+
+.rationales .rationale.own:after {
+    border-width: 0px 0 10px 10px;
+    border-color: transparent transparent transparent #e1ffc7;
+    top: 0;
+    right: -10px;
+}
+
+.rationales .rationale.others {
+    background: #ffffff;
+    border-radius: 0px 5px 5px 5px;
+    float: left;
+}
+
+.rationales .rationale.others:after {
+    border-width: 0px 10px 10px 0;
+    border-color: transparent #fff transparent transparent;
+    top: 0;
+    left: -10px;
+}
+
+.rationales .rationale .arbiter-pseudonym {
+    font-weight: bold;
+    margin-bottom: 7px;
+    display: inline-block;
+}
+
+.rationales .timestamp {
+    font-size: 10px;
+    color: #777777;
+}
+
+.rationales .rationale .timestamp {
+    text-align: right;
+    margin-top: 5px;
+}
+
+.rationales .arbitration-round-number {
+    font-style: italic;
+    margin: 0;
+    padding: 0;
+    display: inline-block;
+    float: right;
+    margin-left: 10px;
+}
+
+.rationales .decision {
+    text-align: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+    margin-bottom: 8px;
+    padding: 0 10px;
+}
+
+.rationales .instructions {
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px dashed #777777;
+}
+
+.rationales .instructions .instruction {
+    padding: 5px;
+    cursor: pointer;
+    border-bottom: 1px dashed #777777;
+}
+
+.rationales .instructions .instruction:last-child {
+    border-bottom: none;
+}
+
+.rationales .instructions .instruction .instruction-text {
+    font-style: italic;
+}
+
+.rationales .instructions .instruction .instruction-label {
+    text-align: center;
+    font-weight: bold;
+    background: #555555;
+    color: #FFFFFF;
+    border-radius: 5px;
+    padding: 2px;
+    margin-bottom: 5px;
+}
+
+.rationale.own .instructions .instruction:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.rationale.others .instructions .instruction:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.rationales .instructions .instruction-conditions {
+    display: none;
+    margin-top: 5px;
+    font-size: 13px;
+}
+
+.rationales .instructions .instruction:hover .instruction-conditions {
+    display: block;
+}
+
+.rationale.own .instruction-conditions {
+    left: -60px;
+}
+
+.rationale.others .instruction-conditions {
+    right: -60px;
+}
+
+.rationales .instructions .instruction-condition {
+    border-bottom: 1px solid #777777;
+}
+
+.rationales .instructions .instruction-condition:last-child {
+    border-bottom: none;
+}
+
+.rationales .instructions .instruction-conditions-title {
+    padding: 5px 0;
+    text-align: center;
+    font-weight: bold;
+    border-bottom: 2px solid #000000;
+}
+
+.rationales .instructions .condition-description {
+    width: 120px;
+    display: inline-block;
+    padding: 5px 5px 5px 0;
+    border-right: 1px dashed #777777;
+    vertical-align: top;
+}
+
+.rationales .instructions .condition-belief {
+    width: 50px;
+    display: inline-block;
+    padding: 5px 0 5px 5px;
+    vertical-align: top;
+}

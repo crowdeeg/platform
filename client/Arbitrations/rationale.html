@@ -1,0 +1,69 @@
+<template name="RationaleForm">
+    <div class="rationale-container">
+        {{#if guideline}}
+        {{> inputAutocomplete settings=instructionRationaleAutocompleteSettings class="rationale-instruction form-control autoclear" placeholder="Cite at least one supporting instruction from the guideline..."}}
+        <div class="guideline">
+            <div class="row filters">
+                <div class="col s12 m4">{{> reactiveTableFilter id="filterIdentifier" label="Search: by Code" fields=filterFieldsIdentifier }}</div>
+                <div class="col s12 m4">{{> reactiveTableFilter id="filterText" label="by Instruction" fields=filterFieldsText }}</div>
+                <div class="col s12 m4">{{> reactiveTableFilter id="filterActions" label="by Sleep Stage" fields=filterFieldsActions }}</div>
+            </div>
+            <div class="guideline-instructions">
+            {{> reactiveTable settings=guidelineTableSettings}}
+            </div>
+        </div>
+
+        {{#if instructions}}
+        <div class="col s12">
+            <h5>You're citing the following instructions:</h5>
+            <ul class="collection card instructions">
+                {{#each instructions}}
+                <li class="collection-item instruction" data-id="{{doc._id}}">
+                    <div class="instruction-text">
+                        <b>[{{doc.identifier}}] {{doc.text}}</b>
+                        <a href="#" class="secondary-content delete"><i class="fa fa-times"></i></a>
+                    </div>
+                    {{#if doc.conditions}}
+                    <div class="conditions">
+                    <div class="conditions-title blue-text text-center">
+                    {{#if doc.hasMultipleConditions}}
+                    Are the following {{doc.numConditions}} conditions met?
+                    {{else}}
+                    Is this condition met?
+                    {{/if}}
+                    </div>
+                    {{#each conditions}}
+                        <div class="condition card blue lighten-2" data-id="{{doc._id}}"><div class="card-content white-text">
+                            <div class="description">{{doc.descriptionCapitalized}}.</div>
+                            <div class="belief">
+                                <div class="btn red no-transition{{#if belief.no}} selected{{/if}}" data-level="-1" data-key="no">No</div>
+                                <div class="btn red lighten-2 no-transition{{#if belief.unlikely}} selected{{/if}}" data-level="-0.5" data-key="unlikely">Unlikely</div>
+                                <div class="btn green lighten-2 no-transition{{#if belief.likely}} selected{{/if}}" data-level="0.5" data-key="likely">Likely</div>
+                                <div class="btn green no-transition{{#if belief.yes}} selected{{/if}}" data-level="1" data-key="yes">Yes</div>
+                            </div>
+                        </div></div>
+                    {{/each}}
+                    </div>
+                    {{/if}}
+                </li>
+                {{/each}}
+            </ul>
+        </div>
+        {{/if}}
+        {{> inputAutocomplete settings=freeFormRationaleAutocompleteSettings class="rationale-free-form form-control autoclear" placeholder="Optionally clarify in your own words or reply to others..."}}
+        {{else}}
+        {{> inputAutocomplete settings=freeFormRationaleAutocompleteSettings class="rationale-free-form form-control autoclear" placeholder="Please explain in your own words or reply to others..."}}
+        {{/if}}
+    </div>
+</template>
+
+<template name="instructionRationaleAutocomplete">
+    <span><b>[{{identifier}}] {{text}}</b></span>
+</template>
+
+<template name="freeFormRationaleAutocomplete">
+    <span>{{rationale.freeForm}}</span>
+</template>
+
+<template name="autocompleteNoMatch">
+</template>

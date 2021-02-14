@@ -1,0 +1,558 @@
+.selected-in-previous-round {
+  border: 0.4rem solid #009688;
+  line-height: 1rem;
+  padding-left: 1.6rem;
+  padding-right: 1.6rem;
+}
+
+.votes-info {
+  display: none;
+  position: absolute;
+  -moz-border-radius: 100%;
+  border-radius: 100%;
+  top: -0.5rem;
+  right: 0.4rem;
+  width: 25px;
+  height: 25px;
+  line-height: 25px;
+  text-align: center;
+  font-weight: bold;
+  color: white !important;
+  background: #7cb342;
+}
+
+.selected-in-previous-round .votes-info {
+  top: -0.9rem;
+  right: 0;
+}
+
+.votes-info.visible {
+  display: block;
+}
+
+.votes-info.has-disagreement {
+  background: #e53935;
+}
+
+.narrow-horizontal-padding {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.floating-panel-toggle {
+  position: fixed;
+  top: -10px;
+  left: -10px;
+  z-index: 12;
+}
+
+.floating-panel-container.right .floating-panel-toggle {
+  right: -10px;
+  left: unset;
+}
+
+.floating-panel-container.active .floating-panel-toggle {
+  background: none !important;
+  border: none;
+  box-shadow: none;
+}
+
+.floating-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  width: 600px;
+  height: 100%;
+  overflow: auto;
+  padding: 20px 30px;
+  margin: 0;
+  display: none;
+}
+
+.floating-panel-container.right .floating-panel {
+  right: 0;
+  left: unset;
+}
+
+.floating-panel-container.narrow .floating-panel {
+  width: 300px;
+}
+
+.floating-panel .saving-status {
+  position: absolute;
+  top: 10px;
+  left: 430px;
+  z-index: 11;
+}
+
+.floating-panel .row:first-of-type {
+  margin-bottom: 30px;
+}
+
+.floating-panel .row {
+  margin-bottom: 0;
+}
+
+.annotator-container {
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.graph_container {
+  padding: 0 10px;
+}
+
+.graph_footer {
+  margin-top: 10px;
+}
+
+.graph {
+  margin: 10px auto;
+}
+
+.graph_control {
+  height: 36px;
+}
+
+.gainUp, .gainDown, .gainReset {
+  float: left;
+}
+
+.selected {
+  color: red;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.panel-heading a:after {
+    font-family:'Glyphicons Halflings';
+    content:"\e114";
+    color: grey;
+}
+
+.panel-heading a.collapsed:after {
+    content:"\e080";
+}
+
+.feature_panel {
+  float: left;
+  display: inline;
+}
+
+.feature_panel .btn.feature {
+  color: #555555;
+}
+
+.feature_panel .btn.feature.active {
+  color: #000000;
+  font-weight: bold;
+}
+
+.select_panel, .select_panel {
+  display: inline-block;
+  float: left;
+  margin: 0 0 0 20px !important;
+}
+
+.select_panel .select-wrapper input.select-dropdown {
+  margin: 0 !important;
+  height: 37px;
+}
+
+.montage_panel {
+  width: 270px;
+}
+
+.frequency_filter_panel {
+  display: inline-block;
+  float: left;
+  margin: 0;
+}
+
+.frequency_filter_panel .select_panel {
+  width: 160px;
+}
+
+.button_container {
+  padding: 0;
+}
+
+.artifact_panel, .sleep_stage_panel, .adjustment_buttons {
+  display: inline;
+}
+
+.navigation_panel, .examples_panel {
+  float: right;
+  display: inline;
+}
+
+.bookmarkCurrentPage {
+  padding: 0 15px;
+  margin-right: 10px;
+}
+
+.main_container {
+  padding: 10px;
+  padding-top: 0;
+  text-align: center;
+}
+
+.experiment_container {
+  padding-top: 0;
+}
+
+.keyboardShortcuts {
+  margin-left: 30px;
+}
+
+.complete-condition {
+  margin-right: -15px;
+}
+
+.classification.active {
+  background-color: lightgrey;
+}
+
+.highcharts-annotation {
+  cursor: pointer;
+}
+
+.highcharts-annotation.saved {
+  cursor: auto;
+}
+
+.confidence-buttons {
+  width: 60px;
+  height: auto;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.highcharts-annotation.saved .toolbar {
+  display: none;
+}
+
+.highcharts-annotation.saved:hover .toolbar {
+  display: block;
+}
+
+.confidence-buttons input {
+  display: none;
+}
+
+.confidence-buttons .btn {
+  width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  display: inline-block !important;
+}
+
+.confidence-buttons .btn.active {
+  border: 3px solid #000000;
+}
+
+.highcharts-annotation .comment {
+  width: 240px;
+  height: auto;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.highcharts-annotation .comment button {
+  position: static;
+  height: 20px;
+  width: 60px;
+  font-size: 12px;
+  line-height: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+.highcharts-annotation .comment input {
+  height: 21px !important;
+  width: 180px !important;
+  vertical-align: middle !important;
+  font-size: 13px !important;
+  background-color: #ffffff !important;
+  margin: 0 !important;
+}
+
+.annotationTime {
+  position: relative;
+}
+
+.annotation-time-container {
+  display: none;
+  position: absolute;
+  top: 33px;
+  right: 0;
+  z-index: 9999999999;
+  background-color: #ffffff;
+  padding: 10px 0 5px 10px;
+}
+
+.annotationTime:hover .annotation-time-container, .annotationTime:focus .annotation-time-container {
+  display: block;
+} 
+
+.annotation-time-container .time {
+  margin-left: 20px;
+  display: inline-block;
+  width: auto;
+}
+
+.examples {
+  margin-top: 60px;
+  margin-bottom: 60px;
+}
+
+.examples-title {
+  height: 34px;
+  display: inline-block;
+  line-height: 34px;
+  margin-right: 15px;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.progress {
+  width: 30%;
+  margin: 0px 2px;
+  display: inline-block;
+  height: 34px;
+}
+
+.correct-answer-explanation {
+  display: inline-block;
+}
+
+.correct-answer-explanation .label {
+  display: inline-block;
+  height: 34px;
+  font-size: 18px;
+  line-height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.highcharts-container {
+  outline: 1px solid rgba(134, 142, 149, 0.4);
+}
+
+.shortcut-key {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.hidden {
+  display: none;
+}
+
+.graph_container .progress {
+  width: 100%;
+  margin-top: 20px;
+  height: 10px;
+}
+
+.annotator-edf .classification-summary {
+  padding: 0 10px;
+  width: 100%;
+}
+
+.annotator-edf .classification-summary > div {
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.annotator-edf .classification-summary .title {
+  display: block;
+  text-align: center;
+  color: #e91e63;
+  font-weight: bold;
+  padding: 10px;
+}
+
+.annotator-edf .classification-summary .y-axis {
+  vertical-align: top;
+  font-weight: bold;
+  width: 8%;
+  text-align: right;
+  padding: 10px;
+  margin: 0;
+  display: inline-block;
+}
+
+.annotator-edf .classification-summary .y-axis .axis-label {
+  font-size: 15px;
+  width: 100%;
+}
+
+.annotator-edf .classification-summary .y-axis .axis-label, .annotator-edf .classification-summary .classification-label {
+  height: 20px;
+  overflow: hidden;
+}
+
+.annotator-edf .classification-summary .x-axis-label {
+  width: 100%;
+  text-align: center;
+  display: block;
+  font-weight: bold;
+  padding: 0 3px 3px 3px;
+}
+
+.annotator-edf .classification-summary .classifications {
+  vertical-align: top;
+  width: 92%;
+  margin-left: -4px;
+  height: 20px;
+  padding: 10px 0;
+  padding-left: 4px;
+  display: inline-block;
+}
+
+.annotator-edf .classification-summary .classification {
+  vertical-align: top;
+  margin-left: -4px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.annotator-edf .classification-summary .classification.does-not-have-multiple-conflicting-guideline-instructions .flag-if-has-multiple-conflicting-guideline-instructions {
+  background-color: #fff8e1;
+}
+
+.annotator-edf .classification-summary .y-axis .axis-label.flag-if-has-multiple-conflicting-guideline-instructions {
+  color: #ff6f00;
+}
+
+.annotator-edf .classification-summary .classification.has-multiple-conflicting-guideline-instructions .flag-if-has-multiple-conflicting-guideline-instructions {
+  background-color: #ff8f00;
+}
+
+.annotator-edf .classification-summary .classification.current-position {
+  background-color: #2979ff !important;
+}
+
+.annotator-edf .classification-summary .classification.current-position .x-axis-tick {
+  color: #2979ff !important;
+  font-weight: bold;
+  font-size: 170%;
+}
+
+.annotator-edf .classification-summary .classification:hover {
+  background-color: #616161;
+}
+
+.annotator-edf .classification-summary .classification:hover .x-axis-tick {
+  color: #616161;
+}
+
+.annotator-edf .classification-summary .classification-label {
+  background-color: #e91e63;
+}
+
+.annotator-edf .classification-summary.do-not-show-quantitative-uncertainty-information .classification-label.is-not-decision, .annotator-edf .classification-summary.show-quantitative-uncertainty-information.do-not-show-alternative-label-choices .classification-label.is-not-decision {
+  opacity: 0 !important;
+  filter: alpha(opacity=0) !important;
+}
+
+.annotator-edf .classification-summary.do-not-show-quantitative-uncertainty-information .classification-label.is-decision {
+  opacity: 1 !important;
+  filter: alpha(opacity=100) !important;
+}
+
+.annotator-edf .classification-summary .classification-label.is-own-decision {
+  background-color: #00bfa5;
+}
+
+.annotator-edf .classification-summary .x-axis-tick {
+  border-left: 1px solid #000000;
+  border-top: 1px solid #000000;
+  margin-top: 2px;
+  padding-left: 3px;
+}
+
+.annotator-edf .classification-summary .x-axis-tick.none {
+  border-left: none;
+  color: rgba(0, 0, 0, 0);
+}
+
+.annotator-edf .classification-summary .classification-explanation {
+  padding: 0 10px;
+  width: 100%;
+  overflow: auto;
+  text-align: center;
+  height: 172px;
+}
+
+.annotator-edf .classification-summary .classification-explanation thead {
+  font-weight: bold;
+  background-color: #e0f2f1;
+}
+
+.annotator-edf .classification-summary .classification-explanation td {
+  height: 20px;
+  overflow: auto;
+  white-space: nowrap;
+  border-left: 1px solid #000000;
+}
+
+.annotator-edf .classification-summary .classification-explanation td:first-child {
+  border: none;
+}
+
+.annotator-edf .classification-summary .classification-explanation td.decision,
+.annotator-edf .classification-summary .classification-explanation td.label-name,
+.annotator-edf .classification-summary .classification-explanation td.confidence {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+  text-align: center;
+}
+
+.annotator-edf .classification-summary .classification-explanation td.decision.own {
+  color: #009688;
+}
+
+.annotator-edf .classification-summary .classification-explanation td.decision.other,
+.annotator-edf .classification-summary .classification-explanation td.confidence {
+  color: #e91e63;
+}
+
+.annotator-edf .classification-summary.do-not-show-argumentative-uncertainty-information .classification-explanation td.guideline-instructions,
+.annotator-edf .classification-summary.do-not-show-argumentative-uncertainty-information .flag-if-has-multiple-conflicting-guideline-instructions {
+  display: none;
+}
+
+.annotator-edf .classification-summary .classification-explanation.does-not-have-multiple-conflicting-guideline-instructions td.guideline-instructions {
+  color: #757575;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.annotator-edf .classification-summary .classification-explanation thead td.guideline-instructions {
+  line-height: 120%;
+}
+
+.annotator-edf .classification-summary .classification-explanation td.guideline-instructions .emphasize {
+  color: #ff6f00;
+  text-decoration: underline;
+  font-size: 120%;
+}
+
+.annotator-edf .classification-summary .classification-explanation tbody td.guideline-instructions {
+  color: #ff6f00;
+  font-weight: bold;
+}
+
+.pre-classification, .pre-classification:hover, .pre-classification:focus {
+  border: 0.4rem solid #e91e63;
+  line-height: 1rem;
+  padding-left: 1.6rem;
+  padding-right: 1.6rem;
+}

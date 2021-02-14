@@ -1,0 +1,50 @@
+<template name="Home">
+    {{> Navigation}}
+
+    {{> Assignments}}
+</template>
+
+<template name="Navigation">
+    {{> status}}
+    <div class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="{{pathFor route='home'}}">crowdEEG</a>
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                {{#if isInRole 'admin'}}
+                    <li><a href="{{pathFor route='arbitrations'}}">Adjudication</a></li>
+                    <li><a href="{{pathFor route='data'}}">Data</a></li>
+                    <li><a href="{{pathFor route='assign'}}">Assign</a></li>
+                    <li><a href="{{pathFor route='status'}}">Status</a></li>
+                    <li><a href="/admin" target="_blank">Manage</a></li>
+                {{/if}}
+                {{> loginButtons}}
+            </ul>
+        </div>
+    </div>
+</template>
+
+<template name="status_connection_fullscreen">
+    {{#unless connected}}
+    <div class="status-connection-fullscreen center card-panel orange lighten-5 {{classes}}">
+        <span class="lime-text text-darken-4">
+            <strong>
+                <i class="small mdi-alert-warning"></i>
+            </strong>
+            {{message}}
+        </span>
+        {{extraMessage}}
+        {{#if showReconnect}}
+            <a href="#" class="alert-link">{{reconnectLabel}}</a>
+        {{/if}}
+        <span class="explanation">Please pause what you are doing for a while, as we've temporarily lost the server connection and are trying to reconnect. Feel free to grab a cup of tea or coffee in the meantime. If this issue persists, please try to reload the page. All of your input up until this point should be saved in our database and should be available on the next page reload. If reloading the page does not solve the issue or if you suspect that some of your input from before this point was not stored properly, please contact the site administrators or study coordinators and tell them what's going on. Sorry for the hiccup, and we're happy to help!</span>
+    </div>
+    {{/unless}}
+</template>

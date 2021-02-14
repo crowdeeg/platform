@@ -1,0 +1,3 @@
+#!/bin/sh
+# Deploy to the Elastic Beanstalk environment
+eb deploy --staged --timeout 120

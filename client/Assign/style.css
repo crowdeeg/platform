@@ -1,0 +1,13 @@
+.autocomplete-container {
+	top: 30px;
+}
+
+.input-group input {
+	margin: 0 !important;
+}
+
+.all-data-from-assignees-form input[type=number] {
+	width: 80px;
+	height: 20px;
+    margin: 0 0 0 20px;
+}

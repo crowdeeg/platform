@@ -1,0 +1,71 @@
+<template name="Assignments">
+    <div class="row text-center">
+        <div class="col s12">
+            <h3>Reading Tasks</h3>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col s12 m4 text-center">{{> AssignmentsPending}}</div>
+        <div class="col s12 m4 text-center">{{> AssignmentsInProgress}}</div>
+        <div class="col s12 m4 text-center">{{> AssignmentsCompleted}}</div>
+    </div>
+</template>
+
+<template name="AssignmentsPending">
+    <h4><i class="fa fa-inbox"></i> Pending</h4>
+    <div class="collection">
+    {{#each assignment in assignments}}
+        {{#with assignment}}
+        {{#if assignment.blockedForReason }}
+        <div class="collection-item grey lighten-3 grey-text"><i class="fa fa-ban left"></i> {{ assignment.nameOrAnonymizedPatientDescription }} <b>[{{ assignment.blockedForReason }}]</b></div>
+        {{else}}
+        <a href="{{pathFor route='assignment'}}" class="collection-item"><i class="fa fa-envelope left"></i> {{ assignment.nameOrAnonymizedPatientDescriptionWithAdjudicationInformation }}</a>
+        {{/if}}
+        {{/with}}
+    {{else}}
+        <span class="flow-text">No reading tasks pending right now.</span>
+    {{/each}}
+    </div>
+</template>
+
+<template name="AssignmentsInProgress">
+    <h4><i class="fa fa-envelope-open"></i> Started</h4>
+    <div class="collection">
+    {{#each assignment in assignments}}
+        {{#with assignment}}
+        {{#if assignment.blockedForReason }}
+        <div class="collection-item grey lighten-3 grey-text"><i class="fa fa-ban left"></i> {{ assignment.nameOrAnonymizedPatientDescription }} <b>[{{ assignment.blockedForReason }}]</b></div>
+        {{else}}
+        <a href="{{pathFor route='assignment'}}" class="collection-item yellow lighten-4"><i class="fa fa-envelope-open left"></i> {{ assignment.nameOrAnonymizedPatientDescriptionWithAdjudicationInformation }}</a>
+        {{/if}}
+        {{/with}}
+    {{else}}
+        <span class="flow-text">Start a reading task.</span>
+    {{/each}}
+    </div>
+</template>
+
+<template name="AssignmentsCompleted">
+    <h4><i class="fa fa-check"></i> Done</h4>
+    <div class="collection">
+    {{#each assignment in assignments}}
+        {{#with assignment}}
+        {{#if assignment.blockedForReason }}
+        <div class="collection-item grey lighten-3 grey-text"><i class="fa fa-ban left"></i> {{ assignment.nameOrAnonymizedPatientDescription }} <b>[{{ assignment.blockedForReason }}]</b></div>
+        {{else}}
+        <a href="{{pathFor route='assignment'}}" class="collection-item green lighten-4"><i class="fa fa-check left"></i> {{ assignment.nameOrAnonymizedPatientDescriptionWithAdjudicationInformation }}</a>
+        {{/if}}
+        {{/with}}
+    {{else}}
+        <span class="flow-text">No tasks completed yet.</span>
+    {{/each}}
+    </div>
+</template>
+
+<template name="Assignment">
+    <div class="assignment-container">
+        {{> status}}
+        <div class="assignment-timer-container"><div class="assignment-timer"></div></div>
+        {{> Template.dynamic template=template data=data}}
+    </div>
+</template>

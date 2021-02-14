@@ -1,0 +1,11 @@
+#!/bin/sh
+IMAGE_TAG="crowdeeg"
+VERSION_TAG="latest"
+REGISTRY_URL="XXXXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com"
+
+IMAGE_TAG_COMPLETE="${IMAGE_TAG}:${VERSION_TAG}"
+REGISTRY_ENDPOINT_COMPLETE="${REGISTRY_URL}/${IMAGE_TAG_COMPLETE}"
+aws ecr get-login --region us-east-1 --no-include-email | sh \
+	&& docker build -f Dockerfile.base --build-arg INSTALL_MONGO=true --build-arg INSTALL_PHANTOMJS=true --build-arg INSTALL_GRAPHICSMAGICK=false -t crowdeeg . \
+	&& docker tag "${IMAGE_TAG_COMPLETE}" "${REGISTRY_ENDPOINT_COMPLETE}" \
+	&& docker push "${REGISTRY_ENDPOINT_COMPLETE}"

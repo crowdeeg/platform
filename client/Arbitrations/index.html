@@ -1,0 +1,23 @@
+<template name="Arbitrations">
+    {{> Navigation}}
+
+    <div class="row">
+        <div class="col s12">
+            <div class="col s12 m3">
+                <h3>Adjudication</h3>
+            </div>
+            <div class="col s12 m9">
+                <div class="row">
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterArbiters" label="Adjudicators" fields=filterFieldsAbiters }}</div>
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterDataPath" label="Recording" fields=filterFieldsDataPath }}</div>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterCurrentAssignmentUserNameAndStatus" label="Active Adjudicator" fields=filterFieldsCurrentAssignmentUserNameAndStatus }}</div>
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterStatus" label="Status" fields=filterFieldsStatus }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 arbitrations">{{> reactiveTable settings=settings}}</div>
+        <div class="col s12 text-center"><button class="btn download">Download Visible Rows To CSV</button></div>
+    </div>
+</template>

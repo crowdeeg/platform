@@ -1,0 +1,2 @@
+#!/bin/sh
+./create-local-dockerfile && docker-compose build

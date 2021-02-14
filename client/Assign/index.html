@@ -1,0 +1,141 @@
+<template name="Assign">
+    {{> Navigation}}
+
+    <div class="row">
+        <div class="col s12 m3"></div>
+        <div class="col s12 m6">
+            <div class="col s12 text-center">
+                <h3>Quick Assign</h3>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <div class="input-group">
+                        <span class="input-group-addon"><span>Task</span></span>
+                        {{> inputAutocomplete settings=taskAutocompleteSettings class="task form-control autoclear"}}
+                    </div>
+                </div>
+                {{#if task}}
+                <div class="col s12">
+                    <div class="collection card">
+                        <div class="collection-item"><i class="fa fa-check"></i> {{task.name}}</div>
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+            {{#if task}}
+            <div class="row">
+                <div class="col s12 text-center">
+                    <h4>Select Recordings</h4>
+                </div>
+                <div class="col s12">
+                    <div class="input-group">
+                        <span class="input-group-addon"><span>Add single recording</span></span>
+                        {{> inputAutocomplete settings=dataAutocompleteSettings class="data form-control autoclear"}}
+                    </div>
+                </div>
+                <div class="col s12">
+                    <div class="input-group">
+                        <span class="input-group-addon"><span>Add all recordings assigned to reader</span></span>
+                        {{> inputAutocomplete settings=singleUserAutocompleteSettings class="assignee-to-copy-data-from form-control autoclear"}}
+                    </div>
+                </div>
+                {{#if assigneesToCopyDataFrom}}
+                <div class="col s12">
+                    <ul class="collection card assignees-to-copy-data-from">
+                        {{#each assigneesToCopyDataFrom}}
+                        <li class="collection-item"><div>{{username}}<a href="#" data-id="{{_id}}" class="secondary-content delete"><i class="fa fa-trash"></i></a></div></li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+                {{#if data}}
+                <div class="col s12">
+                    <h5>Selected recordings {{#if data}} ({{numData}}){{/if}}</h5>
+                    <ul class="collection card data">
+                        {{#each data}}
+                        <li class="collection-item"><div>{{pathLengthAndPatientInfoFormatted}}<a href="#" data-id="{{_id}}" class="secondary-content delete"><i class="fa fa-trash"></i></a></div></li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+            </div>
+            <div class="row">
+                <div class="col s12 text-center">
+                    <h4>Assign to Readers</h4>
+                </div>
+                <div class="col s12">
+                    <div class="input-group">
+                        <span class="input-group-addon"><span>Add reader</span></span>
+                        {{> inputAutocomplete settings=singleUserAutocompleteSettings class="assignee form-control autoclear"}}
+                    </div>
+                </div>
+                {{#if assignees}}
+                <div class="col s12">
+                    <ul class="collection card assignees">
+                        {{#each assignees}}
+                        <li class="collection-item"><div>{{username}}<a href="#" data-id="{{_id}}" class="secondary-content delete"><i class="fa fa-trash"></i></a></div></li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+            </div>
+            {{#if data}}
+            {{#if assignees}}
+            <div class="row">
+                <div class="col s12 text-center">
+                    <button class="btn assign">Assign</button>
+                </div>
+            </div>
+            {{/if}}
+            {{/if}}
+            {{/if}}
+        </div>
+        <div class="col s12 m3"></div>
+    </div>
+</template>
+
+<template name="taskAutocomplete">
+    <span>{{name}}</span>
+</template>
+
+<template name="dataAutocomplete">
+    <span>{{pathLengthAndPatientInfoFormatted}}</span>
+</template>
+
+<template name="userAutocomplete">
+    <span>{{username}}</span>
+</template>
+
+<template name="addAllDataFromAssigneeForm">
+    <div class="all-data-from-assignees-form">
+        <h4>Ignore all recordings:</h4>
+        <br>
+        
+        <div><input type="checkbox" checked="checked" name="ignoreAssignmentsAssociatedWithOtherTasks" id="ignoreAssignmentsAssociatedWithOtherTasks"><label for="ignoreAssignmentsAssociatedWithOtherTasks">associated with other tasks</label></div>
+        
+        <div><input type="checkbox" name="ignorePendingAssignments" id="ignorePendingAssignments"><label for="ignorePendingAssignments">in status pending</label></div>
+        
+        <div><input type="checkbox" name="ignoreInProgressAssignments" id="ignoreInProgressAssignments"><label for="ignoreInProgressAssignments">in progress</label></div>
+        
+        <div><input type="checkbox" checked="checked" name="ignoreCompletedAssignments" id="ignoreCompletedAssignments"><label for="ignoreCompletedAssignments">in status completed</label></div>
+        
+        <div><input type="checkbox" name="ignoreDataAlsoAssignedToOtherReaders" id="ignoreDataAlsoAssignedToOtherReaders"><label for="ignoreDataAlsoAssignedToOtherReaders">also assigned to readers other than the ones selected</label></div>
+        
+        <div><input type="checkbox" checked="checked" name="ignoreRecordingsShorterThan" id="ignoreRecordingsShorterThan"><label for="ignoreRecordingsShorterThan">shorter than:</label><input type="number" name="recordingLengthInMinutesLowerLimit" value="5" /><span> mins</span></div>
+        
+        <div><input type="checkbox" name="ignoreRecordingsLongerThan" id="ignoreRecordingsLongerThan"><label for="ignoreRecordingsLongerThan">longer than:</label><input type="number" name="recordingLengthInMinutesUpperLimit" /><span> mins</span></div>
+        
+        <div><input type="checkbox" name="ignoreDataFromPatientsWithIDLowerThan" id="ignoreDataFromPatientsWithIDLowerThan"><label for="ignoreDataFromPatientsWithIDLowerThan">from patients with ID lower than:</label><input type="number" name="patientIDLowerLimit" placeholder="Patient #" /></div>
+
+        <div><input type="checkbox" name="ignoreDataFromPatientsWithIDGreaterThan" id="ignoreDataFromPatientsWithIDGreaterThan"><label for="ignoreDataFromPatientsWithIDGreaterThan">from patients with ID greater than:</label><input type="number" name="patientIDUpperLimit" placeholder="Patient #" /></div>
+    </div>
+</template>
+
+<template name="assignSettingsForm">
+    <div class="all-data-from-assignee-form">
+        <h4>Assignment settings:</h4>
+        <br>
+        
+        <div><input type="checkbox" checked="checked" name="avoidDuplicateAssignmentsForIndividualReaders" id="avoidDuplicateAssignmentsForIndividualReaders"><label for="avoidDuplicateAssignmentsForIndividualReaders">Avoid duplicate assignments for individual readers</label></div>
+    </div>
+</template>

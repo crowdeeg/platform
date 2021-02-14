@@ -1,0 +1,425 @@
+<template name="AnnotatorEDF">
+    <div class="annotator-edf">
+        {{#let classificationSummaryCached=classificationSummary}}
+        {{#if classificationSummaryCached}}
+            <div class="classification-summary {{#if classificationSummaryCached.uncertaintyInformationConfig.quantitative.show}}show-quantitative-uncertainty-information show-alternative-label-choices{{else}}do-not-show-quantitative-uncertainty-information do-not-show-alternative-label-choices{{/if}} {{#if classificationSummaryCached.uncertaintyInformationConfig.argumentative.show}}show-argumentative-uncertainty-information{{else}}do-not-show-argumentative-uncertainty-information{{/if}}">
+                <div class="card">
+                    {{#if classificationSummaryCached.title}}<div class="title">{{classificationSummaryCached.title}}</div>{{/if}}
+                    <div class="y-axis">
+                        <div class="axis-label flag-if-has-multiple-conflicting-guideline-instructions">Ambiguous?</div>
+                    {{#each label in classificationSummaryCached.yAxisLabels}}
+                        <div class="axis-label">{{label}}</div>
+                    {{/each}}
+                        <div class="x-axis-tick none" style="visibility: hidden">&nbsp;</div>
+                    </div>
+                    <div class="classifications">
+                        {{#each annotation in classificationSummaryCached.annotations}}
+                            <div class="classification jump-to-epoch-with-start-time {{#if annotation.value.metadata.classificationSummary.isSelected}}current-position{{/if}} {{#if annotation.value.metadata.prediction.hasMultipleConflictingGuidelineInstructions}}has-multiple-conflicting-guideline-instructions{{else}}does-not-have-multiple-conflicting-guideline-instructions{{/if}}" data-epoch-start-time-in-seconds="{{annotation.value.position.start}}" style="width: {{annotation.value.metadata.classificationSummary.width}}">
+                                <div class="classification-label flag-if-has-multiple-conflicting-guideline-instructions is-not-decision"></div>
+                            {{#each label in annotation.opinionsOnPossibleLabels}}
+                                <div class="classification-label {{#if label.isDecision}}is-decision{{else}}is-not-decision{{/if}} {{#if label.isOwnDecision}}is-own-decision{{else}}is-not-own-decision{{/if}}" style="{{#if label.isOwnDecision}}opacity: {{ label.ownDecisionProbability }}; filter: alpha(opacity={{ label.ownDecisionPercentage }});"{{else}}opacity: {{ label.decisionProbability }}; filter: alpha(opacity={{ label.decisionPercentage }});"{{/if}}" data-value-label="{{label.value}}"></div>
+                            {{/each}}
+                                <div class="x-axis-tick {{annotation.value.metadata.classificationSummary.tick.type}}">{{{annotation.value.metadata.classificationSummary.tick.label}}}</div>
+                            </div>
+                        {{/each}}
+                    </div>
+                    <div class="x-axis-label">Hours from Start of Recording</div>
+                </div>
+                {{#let explanation=classificationSummaryCached.activeAnnotationExplanation}}
+                <div class="card classification-explanation {{#if explanation.hasMultipleConflictingGuidelineInstructions}}has-multiple-conflicting-guideline-instructions{{else}}does-not-have-multiple-conflicting-guideline-instructions{{/if}}">
+                    {{#if explanation}}
+                    <table class="striped">
+                        <thead>
+                            <tr>
+                                <td class="label-name">Stage</td>
+                                <td class="confidence">Confidence</td>
+                                <td class="decision other">{{classificationSummaryCached.activeAnnotation.userDoc.username}}</td>
+                                <td class="decision own">Your Answer</td>
+                                <td class="guideline-instructions">
+                                    {{#if explanation.hasMultipleConflictingGuidelineInstructions}}
+                                    {{classificationSummaryCached.activeAnnotation.userDoc.username}} thinks this case is <span class="emphasize">ambiguous</span> because multiple conflicting rules are considered applicable:
+                                    {{else}}
+                                    {{classificationSummaryCached.activeAnnotation.userDoc.username}} did not detect any ambiguities for this case.
+                                    {{/if}}
+                                </td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{#each label in explanation.labels}}
+                            <tr>
+                                <td class="label-name">{{label.valueHumanReadable}}</td>
+                                <td class="confidence">{{label.decisionPercentage}}%</td>
+                                <td class="decision other">{{#if label.isDecision}}<i class="fa fa-times"></i>{{/if}}</td>
+                                <td class="decision own">{{#if label.isOwnDecision}}<i class="fa fa-times"></i>{{/if}}</td>
+                                <td class="guideline-instructions">{{#if explanation.hasMultipleConflictingGuidelineInstructions}}{{label.guidelineInstruction.text}}{{/if}}</td>
+                            </tr>
+                        {{/each}}
+                        </tbody>
+                    </table>
+                    {{/if}}
+                </div>
+                {{/let}}
+            </div>
+        {{/if}}
+        {{/let}}
+        <div class="input-panel-container floating-panel-container">
+            <button class="input-panel-toggle floating-panel-toggle btn-floating btn-large waves-effect waves-light yellow lighten-4"><i class="fa fa-pencil black-text" data-icon-class="fa-pencil black-text"></i></button>
+            <div class="input-panel floating-panel card yellow lighten-4">
+                <div class="saving-status">
+                    {{#if isSavingData}}
+                        <span class="grey-text"><i class="fa fa-refresh"></i> Saving input data...</span>
+                    {{else}}
+                        <span class="green-text"><i class="fa fa-check"></i> All input data saved</span>
+                    {{/if}}
+                </div>
+                <div class="row">
+                    <div class="input-field col s4">
+                        <b>Patient:</b><br>
+                        {{ assignment.dataDoc.patientDoc.anonymizedDescriptionShort }}
+                    </div>
+                    <div class="input-field col s8">
+                        <b>Current AEDs:</b><br>
+                        {{ assignment.dataDoc.patientDoc.currentAEDs }}<br>
+                        {{#if medicationIntakeIsRegularIsSet}}
+                        Regularly take medication?
+                            {{#if assignment.dataDoc.patientDoc.medicationIntakeIsRegular }}
+                                Yes
+                            {{else}}
+                                No
+                            {{/if}}
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <select required data-bound-annotation-type="QUALITY_OF_EEG">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="1">Totally unusable</option>
+                            <option value="2">Barely usable</option>
+                            <option value="3">Barely usable, some information gathered</option>
+                            <option value="4">Some usable information, many technical and quality issues</option>
+                            <option value="5">Some information can be gathered</option>
+                            <option value="6">Decent recording, still large number of technical concerns</option>
+                            <option value="7">Good recording, some technical concerns</option>
+                            <option value="8">Very good recording, some technical concerns</option>
+                            <option value="9">Almost perfect, few technical concerns</option>
+                            <option value="10">Perfect recording, no concerns</option>
+                        </select>
+                        <label>Quality of EEG</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="ALL_LEADS_WORKING_THROUGHOUT_RECORDING">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Unsure">Unsure</option>
+                        </select>
+                        <label>All leads working throughout recording?</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input id="leads-not-working-description" type="text" class="validate" data-bound-annotation-type="NOT_ALL_LEADS_WORKING_THROUGHOUT_RECORDING_DESCRIPTION">
+                        <label for="leads-not-working-description">If no, describe</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="IS_EEG_USABLE_FOR_CLINICAL_PURPOSES">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                        <label>Is EEG usable for clinical purposes?</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input id="recording-not-usable-for-clinical-purposes-explanation" type="text" class="validate" data-bound-annotation-type="EEG_NOT_USABLE_FOR_CLINICAL_PURPOSES_DESCRIPTION">
+                        <label for="recording-not-usable-for-clinical-purposes-explanation">If no, why?</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="NORMAL_EEG_PATTERN">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                        <label>Normal EEG pattern?</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input id="abnormal-description" type="text" class="validate" data-bound-annotation-type="NOT_NORMAL_EEG_PATTERN_DESCRIPTION">
+                        <label for="abnormal-description">If no, describe</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_PRESENT">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Unsure">Unsure</option>
+                        </select>
+                        <label>Epileptiform discharges present?</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input id="epileptiform-description" type="text" class="validate" data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_PRESENT_DESCRIPTION">
+                        <label for="epileptiform-description">If yes, describe</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_TYPE">
+                            <option value="" selected>Choose if present</option>
+                            <option value="Focal">Focal</option>
+                            <option value="Generalized">Generalized</option>
+                            <option value="Multifocal">Multifocal</option>
+                        </select>
+                        <label>Type of epileptiform discharges</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s6">
+                        For focal or multifocal epileptiform discharges, please select the laterality for all focal zones that apply:
+                    </div>
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_FOCALITY_FRONTAL">
+                            <option value="" selected>Choose if frontal</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Frontal zone</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_FOCALITY_TEMPORAL">
+                            <option value="" selected>Choose if temporal</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Temporal zone</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_FOCALITY_PARIETAL">
+                            <option value="" selected>Choose if parietal</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Parietal zone</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_FOCALITY_PARACENTRAL">
+                            <option value="" selected>Choose if paracentral (midline)</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Paracentral (midline) zone</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="EPILEPTIFORM_DISCHARGES_FOCALITY_OCCIPITAL">
+                            <option value="" selected>Choose if occipital</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Occipital zone</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="SLOWING_PRESENT">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Unsure">Unsure</option>
+                        </select>
+                        <label>Slowing present?</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input id="slowing-description" type="text" class="validate" data-bound-annotation-type="SLOWING_PRESENT_DESCRIPTION">
+                        <label for="slowing-description">If yes, describe</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <select required data-bound-annotation-type="SLOWING_TYPE">
+                            <option value="" selected>Choose if present</option>
+                            <option value="Focal">Focal</option>
+                            <option value="Generalized">Generalized</option>
+                            <option value="Multifocal">Multifocal</option>
+                        </select>
+                        <label>Type of slowing</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s6">
+                        For focal or multifocal slowing, please select the laterality for all focal zones that apply:
+                    </div>
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="SLOWING_FOCALITY_FRONTAL">
+                            <option value="" selected>Choose if frontal</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Frontal zone</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="SLOWING_FOCALITY_TEMPORAL">
+                            <option value="" selected>Choose if temporal</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Temporal zone</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="SLOWING_FOCALITY_PARIETAL">
+                            <option value="" selected>Choose if parietal</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Parietal zone</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="SLOWING_FOCALITY_PARACENTRAL">
+                            <option value="" selected>Choose if paracentral (midline)</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Paracentral (midline) zone</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <select required data-bound-annotation-type="SLOWING_FOCALITY_OCCIPITAL">
+                            <option value="" selected>Choose if occipital</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Independent bilateral">Independent bilateral</option>
+                            <option value="Bilateral but synchronous">Bilateral but synchronous</option>
+                        </select>
+                        <label>Occipital zone</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <textarea id="classification-epilepsy-syndrome" class="materialize-textarea" style="height: 50px" data-bound-annotation-type="CLASSIFICATION_OF_EPILEPSY_SYNDROME" placeholder=""></textarea>
+                        <label for="classification-epilepsy-syndrome">Classification of epilepsy syndrome:</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <select required data-bound-annotation-type="STAGE_NREM2_SLEEP_ARCHITECTURE_PRESENT">
+                            <option value="" disabled selected>Choose an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Unsure">Unsure</option>
+                        </select>
+                        <label>Non-REM stage 2 sleep architecture present?</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <textarea id="final-characterization" class="materialize-textarea" style="height: 100px" data-bound-annotation-type="FINAL_CHARACTERIZATION_OF_EEG" placeholder="ex: 3hz spike and wave, generalized discharges, etc."></textarea>
+                        <label for="final-characterization">Final characterization of EEG:</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s12">
+                        <p><b>Based on the EEG results:</b></p>
+                        <p>
+                            <input type="checkbox" id="no-change-to-patient-management-or-diagnosis" data-bound-annotation-type="RECOMMEND_NO_CHANGE_TO_PATIENT_MANAGEMENT_OR_DIAGNOSIS"><label for="no-change-to-patient-management-or-diagnosis">there will be no change to patient management or diagnosis</label>
+                        </p>
+                        <p>
+                            <input type="checkbox" id="recommend-further-EEG" data-bound-annotation-type="RECOMMEND_FURTHER_10_20_EEG"><label for="recommend-further-EEG">recommend further 10-20 EEG</label>
+                        </p>
+                        <p>
+                            <input type="checkbox" id="recommend-neuroimaging" data-bound-annotation-type="RECOMMEND_NEUROIMAGING"><label for="recommend-neuroimaging">recommend neuroimaging</label>
+                        </p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <a class="btn-floating btn-large waves-effect waves-light left" href="{{pathFor route='home'}}"><i class="fa fa-home"></i></a>
+                        <button class="waves-effect waves-light btn-large right" data-bound-action="COMPLETE_ASSIGNMENT">Mark reading as complete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{#if showInfoPanel}}
+        <div class="info-panel-container floating-panel-container right narrow">
+            <button class="info-panel-toggle floating-panel-toggle btn-floating btn-large waves-effect waves-light red"><i class="fa fa-comment white-text" data-icon-class="fa-comment white-text"></i></button>
+            <div class="info-panel floating-panel card blue lighten-4">
+                <h5><b>{{assignment.progress.asNumStepsCompletedOfNumStepsRequiredAndPercentage}}</b></h5>
+                <h6> epochs done for this pass</h6>
+                {{#if revisionsWithRationalesForAnnotation}}
+                <br>
+                <h5><b>Epoch Comments:</b></h5>
+                <h6><i>(most recent comment at the top)</i></h6>
+                <div class="rationales">
+                {{#each r in revisionsWithRationalesForAnnotation}}
+                    <div class="rationale {{#if r._helpers.isOwn }}own{{else}}others{{/if}}">
+                        <div class="arbiter-pseudonym">{{r._helpers.arbiterPseudonym}}</div>
+                        <div class="arbitration-round-number">Round {{r.arbitrationRoundNumber}}</div>
+                        <div class="decision">Opinion: {{labelToHumanReadable r.value.label}}</div>
+                        <div class="free-form">{{r.rationale.freeForm}}</div>
+                        {{#if r.rationale.instructions}}
+                        <div class="instructions">
+                            {{#each i in r.rationale.instructions}}
+                            <div class="instruction">
+                                <div class="instruction-label">Cited instruction [{{i.doc.identifier}}]</div>
+                                <div class="instruction-text">"{{i.doc.text}}"</div>
+                                {{#if i.conditions}}
+                                <div class="instruction-conditions">
+                                    <div class="instruction-conditions-title">Condition(s) met according to {{r._helpers.arbiterPseudonym}}?</div>
+                                    {{#each c in i.conditions}}
+                                    <div class="instruction-condition">
+                                        <div class="condition-description">{{c.doc.descriptionCapitalized}}</div>
+                                        <div class="condition-belief">{{c.belief.humanReadable}}</div>
+                                    </div>
+                                    {{/each}}
+                                </div>
+                                {{/if}}
+                            </div>
+                            {{/each}}
+                        </div>
+                        {{/if}}
+                    </div>
+                {{/each}}
+                </div>
+                {{/if}}
+                {{#if assignment.missingAnnotations}}
+                <br>
+                <h6><b>Please classify a few more epochs before you can mark this pass as complete. Click on one of the buttons to jump to the epoch:</b></h6><br>
+                <div class="collection">
+                {{#each annotation in assignment.missingAnnotations}}
+                    <a href="#" class="collection-item text-center jump-to-epoch-with-start-time" data-epoch-start-time-in-seconds="{{annotation.startTimeInSeconds}}">{{annotation.startTimeFormatted}}</a>
+                {{/each}}
+                </div>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
+        <div class="annotator-container"></div>
+    </div>
+</template>

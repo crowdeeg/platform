@@ -1,0 +1,4 @@
+#!/bin/sh
+touch .environment
+cat Dockerfile.base > Dockerfile.local
+grep -v "^FROM " Dockerfile >> Dockerfile.local

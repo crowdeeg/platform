@@ -1,0 +1,54 @@
+<template name="Data">
+    {{> Navigation}}
+
+    <div class="row">
+        <div class="col s12">
+            <div class="col s12 m3">
+                <h3>Recordings</h3>
+            </div>
+            <div class="col s12 m9">
+                <div class="row">
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterDataPath" label="Path" fields=filterFieldsDataPath }}</div>
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientId" label="Patient #" fields=filterFieldsPatientId }}</div>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientAge" label="Age" fields=filterFieldsPatientAge }}</div>
+                    <div class="col s12 m6">{{> reactiveTableFilter id="filterNumAssignments" label="# Assignments" fields=filterFieldsNumAssignments }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 data">{{> reactiveTable settings=settings}}</div>
+        <div class="col s12 text-center"><button class="btn download">Download Visible Rows To CSV</button></div>
+    </div>
+    <div class="row">
+        <div class="col s12 m4"></div>
+        <div class="col s12 m4">
+            <div class="input-group">
+                <span class="input-group-addon"><span>Task</span></span>
+                {{> inputAutocomplete settings=taskAutocompleteSettings class="task form-control autoclear"}}
+            </div>
+            {{#if task}}
+            <div class="collection card">
+                <div class="collection-item"><i class="fa fa-check"></i> {{task.name}}</div>
+            </div>
+            {{/if}}
+            <div class="input-group">
+                <span class="input-group-addon"><span>Add reader</span></span>
+                {{> inputAutocomplete settings=singleUserAutocompleteSettings class="assignee form-control autoclear"}}
+            </div>
+            {{#if assignees}}
+            <ul class="collection card assignees">
+                {{#each assignees}}
+                <li class="collection-item"><div>{{username}}<a href="#" data-id="{{_id}}" class="secondary-content delete"><i class="fa fa-trash"></i></a></div></li>
+                {{/each}}
+            </ul>
+            {{#if data}}
+            {{#if task}}
+            <button class="btn assign" style="width: 100%">Assign</button>
+            {{/if}}
+            {{/if}}
+            {{/if}}
+        </div>
+        <div class="col s12 m4"></div>
+    </div>
+</template>

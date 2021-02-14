@@ -1,0 +1,25 @@
+<template name="Status">
+    {{> Navigation}}
+
+    <div class="row">
+        <div class="col s12">
+            <div class="col s12 m3">
+                <h3>Reading Status</h3>
+            </div>
+            <div class="col s12 m9">
+                <div class="row">
+                    <div class="col s12 m4">{{> reactiveTableFilter id="filterReader" label="Reader" fields=filterFieldsReader }}</div>
+                    <div class="col s12 m4">{{> reactiveTableFilter id="filterTaskName" label="Task" fields=filterFieldsTaskName }}</div>
+                    <div class="col s12 m4">{{> reactiveTableFilter id="filterSource" label="Source" fields=filterFieldsSource }}</div>
+                </div>
+                <div class="row">
+                    <div class="col s12 m4">{{> reactiveTableFilter id="filterPatientId" label="Patient #" fields=filterFieldsPatientId }}</div>
+                    <div class="col s12 m4">{{> reactiveTableFilter id="filterStatus" label="Status" fields=filterFieldsStatus }}</div>
+                    <div class="col s12 m4">{{> reactiveTableFilter id="filterDataPath" label="Recording" fields=filterFieldsDataPath }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12">{{> reactiveTable settings=settings}}</div>
+        <div class="col s12 text-center"><button class="btn download">Download Visible Rows To CSV</button></div>
+    </div>
+</template>

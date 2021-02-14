@@ -1,0 +1,19 @@
+FROM johnnyutahio/meteor-launchpad:latest
+
+MAINTAINER Mike Schaekermann <mikeschaekermann@gmail.com>
+
+RUN    apt-get update \
+    && apt-get install -y curl wget build-essential vim nano nfs-common
+
+# WFDB software package
+# https://www.physionet.org/physiotools/wfdb-linux-quick-start.shtml
+RUN    wget https://www.physionet.org/physiotools/wfdb.tar.gz \
+    && mkdir wfdb \
+    && tar xfvz wfdb.tar.gz -C wfdb --strip-components 1 \
+    && cd wfdb \
+    && ./configure && make install \
+    && cd .. && rm -rf wfdb && rm -f wfdb.tar.gz
+
+ADD container_start.sh $APP_BUNDLE_DIR/bundle/
+
+CMD ["sh", "./container_start.sh"]

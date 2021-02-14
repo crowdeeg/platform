@@ -1,0 +1,4 @@
+.data .reactive-table tbody tr.selected-data {
+	border: 3px solid #ff4081;
+    background: #f8bbd0;
+}
