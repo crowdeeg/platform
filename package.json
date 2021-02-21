@@ -4,8 +4,7 @@
   "description": "A collaborative annotation tool for medical time series data.",
   "main": "index.js",
   "dependencies": {
-    "@babel/runtime": "^7.0.0-beta.46",
-    "bcrypt": "^2.0.1",
+    "@babel/runtime": "^7.12.18",
     "bowser": "^2.0.0-beta.3",
     "d3-dsv": "^1.0.8",
     "detector-webgl": "^2.0.0",
