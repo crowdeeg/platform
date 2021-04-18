@@ -2,7 +2,7 @@
 
 ## A Collaborative Annotation Tool for Medical Time Series Data
 
-This repository contains the code for the **[CrowdEEG](http://crowdeeg.ca/)** web application, a collaborative annotation tool for medical time series data. Check out our **[Getting Started](docs/getting_started.md)** guide to learn how to run and deploy this web app.
+This repository contains the code for the **[CrowdEEG](http://crowdeeg.ca/)** web application, a collaborative annotation tool for medical time series data. Check out our **[Getting Started](docs/getting_started_meteor_cloud.md)** guide to learn how to run and deploy this web app.
 
 ![The CrowdEEG adjudication interface](docs/images/adjudication_ui.gif)
 

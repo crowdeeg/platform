@@ -1,0 +1,1 @@
+DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy $METEOR_APP_NAME.meteorapp.com --free --mongo --settings settings.json --cache-build

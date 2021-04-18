@@ -1,0 +1,15 @@
+{
+  "galaxy.meteor.com": {
+    "env": {
+      "NODE_ENV": "production",
+      "EDF_DIR": "/edf",
+      "MAIL_URL": "smtps://PASSWORD:USERNAME@email-smtp.us-east-1.amazonaws.com:465",
+      "MAIL_FROM": "platform@example.com",
+      "MAIL_CC_LIST": "user1@example.com,user2@example.com"
+    },
+    "baseImage": {
+      "repository": "crowdeeg/platform",
+      "tag": "latest"
+    }
+  }
+}
