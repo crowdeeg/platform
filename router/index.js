@@ -11,7 +11,10 @@ Router.onBeforeAction(function () {
         this.next();
     }
 }, {
-    except: [ 'resetPassword' ]
+    except: [
+        'resetPassword',
+        'loginWithTestAccount',
+    ]
 });
 
 Router.route('/reset-password/:token', {
@@ -137,5 +140,14 @@ Router.route('/arbitrations', {
             return;
         }
         this.render('Arbitrations');
+    }
+});
+
+Router.route('/login-with-test-account', {
+    name: 'loginWithTestAccount',
+    action: function () {
+        Meteor.loginWithPassword('test@example.com', 'test', () => {
+            this.redirect('home');
+        });
     }
 });

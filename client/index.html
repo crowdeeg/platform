@@ -25,6 +25,9 @@
                     <li><a href="{{pathFor route='status'}}">Status</a></li>
                     <li><a href="/admin" target="_blank">Manage</a></li>
                 {{/if}}
+                {{#unless currentUser}}
+                    <li><a href="{{pathFor route='loginWithTestAccount'}}">Try Out With Test Account</a></li>
+                {{/unless}}
                 {{> loginButtons}}
             </ul>
         </div>
