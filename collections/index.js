@@ -1296,9 +1296,6 @@ function onAssignmentInsertOrUpdate(senderId, assignment) {
         isInsert = true;
         wasPreviouslyCompleted = false;
     }
-    if (isInsert) {
-        assignment._id = assignment._id.insertedIds[0];
-    }
     assignment = Assignments.findOne(assignment._id);
     const shouldNotifyAssignees = (isInsert || wasPreviouslyCompleted) && !isNowCompleted;
     if (shouldNotifyAssignees) {
