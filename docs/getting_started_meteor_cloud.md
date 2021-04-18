@@ -24,4 +24,4 @@ To deploy your app to Meteor Cloud run:
 
 `METEOR_APP_NAME=your-meteor-app-name ./deploy-to-meteor-cloud`
 
-You may choose to deploy your app through other platforms than Meteor Cloud. We provide instructions for deploying your app through AWS Elastic Beanstalk Check out our [here](getting_started_elastic_beanstalk.md)**.
+You may choose to deploy your app through other platforms than Meteor Cloud. We provide instructions for deploying your app through AWS Elastic Beanstalk Check out our [here](getting_started_elastic_beanstalk.md).
