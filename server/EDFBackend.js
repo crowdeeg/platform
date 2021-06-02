@@ -21,7 +21,7 @@ const runWFDBCommand = (command, runInDirectory = '') => {
   if (EDFDir) {
     WFDBCommand = 'WFDB="' + EDFDir + '" ' + WFDBCommand;
   }
-  const output = runCommand(WFDBCommand, { maxBuffer: 1024 * 500 * 10 });
+  const output = runCommand(WFDBCommand, { maxBuffer: 2048 * 500 * 10 });
   // console.timeEnd('runWFDBCommand');
   return output;
 };
@@ -61,7 +61,24 @@ let WFDB = {
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
       const recordingDirectory = recordingPathSegments.join('/');
-      const signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
+      var reqSignals = options.channelsDisplayed.join();
+      
+      var allsignals = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v'  , recordingDirectory);
+      var signalName = allsignals.split("'seconds'");
+      allsignals = signalName[0].split(",");
+      console.log(allsignals);
+     /* signalName = [];
+      allsignals.forEach((Currsignal) => {
+        csignal = Currsignal.split("'");
+        signalName.push(csignal[1]);
+      });
+      allsignals = signalName;
+      console.log(allsignals);
+      */
+      allsignals = allsignals.filter(oneSignal => reqSignals.includes(oneSignal));
+      //console.log(allsignals);
+     // console.time(allsignals);
+      const signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + allsignals.join(' '), recordingDirectory);
       // console.time('parseRawOutput');
       let rows = dsvFormat(',').parseRows(signalRawOutput);
       const columnNames = rows[0].map((value) => {
@@ -137,25 +154,41 @@ let WFDB = {
 let isInteger = (expression) => {
   return expression == '' + parseInt(expression);
 }
+/*
+let filterName = (allSignals) => {
+  returnSignals = [];
 
+  allSignals.forEach((fixSignal) => {
+  if(fixSignal.){
+
+  }
+  });
+  return returnSignals = [];
+
+}
+*/
 let parseComputedChannelString = (computedChannelString) => {
   const parts = computedChannelString.split('=');
   const channelName = parts[0].trim();
-  const formula = parts[1].trim();
-  const formulaParts = formula.split('(');
-  let functionName;
-  let functionParameters;
   let channelKey;
-  if (formulaParts.length == 1) {
-    functionName = 'IDENTITY';
-    functionParameters = [ formulaParts[0] ];
-    channelKey = functionParameters[0];
-  }
-  else {
-    functionName = formulaParts[0];
-    functionParameters = formulaParts[1].slice(0, -1).split(',').map((parameter) => { return parameter.trim(); })
-    channelKey = functionName + '(' + functionParameters.join(',') + ')';
-  }
+  let functionParameters;
+  let functionName;
+ if(parts.length > 1 ){
+    const formula = parts[1].trim();
+    const formulaParts = formula.split('(');
+    
+    if (formulaParts.length == 1) {
+      functionName = 'IDENTITY';
+      functionParameters = [ formulaParts[0] ];
+      channelKey = functionParameters[0];
+    }
+    else {
+      functionName = formulaParts[0];
+      functionParameters = formulaParts[1].slice(0, -1).split(',').map((parameter) => { return parameter.trim(); })
+      channelKey = functionName + '(' + functionParameters.join(',') + ')';
+    }
+  
+  
   let individualChannelsRequired;
   switch (functionName) {
     case 'MEAN':
@@ -165,6 +198,13 @@ let parseComputedChannelString = (computedChannelString) => {
     default:
       throw new Meteor.Error('get.edf.data.computed.channel.unknown.function', 'Unknown function name for computed channel: ' + functionName);
       break;
+  }
+}
+  else{
+    functionName = 'IDENTITY';
+    functionParameters = [ channelName];
+    channelKey = functionParameters[0];
+    individualChannelsRequired = functionParameters;
   }
   return {
     computed: true,
@@ -193,6 +233,7 @@ let computeChannelData = (computedChannel, dataFrame, subtractionOrder) => {
       }
       return computedChannelData;
     case 'IDENTITY':
+      console.log("here");
       const channelIndex = subtractionOrder.indexOf(computedChannel.functionParameters[0]);
       const channelData = dataFrame.data[channelIndex];
       return channelData;
@@ -204,6 +245,8 @@ let computeChannelData = (computedChannel, dataFrame, subtractionOrder) => {
 
 let parseChannelsDisplayed = (channelsDisplayed) => {
   individualChannelsRequired = new Set();
+  var individualChannels= [];
+  
   let channelsDisplayedParsed = {
     subtractions: [],
   }
@@ -215,6 +258,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
       plus: undefined,
       minus: undefined,
     }
+    
     channelsDisplayedParsed.subtractions.push(subtraction);
     let operandNames = ['plus', 'minus']
     channelParts.forEach((channelPart, c) => {
@@ -225,20 +269,48 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
       if (isInteger(channelPart)) {
         subtraction[operandName] = channelPart;
         individualChannelsRequired.add(subtraction[operandName]);
+        
       }
       else {
+        
+        individualChannels = [];
+        var count = 15;
+        channelsDisplayed.forEach((myChannel) => {
+        
+          count++;
+          computedChannel = parseComputedChannelString(myChannel);
+          
+         (computedChannel.individualChannelsRequired).forEach((r) => {
+            
+            individualChannels.push(r)
+           
+          })
+        });
+/*
         computedChannel = parseComputedChannelString(channelPart);
         subtraction[operandName] = computedChannel;
-        computedChannel.individualChannelsRequired.forEach((c) => {
-          individualChannelsRequired.add(c);
+        //console.log(computedChannel.individualChannelsRequired);
+        (computedChannel.individualChannelsRequired).forEach((r) => {
+          //console.log(individualChannelsRequired);
+          if(!individualChannelsRequired.includes(c)){
+            individualChannelsRequired.push(r);
+           // individualChannelsRequired.push("Pleth");
+            //console.log(individualChannelsRequired);
+            //individualChannelsRequired.push("Snore");
+            //console.log(individualChannelsRequired);
+            individualChannelsRequired = Array.from(individualChannelsRequired);
+*/
+          }
         });
-      }
-    });
-  });
-  individualChannelsRequired = Array.from(individualChannelsRequired);
-  channelsDisplayedParsed.individualChannelsRequired = individualChannelsRequired;
+      })
+
+ 
+  
+
+  channelsDisplayedParsed.individualChannelsRequired = individualChannels;
+  
   return channelsDisplayedParsed;
-}
+};
 
 let parseWFDBMetadata = (metadata) => {
   let overallAndSignals = metadata.split('\nGroup ');

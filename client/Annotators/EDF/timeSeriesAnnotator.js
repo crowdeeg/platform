@@ -2090,24 +2090,59 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var samplingRate = input.sampling_rate;
         for (var name in input.channel_values) {
             var values = input.channel_values[name];
+            //console.log(that.vars.audioContextSampleRate);
             var offlineCtx = new OfflineAudioContext(1, values.length, that.vars.audioContextSampleRate);
             var audioBuffer = offlineCtx.createBuffer(1, values.length, offlineCtx.sampleRate);
             var scaleFactorFrequency = offlineCtx.sampleRate / samplingRate;
-            var scaleFactorAmplitude = values.map(Math.abs).reduce((a, b) => Math.max(a, b));
+            var scaleFactorAmplitude = values.map(Math.abs).reduce((a, b) => Math.max(a,b));
+            var maxIn = scaleFactorAmplitude;
+            //console.log(maxIn);
+            var thisCounting = values.reduce((a,b) => a + 1);
+            console.log(name);
+            var avg = (values.reduce((a,b) => a + b))/thisCounting;
+            avg = Math.abs(avg);
+            //console.log(avg);
+            var changeVal = values.reduce((a,b) => a + Math.abs(avg -b));
+            //console.log(changeVal);
+           
+           // console.log(name);
+         //   console.log(scaleFactorAmplitude) ;
             var valuesScaled = values;
+
+            var scaleValueChange = maxIn*scaleFactorAmplitude;
+          
             if (scaleFactorAmplitude != 0) {
-                valuesScaled = values.map(v => v / scaleFactorAmplitude);
+              //  console.log(name);
+                valuesScaled = values.map(v => v/scaleFactorAmplitude);
+               // console.log(valuesScaled);
             }
             audioBuffer.copyToChannel(valuesScaled, 0, 0);
+
+          
+            //console.log(changeVal);
+            while(changeVal > 0 && scaleValueChange > 0 && changeVal < 10000 && (scaleValueChange*10) < 500){
+                console.log(changeVal);
+                scaleFactorAmplitude = scaleFactorAmplitude*10;
+                scaleValueChange = scaleFactorAmplitude*maxIn;
+                console.log(scaleFactorAmplitude*maxIn);
+                changeVal = changeVal*7;
+            }
+         /*   
+            if(scaleValueChange > 500 ){
+                scaleValueChange = 500/maxIn;
+                scaleFactorAmplitude = scaleValueChange;
+            }
+*/
             channelAudioRepresentations[name] = {
                 buffer: audioBuffer,
                 scaleFactors: {
                     frequency: scaleFactorFrequency,
-                    amplitude: scaleFactorAmplitude,
+                    amplitude:scaleFactorAmplitude,
                 },
             };
             var numSamplesPaddedBefore = numSecondsPaddedBefore * samplingRate;
             var numSamplesDataOfInterest = Math.min(numSecondsDataOfInterest * samplingRate, values.length - numSamplesPaddedBefore);
+
             var numSamplesPaddedAfter = values.length - numSamplesPaddedBefore - numSamplesDataOfInterest;
             channelNumSamples[name] = {
                 paddedBefore: numSamplesPaddedBefore,
@@ -2115,15 +2150,20 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 paddedAfter: numSamplesPaddedAfter,
             };
         }
+       
         for (var i = 0; i < input.channel_order.length; ++i) {
             var name = input.channel_order[i];
-            var channel = {
-                name: name,
-                audio: channelAudioRepresentations[name],
-                numSamples: channelNumSamples[name],
-            }
-            channel.valuesPadded = new Float32Array(channel.audio.buffer.length - channel.numSamples.paddedBefore);
-            channels.push(channel);
+            
+            if(channelNumSamples[name]){
+                var channel = {
+                    name: name,
+                    audio: channelAudioRepresentations[name],
+                    numSamples: channelNumSamples[name],
+                }
+                channel.valuesPadded = new Float32Array(channel.audio.buffer.length - channel.numSamples.paddedBefore);
+    
+                channels.push(channel);
+        }
         }
         var output = {
             channels: channels,
@@ -2138,6 +2178,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var maxDetectableFrequencyInHz = data.sampling_rate / 2;
         var frequencyFilters = that.vars.frequencyFilters || [];
         data.channels.forEach((channel, c) => {
+            
             var staticFrequencyFilters = that._getStaticFrequencyFiltersForChannel(channel);
             var buffer = channel.audio.buffer;
             var offlineCtx = new OfflineAudioContext(1, buffer.length, that.vars.audioContextSampleRate);
@@ -2178,6 +2219,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 var scaleFactorAmplitude = channel.audio.scaleFactors.amplitude;
                 if (scaleFactorAmplitude != 0) {
                     channel.values = channel.values.map(v => v * scaleFactorAmplitude);
+                 //   console.log(buffer);
+                  //  console.log(channel.values);
                 }
                 --numRemainingChannelsToFilter;
                 if (numRemainingChannelsToFilter <= 0) {

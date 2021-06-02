@@ -22,7 +22,9 @@ const rootUser = userAccounts['ADMIN'];
 const testUser = userAccounts['TEST'];
 
 const recordingPaths = [
-    '/physionet/edfx/SC4001E0-PSG.edf'
+   //'/physionet/edfx/SC4001E0-PSG.edf',
+    '/physionet/edfx/_v210211_.edf',
+    '/physionet/edfx/200930_761428_PSGfiltered.edf'
 ];
 
 Meteor.startup(() => {
@@ -47,7 +49,7 @@ Meteor.startup(() => {
         }
     }
 
-    const taskName = 'Sleep Staging (Physionet EDFX)';
+    const taskName = 'Sleep Staging (Physionet EDFX)185';
     let task = Tasks.findOne({ name: taskName });
     let taskId;
     if (task) {
@@ -62,41 +64,156 @@ Meteor.startup(() => {
                 defaultMontage: 'Show all Signals',
                 channelsDisplayed: {
                     'Show all Signals': [
-                        '0', // EEG Fpz-Cz
-                        '1', // EEG Pz-Oz
-                        'EOG=2', // EOG horizontal
-                        'Resp=3', // Resp oro-nasal
-                        'EMG=4', // EMG submental
-                        'Temp=5', // Temp rectal
+                        "'Pleth'",
+                        "'Snore'",
+                        "'ECG'",
+                        //'Accl Pitch',
+                        //'pcg',
+//
                     ],
                     'EEG + EOG + Chin EMG': [
                         '0', // EEG Fpz-Cz
                         '1', // EEG Pz-Oz
-                        'EOG=2', // EOG horizontal
-                        'EMG=4', // EMG submental
+                        '5',
+                        //'3',
+                        //'2',
+                        //'4',
+                        //'5',
+                        //'6',
+                        //'7',
+                        //'8',
+
                     ],
+                    'PSG Annotation':[
+                        "'F4-A1'",
+                        "'C4-A1'",
+                        "'O2-A1'",
+                        "'LOC-A2'",
+                        "'ROC-A1'",
+                        "'Chin1-Chin2'",
+                        "'ECG'",
+                        "'Leg/L'",
+                        "'Leg/R'",
+                        "'Snore'",
+                        "'Airflow'",
+                        "'Nasal Pressure'",
+                        "'Thor'",
+                        "'Abdo'",
+                        "'SpO2'",
+                       
+                    ],
+                    'Anne Annotation':[
+                        "'ECG'",
+                        "'Pleth'",
+                        "'AcclPtch'",
+                        "'AcclRoll'",
+                        "'RespEffort'",
+                        "'PAT(ms)'",
+                        "'PAT_resp'",
+                        "'Snore'",
+                        "'PAT_trend'",
+                        "'HR(bpm)'",
+                        "'SpO2(%)'",
+                       "'ChestTemp'",
+                        "'LimbTemp'",
+                                            ]
+
                 },
                 channelGains: {
                     "Show all Signals": [
-                        1,
-                        1,
-                        0.8,
-                        0.10737418240000006,
-                        1009.7419586828951,
-                        2.44140625
+                        0,
+                        //1,
+                        //0.8,
+                    //    0.10737418240000006,
+                      //  1009.7419586828951,
+                        //2.44140625
+                        0.03051804379,
+                        0.03051804379,
+                        0.03051804379,
+                        0.03051804379,
+                        0.00003051804379,
+                        0.00003051804379,
+                        0.00003814755474,
+                        0.0003051804379,
+                        0.0003051804379
                     ],
                     "EEG + EOG + Chin EMG": [
                         1.5625,
                         2.44140625,
                         0.5120000000000001,
                         1009.741958682895
-                    ]
+                    ],
+                    "PSG Annotation": [
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1,
+                     1
+
+                    ],
+                    "Anne Annotation": [
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1
+   
+                       ],
+
                 },
                 staticFrequencyFiltersByDataModality: {
-                    'EEG': { highpass: 0.3, lowpass: 35 },
-                    'EOG': { highpass: 0.3, lowpass: 35 },
-                    'EMG': { highpass: 10, lowpass: 100 },
-                    'RESP': { highpass: 0.01, lowpass: 15 },
+                    "'F4-A1'": { highpass: 0.3, lowpass: 35 },
+                    "'C4-A1'": { highpass: 0.3, lowpass: 35 },
+                    "'O2-A1'": { highpass: 0.3, lowpass: 35 },
+                    "'Chin1-Chin2'": { highpass: 10, lowpass: 100 },
+                    "'LOC-O2'": { highpass: 0.3, lowpass: 35 },
+                    "'ECG'": { highpass: 0.3, lowpass: 70 },
+                    "'Leg/L'": { highpass: 10, lowpass: 100 },
+                    "'Leg/R'": { highpass: 10, lowpass: 100 },
+                    "'Snore'": { highpass: 10, lowpass: 100 },
+                    "'Airflow'": { highpass: 0.01, lowpass: 15 },
+                    'Nasal Pressure': { highpass: 0.01, lowpass: 15 },
+                    'Thor': { highpass: 0.01, lowpass: 15 },
+                    'Abdo': { highpass: 0.01, lowpass: 15 },
+
+                    "'EEG'": { highpass: 0.3, lowpass: 35 },
+                    "'EOG'": { highpass: 0.3, lowpass: 35 },
+                    "'EMG'": { highpass: 10, lowpass: 100 },
+                    "'RESP'": { highpass: 0.01, lowpass: 15 },
+                    
+                    
+                    "'A1'": { highpass: 0.3, lowpass: 35 },
+                    "'A2'": { highpass: 0.3, lowpass: 35 },
+                    
+                    
+                    "'ROC'": { highpass: 0.3, lowpass: 35 },
+                    
+                    "'Chin 2'": { highpass: 10, lowpass: 100 },
+                    
+                    
+                    
+                    
+                    
+                    
+                        //'SpO2',
                 },
                 frequencyFilters: [{
                     title: 'Notch',
@@ -120,7 +237,7 @@ Meteor.startup(() => {
                 targetSamplingRate: 32,
                 useHighPrecisionSampling: false,
                 startTime: 0,
-                windowSizeInSeconds: 30,
+                windowSizeInSeconds: 300,
                 preloadEntireRecording: false,
                 showReferenceLines: true,
                 showSleepStageButtons: true,
