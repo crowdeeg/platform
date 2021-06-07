@@ -2481,7 +2481,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     style: {
                         textOverflow: 'none',
                     },
-                    step: 5,
+                    //step is number of seconds between x-axis time labels
+                    step: that.options.windowSizeInSeconds / 6,
                     formatter: that._formatXAxisLabel,
                 },
                 tickInterval: 1,
@@ -3958,3 +3959,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     }
 
 });
+
+function xAxisLabelInterval() {
+    return that.options.windowSizeInSeconds / 6
+}

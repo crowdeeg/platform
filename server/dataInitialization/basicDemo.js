@@ -49,13 +49,17 @@ Meteor.startup(() => {
         }
     }
 
-    const taskName = 'Sleep Staging (Physionet EDFX)185';
+    const taskName = 'Sleep Staging ANNE (Physionet EDFX) 5';
     let task = Tasks.findOne({ name: taskName });
     let taskId;
     if (task) {
         taskId = task._id;
     }
     if (!task) {
+        var wsize = 30;
+        if(taskName.includes("ANNE") || taskName.includes("MUSE")){
+            wsize = 300;
+        }
         taskId = Tasks.insert({
             name: taskName,
             allowedDataTypes: ['EDF'],
@@ -237,7 +241,7 @@ Meteor.startup(() => {
                 targetSamplingRate: 32,
                 useHighPrecisionSampling: false,
                 startTime: 0,
-                windowSizeInSeconds: 300,
+                windowSizeInSeconds: wsize,
                 preloadEntireRecording: false,
                 showReferenceLines: true,
                 showSleepStageButtons: true,
