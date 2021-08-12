@@ -20,17 +20,18 @@ const userAccounts = {
 }
 const rootUser = userAccounts['ADMIN'];
 const testUser = userAccounts['TEST'];
-
+console.log("here");
 const recordingPaths = [
    //'/physionet/edfx/SC4001E0-PSG.edf',
-    '/physionet/edfx/_v210211_.edf',
-    '/physionet/edfx/200930_761428_PSGfiltered.edf'
+   // '/physionet/edfx/200930_761428_ANNE.edf',
+   // '/physionet/edfx/200930_761428_PSGfiltered.edf'
 ];
 
 Meteor.startup(() => {
     for (let userName in userAccounts) {
         const user = userAccounts[userName];
         const userDoc = Accounts.findUserByEmail(user.email);
+        
         if (userDoc) {
             user._id = userDoc._id;
         }
@@ -49,14 +50,15 @@ Meteor.startup(() => {
         }
     }
 
-    const taskName = 'Sleep Staging ANNE (Physionet EDFX) 5';
+    const taskName = 'Sleep Staging (Physionet EDFX)24';
+    
     let task = Tasks.findOne({ name: taskName });
     let taskId;
     if (task) {
         taskId = task._id;
     }
     if (!task) {
-        var wsize = 30;
+        var wsize = 30;	
         if(taskName.includes("ANNE") || taskName.includes("MUSE")){
             wsize = 300;
         }
@@ -65,12 +67,21 @@ Meteor.startup(() => {
             allowedDataTypes: ['EDF'],
             annotator: 'EDF',
             annotatorConfig: {
-                defaultMontage: 'Show all Signals',
+                defaultMontage: 'PSG Annotation',
                 channelsDisplayed: {
                     'Show all Signals': [
-                        "'Pleth'",
+                       // "'Pleth'",
                         "'Snore'",
+                        "'Nasal Pressure'",
+                        "'Thor'",
                         "'ECG'",
+                        "'F4-A1'",
+                        "'C4-A1'",
+                        "'ECG'",
+                        "'Leg/L'",
+                        "'Airflow'",
+                       
+                        
                         //'Accl Pitch',
                         //'pcg',
 //
@@ -94,7 +105,7 @@ Meteor.startup(() => {
                         "'O2-A1'",
                         "'LOC-A2'",
                         "'ROC-A1'",
-                        "'Chin1-Chin2'",
+                        "'Chin 1-Chin 2'",
                         "'ECG'",
                         "'Leg/L'",
                         "'Leg/R'",
@@ -109,17 +120,20 @@ Meteor.startup(() => {
                     'Anne Annotation':[
                         "'ECG'",
                         "'Pleth'",
-                        "'AcclPtch'",
-                        "'AcclRoll'",
-                        "'RespEffort'",
+                        "'Accl Pitch'",
+                        "'Accl Roll'",
+                        "'Resp Effort'",
                         "'PAT(ms)'",
-                        "'PAT_resp'",
+                        "'PR(bpm)'",
+                        //"'PAT_resp'",
                         "'Snore'",
-                        "'PAT_trend'",
+                        //"'PAT_trend'",
+                        "'PI(%)'",
                         "'HR(bpm)'",
+                        "'RR(rpm)'",
                         "'SpO2(%)'",
-                       "'ChestTemp'",
-                        "'LimbTemp'",
+                       "'Chest Temp(A C)'",
+                        "'Limb Temp(A C)'",
                                             ]
 
                 },
@@ -256,7 +270,7 @@ Meteor.startup(() => {
                     enableMouseTracking: true,
                 },
                 features: {
-                    order: [],
+                    order: ['sleep_spindle', 'k_complex', 'rem', 'vertex_wave'],
                     options: {}
                 }
             }
@@ -328,6 +342,7 @@ Meteor.startup(() => {
                 task: taskId,
                 data: data._id,
                 status: 'Pending',
+                channelsDelayed: '',
             });
             console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + data.name + '" (' + assignmentId + ')');
         }

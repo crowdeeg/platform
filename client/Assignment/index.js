@@ -228,6 +228,7 @@ Template.Assignment.events({
             }
             annotationId = annotation._id;
             template.incrementNumPendingItemsToSave();
+            console.log("here");
             Annotations.update({ _id: annotationId }, { $set: annotationDocument }, (error, _) => {
                 if (!error) {
                     template.decrementNumPendingItemsToSave();
