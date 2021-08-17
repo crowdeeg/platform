@@ -23,8 +23,8 @@ const testUser = userAccounts['TEST'];
 console.log("here");
 const recordingPaths = [
    //'/physionet/edfx/SC4001E0-PSG.edf',
-   // '/physionet/edfx/200930_761428_ANNE.edf',
-   // '/physionet/edfx/200930_761428_PSGfiltered.edf'
+    '/physionet/edfx/200930_761428_ANNE.edf',
+    '/physionet/edfx/200930_761428_PSGfiltered.edf'
 ];
 
 Meteor.startup(() => {

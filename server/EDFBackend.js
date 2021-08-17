@@ -437,7 +437,6 @@ Meteor.methods({
         //console.log(startTime);
        // console.log(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]);
         if(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]){
-          console.log("here");
              
           startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
           //atLeast1 = 0;
@@ -459,7 +458,7 @@ Meteor.methods({
         //console.log(dataFrame);
        // console.log(channel);
        //console.log(dataFrame);
-        if(atLeast1 == 0|| !dataFrame ||dataFrame.size == 0 || dataFrame.length == 0 || dataFrame == {}){
+        if(atLeast1 == 0|| !dataFrame ||dataFrame.size == 0 || dataFrame.length == 0 || dataFrame == {} || !dataFrame.channelNames){
          // console.log("yes1");
           dataFrame = currDataframe;
           dataFrame.channelNames = currDataframe.channelNames;

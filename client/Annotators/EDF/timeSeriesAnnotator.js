@@ -380,6 +380,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             specifiedTrainingWindows: undefined,
             requiredName:"",
             valueOptions: 0,
+            allChannels: undefined,
             currType: "",
             increaseOnce: 0,
             oldIndex: -1,
@@ -2919,16 +2920,13 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                             return null;
                         };
                         var index = that._getChannelIndexFromY(this.value);
+                        that.vars.allChannels = channels;
                         var channel = channels[index];
                        
-                        //console.log(channel.name);
-
-                        //var fcaller = that._myFunction();
                         that.vars.popUpActive = 1;
-                        //console.log(channels[index]);
+                        
                         var html = '<div class="popup"><span class="channel-label" id="channel-' + index + '" data-index="' + index + '">' + channel.name + ' <span class="popuptext" id="myPopup-'+index + '">'+ channel.name + ": " +'<button class="popupbutton" id="increase-'+index+'">Increase Amplitude</button> <button class="popupbutton" id="decrease-'+index+'">Decrease Amplitude</button> <button class="popupbutton" id="default-'+index+'">Default</button></span></span></div>' 
-                        //console.log(html);
-                        that._changeAmplitude(index, channels);
+                       
                         return html;
                     },
                     
@@ -2964,45 +2962,46 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     var cid = "channel-" + index;
     //console.log(channel.name)
     //console.log(cid);
-    console.log("here");
-    var toggler = $("#channel-"+(index+1)).on('click', (evt) => {
+   
+    //var toggler = $("#channel-"+(index)).on('click', (evt) => {
         
         //console.log("button clicked");
         //console.log($('.popup').id);
    // $(this).hide();
      //addClass('<button>click me</button>');
-     //console.log("inside");
+    // console.log("inside");
      //console.log(channel.name);
-    console.log(index);
+    //console.log(index);
     var checker = that.vars.oldIndex;
     if(checker > -1){
-      
-        $("#increase-"+(checker+1)).css("visibility", "hidden");
-        $("#decrease-"+(checker+1)).css("visibility", "hidden");
-        $("#default-"+(checker+1)).css("visibility", "hidden");
+     // console.log(checker);
+        $("#increase-"+(checker)).css("visibility", "hidden");
+        $("#decrease-"+(checker)).css("visibility", "hidden");
+        $("#default-"+(checker)).css("visibility", "hidden");
      
-        $("#myPopup-"+(checker+1)).css("visibility", "hidden");
+        $("#myPopup-"+(checker)).css("visibility", "hidden");
         that.vars.oldIndex = -1;
         //that._reloadCurrentWindow();
         //console.log("here");
     }
-   var channel = channels[index + 1];
+   var channel = channels[index];
+   //console.log(channel);
     check = that.vars.popUpActive;
     
-    console.log(that.vars.popUpActive)
+   // console.log(that.vars.popUpActive)
     if(check == 1 ){
-        console.log("here as well");
-        $("#myPopup-"+(index+1)).css("visibility", "visible");
+        //console.log("here as well");
+        $("#myPopup-"+(index)).css("visibility", "visible");
         
-        $("#increase-"+(index+1)).css("visibility", "visible");
-        $("#decrease-"+(index+1)).css("visibility", "visible");
-        $("#default-"+(index+1)).css("visibility", "visible");
+        $("#increase-"+(index)).css("visibility", "visible");
+        $("#decrease-"+(index)).css("visibility", "visible");
+        $("#default-"+(index)).css("visibility", "visible");
        
       //  console.log("inside it")
      }
      that.vars.popUpActive = 2;
      that.vars.oldIndex =index;
-     var increaser = $("#increase-"+(index+1)).on('click', (evt) => {
+     var increaser = $("#increase-"+(index)).on('click', (evt) => {
        //  console.log()
        
         name = channel.name;
@@ -3024,7 +3023,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 //console.log(increase);
   });
   
-  var decreaser = $("#decrease-"+(index+1)).on('click', (evt) => {
+  var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
     //  console.log()
      name = channel.name;
     // console.log(name);
@@ -3043,7 +3042,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
 //console.log(increase);
 });
-var defaulter = $("#default-"+(index+1)).on('click', (evt) => {
+var defaulter = $("#default-"+(index)).on('click', (evt) => {
     //  console.log()
     name = channel.name;
     // console.log(name);
@@ -3067,8 +3066,8 @@ var defaulter = $("#default-"+(index+1)).on('click', (evt) => {
     //document.getElementById("myPopup-"+index).classList.toggle("show");
     //console.log(index);
      //addClass('<button>click me</button>');
-    })
-    
+  //  })
+    //console.log(toggler);
    /* toggler.addEvent(function(){
         var popup = document.getElementById("myPopup");
         popup.classList.toggle("show");
@@ -3777,7 +3776,7 @@ that.vars.chart.addAnnotation({
 });
 var annotation = annotations[annotations.length - 1];
 if (!preliminary) {
-    console.log("inside this");
+   // console.log("inside this");
     var classString = $(annotation.group.element).attr('class');
     classString += ' saved';
     $(annotation.group.element).attr('class', classString);
@@ -3793,7 +3792,7 @@ annotation.metadata = {
     comment: ''
 }
 
-console.log(annotation);
+//console.log(annotation);
 if (!preliminary) {
     //annotation.metadata.confidence = confidence;
     annotation.metadata.comment = comment;
@@ -3815,15 +3814,15 @@ if (!that.options.isReadOnly && !annotationData.is_answer) {
 
 }
 
-console.log("postTimeOut")
-console.log(annotation);
+//console.log("postTimeOut")
+//console.log(annotation);
 return annotation;
     },
 _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType, timeEnd, confidence, comment, annotationData) {
         var that = this;
        // console.log("anotater");
         var annotations = that.vars.chart.annotations.allItems;
-        console.log(annotations);
+        //console.log(annotations);
         if (!Array.isArray(channelIndices)) {
             channelIndices = [channelIndices];
         }
@@ -3897,7 +3896,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
             }
         });
         
-        console.log(that.vars.chart);
+       
         
         var annotation = annotations[annotations.length - 1];
         if (!preliminary) {
@@ -4367,7 +4366,9 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         var that = this;
         $(that.element).find('.channel-label').click(function(event) {
             var index = $(this).data('index');
+            
             that._selectChannel(index);
+            that._changeAmplitude(index, that.vars.allChannels);
         });
     },
 
@@ -4378,6 +4379,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         $(that.element).find('.gain-button').prop('disabled', false);
         if (index !== undefined) {
             $(that.element).find('.channel-label[data-index="' + index + '"]').addClass('selected');
+            
         }
     },
 
@@ -4746,7 +4748,6 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
 
         
         assign = assigns[0];
-        console.log(assign);
         //console.log(assign.getchannelsDelayedAmount());
      //   console.log(assign.channelsDelayed);
         if(assign.channelsDelayed){
@@ -4787,7 +4788,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
 
         
         assign = assigns[0];
-        console.log(assign);
+       
         return assign;
 
     },
@@ -4804,7 +4805,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         
         assign = that._getCurrAssignment();
         //assigns[0];
-       console.log(assign);
+       
        // console.log(assign);
         var delayString ="";
         that.vars.delayAmount.forEach( channelAmount =>{
@@ -5140,13 +5141,9 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
             channelIndicesMapped.sort().reverse().forEach((channelIndexMapped) => {
                // console.log("inside thids")
                //console.log(channelIndexMapped);
-              console.log(end_time);
-              console.log(annotationId);
+             
                if(!end_time){
-                    console.log("inside changePoint");
-                    console.log(that.vars.activeFeatureType);
-                    console.log(start_time);
-                    console.log(that.vars.activeFeatureType);
+                   
                     annotation = that._addAnnotationChangePoint(annotationId, start_time, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,], that.vars.activeFeatureType);
                     annotation.update({
                         
