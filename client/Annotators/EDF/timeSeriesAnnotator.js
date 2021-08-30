@@ -2940,7 +2940,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             },
             series: that._initSeries(data),
             annotationsOptions: {
-                enabledButtons: true,
+                enabledButtons: false,
             },
             
         });
