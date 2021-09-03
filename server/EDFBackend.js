@@ -40,6 +40,7 @@ let WFDB = {
       throw new Meteor.Error('wfdb.wfdbdesc.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
     try {
+      
       const recordingPathSegments = recordingFilePath.split('/');
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
@@ -53,6 +54,7 @@ let WFDB = {
   rdsamp (options) {
     // console.log("rdsamp started");
     const isCallFromClient = !!this.connection;
+   
     if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
       throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
@@ -60,7 +62,8 @@ let WFDB = {
     try {
       // console.log("try");
       const useHighPrecisionSamplingString = options.useHighPrecisionSampling ? ' -P' : ' -p';
-      const recordingPathSegments = options.recordingName.split('/');
+      console.log(recordingName);
+      const recordingPathSegments = [options.recordingName]//split('/');
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
       const recordingDirectory = recordingPathSegments.join('/');
@@ -315,6 +318,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
   let channelsDisplayedParsed = {
     subtractions: [],
   }
+  
   channelsDisplayed.forEach((channel) => {
     const channelString = '' + channel;
     const channelParts = channelString.split('-');
@@ -351,20 +355,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
            
           })
         });
-/*
-        computedChannel = parseComputedChannelString(channelPart);
-        subtraction[operandName] = computedChannel;
-        //console.log(computedChannel.individualChannelsRequired);
-        (computedChannel.individualChannelsRequired).forEach((r) => {
-          //console.log(individualChannelsRequired);
-          if(!individualChannelsRequired.includes(c)){
-            individualChannelsRequired.push(r);
-           // individualChannelsRequired.push("Pleth");
-            //console.log(individualChannelsRequired);
-            //individualChannelsRequired.push("Snore");
-            //console.log(individualChannelsRequired);
-            individualChannelsRequired = Array.from(individualChannelsRequired);
-*/
+
           }
         });
       })
@@ -460,21 +451,26 @@ Meteor.methods({
   'get.edf.metadata' (recordingName) {
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
   },
-  'get.edf.data' (options) {
+  'get.edf.data' (options, options2) {
     // console.time('get.edf.data');
     options = options || {};
+    options2 = options2 || {};
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
     let count = 0;
     let channelsDisplayed = options.channels_displayed;
+    let channelsDisplayed2 = options.channels_displayed;
     let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
+    let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
     let channelsDelayed = options.channelsDelayed;
     let recordingName = options.recording_name;
+    let recordingName2 = options2.recording_name;
     let targetSamplingRate = options.target_sampling_rate;
     let useHighPrecisionSampling = options.use_high_precision_sampling;
     let delayExists = options.delayExists;
     let atLeast1 = 0;
     let dataFrame = {};
+    let dataFrame2 = {}
  
     if(channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length > 0 ){
 
@@ -489,23 +485,19 @@ Meteor.methods({
         
       let currParsed = {};
       let delayedTime = 0;
-    //  console.log(channelsDelayed.channelNames);
+    
       
       channelsDelayed.channelNames.forEach(channel => {
-       // console.log(channel);
+      
         currParsed = parseChannelsDisplayed([channel]);
         
-        //console.log(startTime);
-       // console.log(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]);
+        
         if(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]){
              
           startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
-          //atLeast1 = 0;
+          
         }
       
-       // console.log(startTime);
-       // console.log(delayedTime);
-       //console.log(currParsed.individualChannelsRequired);
         currDataframe = WFDB.rdsamp({
           recordingName,
           startTime,
@@ -515,39 +507,32 @@ Meteor.methods({
           useHighPrecisionSampling,
         });
        
-        //console.log("dataframe");
-        //console.log(dataFrame);
-       // console.log(channel);
-       //console.log(dataFrame);
+     
         if(atLeast1 == 0|| !dataFrame ||dataFrame.size == 0 || dataFrame.length == 0 || dataFrame == {} || !dataFrame.channelNames){
-         // console.log("yes1");
+      
           dataFrame = currDataframe;
           dataFrame.channelNames = currDataframe.channelNames;
           dataFrame.data = currDataframe.data;
           atLeast1 = 1;
         }
         else{
-       //   console.log("not1");
-        //console.log(dataFrame);
+      
         dataFrame.channelNames.push(currDataframe.channelNames[0]);
-       // console.log(dataFrame.channelNames);
+       
         dataFrame.data.push(currDataframe.data[0]);
-       // console.log(dataFrame);
-       // dataFrame.channelsDisplayed.extend(currDataframe.channelsDisplayed);
-        
-        //console.log(currDataframe);
+       
         }
         startTime = sTime;
-        //console.log(count);
+        
         count++;
       } )
     
-      console.log("enddataFrame");
+      
     }
 
       
       else{
-       // console.log("notDelayed");
+       
         dataFrame = WFDB.rdsamp({
         recordingName,
         startTime,
@@ -556,7 +541,7 @@ Meteor.methods({
         targetSamplingRate,
         useHighPrecisionSampling,
       });
-      //console.log(dataFrame);
+     
       let currParsed = {};
       let delayedTime = 0;
       channelsDelayed.channelNames.forEach(channel => {
@@ -564,7 +549,7 @@ Meteor.methods({
         
 
         startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
-       // console.log("delayedTime");
+      
         currDataframe = WFDB.rdsamp({
           recordingName,
           startTime,
@@ -575,13 +560,12 @@ Meteor.methods({
         });
         dataFrame.channelNames.push(currDataframe.channelNames[0]);
         dataFrame.data.push(currDataframe.data[0]);
-       // dataFrame.channelsDisplayed.extend(currDataframe.channelsDisplayed);
+      
         startTime = sTime;
-        //console.log(currDataframe);
+    
       } )
       
-     // console.log("we are here");
-      //console.log(dataFrame);
+
     }
     }
     else {
@@ -594,6 +578,27 @@ Meteor.methods({
       targetSamplingRate,
       useHighPrecisionSampling,
     });
+
+    let temprName = recordingName;
+    recordingName = tempName;
+    dataFrame2 = WFDB.rdsamp({
+      recordingName,
+      startTime,
+      windowLength,
+      channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
+      targetSamplingRate,
+      useHighPrecisionSampling,
+    });
+    dataFrame2.channelNames.forEach( channel => {
+      dataFrame.channelNames.push(channel);
+    })
+   
+       
+    dataFrame2.data.forEach( dataSet => {
+      dataFrame.data.push(dataSet);
+    })
+   dataFrame.numSamples = dataFrame.numSamples + dataFrame2.numSamples;
+   recordingName =temprName
   };
     if (dataFrame.numSamples == 0) {
       return {};
@@ -601,7 +606,7 @@ Meteor.methods({
     // console.time('computeSubtractions');
     let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired.slice();
     let channelNames = dataFrame.channelNames;
-    //console.log(channelNames);
+
     channelsDisplayedParsed.subtractions.forEach((subtraction) => {
       if (subtractionOrder.indexOf(subtraction.key) > -1) {
         return;
@@ -684,7 +689,7 @@ Meteor.methods({
     dataFrame.channelNames.forEach((channelName, c) => {
       dataDict[channelName] = dataFrame.data[c];
     });
-    //console.log(dataFrame.channelNames);
+
     return {
       channel_order: dataFrame.channelNames,
       sampling_rate: dataFrame.samplingRate,
