@@ -12,3 +12,7 @@ Dockerfile.local
 
 edf_files/
 **/.DS_Store
+
+# VSCode Files
+.vscode/*
+jsconfig.json
