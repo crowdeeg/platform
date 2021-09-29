@@ -21,6 +21,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         showConfirmationCode: false,
         confirmationCode: undefined,
         recordingName: undefined,
+        allRecordings: undefined,
         defaultMontage: undefined,
         channelsDisplayed: [0, 1, 2, 3, 4, 6, 7],
         channelGains: undefined,
@@ -394,7 +395,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         else {
             var recordingNameFromGetParameter = that._getUrlParameter('recording_name');
             if (recordingNameFromGetParameter) {
-                that.options.recordingName = recordingNameFromGetParameter;
+                that.options.allRecordings = [recordingNameFromGetParameter];
             }
             that._setup();
         }
@@ -1032,7 +1033,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var firstExample = examples[0];
         var recordingName = firstExample.recording;
         var channelsDisplayed = [firstExample.channels_displayed[firstExample.channels]];
-        that.options.recordingName = recordingName;
+        that.options.allRecordings = [recordingName];
         that.options.channelsDisplayed = channelsDisplayed;
         that.options.graph.height = 200;
         that.options.features.showUserAnnotations = false;
@@ -1152,7 +1153,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             var example = that.options.features.examples[that.vars.currentExampleIndex];
             var nextWindowStart = that._getWindowStartForTime(example.start);
         } while (nextWindowStart == that.vars.currentWindowStart);
-        that._switchToWindow(that.options.recordingName, nextWindowStart, that.vars.xAxisScaleInSeconds);
+        that._switchToWindow(that.options.allRecordings, nextWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
     _getMontages: function() {
@@ -1179,6 +1180,23 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             return that.options.channelsDisplayed[that.options.defaultMontage];
         }
         return that.options.channelsDisplayed[that._getMontages()[0]];
+    },
+
+    _getMontageNameFromRecording: function(name) {
+        var that = this; 
+        var parts = name.split("/");
+        var fileName = parts[parts.length - 1];
+        console.log(fileName);
+        if (fileName.indexOf("PSG") > -1 || fileName.indexOf("Psg") > -1 || fileName.indexOf("psg") > -1 ){
+         
+            return "PSG Annotation"
+        }
+        else if(fileName.indexOf("ANNE") > -1 || fileName.indexOf("Anne") > -1 || fileName.indexOf("anne") > -1){
+            
+            return "Anne Annotation"
+
+        }
+
     },
 
     _dealyChannel: function(channelName, amount){
@@ -1246,13 +1264,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._setupArbitration();
         that._setupDownsampledRecording(() => {
             that._getRecordingMetadata(function(metadata) {
+            console.log("metadata", metadata);
                 that.vars.recordingMetadata = metadata;
                 if (that.options.preloadEntireRecording) {
+                    console.log("preloadEntireRecording", that.options.preloadEntireRecording);
                     that._preloadEntireRecording(function() {
                         that._getUserStatus();
                     });
-                }
-                else {
+                } else {
                     that._getUserStatus();
                 }
             });
@@ -1393,13 +1412,16 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             select.append('<option value="' + montage + '"' + selectedString + '>' + montage + '</option>');
         });
         select.material_select();
+        console.log("_setupMontageSelector before change");
         select.change(function() {
+            console.log("_setupMontageSelector onchange");
             that.vars.currentMontage = select.val();
             that._savePreferences({
                 defaultMontage: that.vars.currentMontage,
             })
             that._reinitChart();
         });
+        console.log("Finish _setupMontageSelector function");
     },
 
     _setupFrequencyFilterSelector: function() {
@@ -1422,6 +1444,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             });
             select.material_select();
             select.change(function() {
+                console.log("freqFilter onchange");
                 filterSettings.forEach(function(filterSetting) {
                     delete filterSetting.default;
                 });
@@ -1431,6 +1454,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 })
                 that.vars.frequencyFilters[f].selectedValue = select.val();
                 that._reloadCurrentWindow();
+                console.log("freqFilter here");
             });
             select.change();
         });
@@ -1680,11 +1704,12 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
         }
         updateLoadingProgress();
+        console.log("channelsDisplayedPerMontage:", channelsDisplayedPerMontage);
         channelsDisplayedPerMontage.forEach(function(channelsDisplayed, m) {
             for (var i = 0; i < numWindowsToRequestPerMontage; ++i) {
                 var startTime = i * that.vars.xAxisScaleInSeconds;
                 var options = {
-                    recording_name: that.options.recordingName,
+                    recording_name: that.options.allRecordings[0],
                     channels_displayed: channelsDisplayed,
                     start_time: i * that.vars.xAxisScaleInSeconds + 90,
                     window_length: that.vars.xAxisScaleInSeconds,
@@ -1710,7 +1735,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             callback(that.vars.recordingMetadata);
             return;
         }
-        Meteor.call('get.edf.metadata', that.options.recordingName, function(error, metadata) {
+        Meteor.call('get.edf.metadata', that.options.allRecordings[0], function(error, metadata) {
             if (error) {
                 callback(null, error.message);
                 return;
@@ -1732,31 +1757,35 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         //that._getDelay();
         //that._setDelay();
         that._setupMontageSelector();
-       
+        console.log("Finish _setupMontageSelector");
         that._setupFrequencyFilterSelector();
         console.log("Finish _setupFrequencyFilterSelector");
         that._setupXAxisScaleSelector();
         console.log("Finish _setupXAxisScaleSelector");
         that._setupAnnotationChoice();
+        console.log("Finish _setupAnnotationChoice");
         that._setupAnnotationDisplayType();
         console.log("Finish _setupAnnotationDisplayType");
        
         
-        
+        console.log("before ifs");
         if (that.options.experiment.running) {
+            console.log("that.options.experiment.running");
             that._updateNavigationStatusForExperiment();
             var currentWindowIndex = that.options.experiment.current_condition.current_window_index;
             var conditionWindows = that.options.experiment.current_condition.windows;
-            that.options.recordingName = that.options.experiment.current_condition.recording_name;
+            that.options.allRecordings = [that.options.experiment.current_condition.recording_name];
             var initialWindowStart = conditionWindows[currentWindowIndex];
             that.vars.lastActiveWindowStart = initialWindowStart;
-            that._switchToWindow(that.options.recordingName, initialWindowStart, that.vars.xAxisScaleInSeconds);
+            that._switchToWindow(that.options.allRecordings, initialWindowStart, that.vars.xAxisScaleInSeconds);
         }
         else if (that._areTrainingWindowsSpecified()) {
+            console.log("that._areTrainingWindowsSpecified")
             var trainingWindow = that._getCurrentTrainingWindow();
-            that._switchToWindow(trainingWindow.recordingName, trainingWindow.timeStart, trainingWindow.windowSizeInSeconds);
+            that._switchToWindow(trainingWindow.allRecordings, trainingWindow.timeStart, trainingWindow.windowSizeInSeconds);
         }
-        else if (that.options.recordingName) {
+        else if (that.options.allRecordings[0]) {
+            console.log("that.options.allRecordings")
             that.vars.lastActiveWindowStart = + that.options.startTime;
             const context = that.options.context;
             const preferencesArbitrationRoundNumber = !!context.preferences.arbitrationRoundNumber ? context.preferences.arbitrationRoundNumber : 0;
@@ -1770,7 +1799,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     that.vars.lastActiveWindowStart = that.options.startTime;
                 }
             }
-            that._switchToWindow(that.options.recordingName, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
+            that._switchToWindow(that.options.allRecordings, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
         }
         else {
             alert('Could not retrieve user data.');
@@ -2115,7 +2144,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (!that.vars.fastForwardEnabled && windows >= that.options.windowJumpSizeFastForwardBackward) return;
         if (!that.vars.backwardEnabled && windows <= -1) return;
         if (!that.vars.fastBackwardEnabled && windows <= -that.options.windowJumpSizeFastForwardBackward) return;
-        var nextRecordingName = that.options.recordingName;
+        var nextRecordingName = that.options.allRecordings;
         var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
         var nextWindowStart = that.options.currentWindowStart;
         if (that.options.experiment.running) {
@@ -2132,7 +2161,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that.vars.currentTrainingWindowIndex += windows;
             if (that._isCurrentWindowTrainingWindow()) {
                 var nextTrainingWindow = that._getCurrentTrainingWindow();
-                nextRecordingName = nextTrainingWindow.recordingName;
+                nextRecordingName = [nextTrainingWindow.recordingName]; // need to be fixed with multi recoding loaded
                 nextWindowStart = nextTrainingWindow.timeStart;
                 nextWindowSizeInSeconds = nextTrainingWindow.windowSizeInSeconds;
             }
@@ -2151,11 +2180,13 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._switchToWindow(nextRecordingName, nextWindowStart, nextWindowSizeInSeconds);
     },
 
-    _switchToWindow: function (recording_name, start_time, window_length) {
+    _switchToWindow: function (recording_names, start_time, window_length) {
         var that = this;
         console.log("_switchToWindow.that:", that);
         if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
+            console.log("0");
             if (that.options.visibleRegion.start !== undefined) {
+                console.log("0-1");
                 start_time = Math.max(that.options.visibleRegion.start, start_time );
                 start_time = window_length * Math.ceil(start_time / window_length);
                 that._setBackwardEnabledStatus(start_time - window_length >= that.options.visibleRegion.start);
@@ -2163,11 +2194,13 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
 
             if (that.options.visibleRegion.end !== undefined) {
+                console.log("0-2");
                 start_time = Math.min(that.options.visibleRegion.end - window_length, start_time);
                 start_time = window_length * Math.floor(start_time / window_length);
                 var forwardEnabled = start_time + window_length <= that.options.visibleRegion.end - window_length;
                 that._setForwardEnabledStatus(forwardEnabled);
                 if (!forwardEnabled) {
+                    console.log("0-2-1");
                     that._lastWindowReached();
                 }
                 that._setFastForwardEnabledStatus(start_time + window_length * that.options.windowJumpSizeFastForwardBackward < that.options.visibleRegion.end - window_length);
@@ -2175,23 +2208,27 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
 
         if (that.vars.currentWindowStart != start_time) {
+            console.log("1");
             that._setNumberOfAnnotationsInCurrentWindow(0);
         }
 
         that.vars.currentWindowStart = start_time;
-        that.vars.currentWindowRecording = recording_name;
+        that.vars.currentWindowRecording = recording_names[0];
         that._updateJumpToClosestDisagreementWindowButtonsEnabledStatus();
 
         if (that._isVisibleRegionDefined()) {
+            console.log("2");
             var progress = that._getProgressInPercent();
             $(that.element).find('.progress-bar').css('width', progress + '%');
         }
 
         if (that._isCurrentWindowLastTrainingWindow() && that._isTrainingOnly()) {
+            console.log("3");
             that._lastWindowReached();
         }
 
         if (that._isCurrentWindowFirstTrainingWindow() && !that._isTrainingOnly()) {
+            console.log("4");
             bootbox.alert({
                 closeButton: false,
                 title: 'Beginning of the Training Phase',
@@ -2202,6 +2239,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }).css({zIndex: 1}).appendTo(that.element);
         }
         else {
+            console.log("4-1");
             that._saveUserEventWindowBegin();
         }
 
@@ -2214,6 +2252,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             !that._isCurrentWindowSpecifiedTrainingWindow()
             && !that.options.experiment.running
         ) {
+            console.log("5");
             for (var i = 1; i <= that.options.numberOfForwardWindowsToPrefetch; ++i) {
                 windowsToRequest.push(start_time + i * window_length);
             }
@@ -2232,13 +2271,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         //that._setDelay(assign);
         //console.log(that.vars.delayAmount);
         windowsToRequest.forEach((windowStartTime) => {
+            console.log("6, windowStartTime:", windowStartTime);
             channelsDelayed = {
                 channelNames: that.vars.channelsDealyedNames,
                 delayAmount: that.vars.delayAmount,
             }
             var options = {
-                recording_name: recording_name,
-                channels_displayed: that._getChannelsDisplayed(),
+                recording_name: recording_names[0],
+                channels_displayed: that._getChannelsDisplayed(that._getMontageNameFromRecording(recording_names[0])),
                 start_time: windowStartTime,
                 delayExists: that.vars.delayExists,
                 channelsDelayed: channelsDelayed,
@@ -2246,9 +2286,18 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 target_sampling_rate: that.options.targetSamplingRate,
                 use_high_precision_sampling: that.options.useHighPrecisionSampling,
             };
-           
-            that._requestData(options, (data, errorData) => {
-                console.log("_requestData");
+            var options2 = {
+                recording_name: recording_names[1],
+                channels_displayed: that._getChannelsDisplayed(that._getMontageNameFromRecording(recording_names[1])),
+                start_time: windowStartTime,
+                delayExists: that.vars.delayExists,
+                channelsDelayed: channelsDelayed,
+                window_length: window_length,
+                target_sampling_rate: that.options.targetSamplingRate,
+                use_high_precision_sampling: that.options.useHighPrecisionSampling,
+            };
+            that._requestData(options, options2, (data, errorData) => {
+                console.log("7, data:", data);
                 var windowAvailable = !errorData;
                 if (windowAvailable && windowStartTime == that.vars.currentWindowStart) {
                     that._applyFrequencyFilters(data, (dataFiltered) => {
@@ -2293,7 +2342,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             console.error('Cannot jump to epoch with start time', epochStartTimeInSeconds);
             return;
         }
-        that._switchToWindow(that.options.recordingName, epochStartTimeInSeconds, that.vars.xAxisScaleInSeconds);
+        that._switchToWindow(that.options.allRecordings, epochStartTimeInSeconds, that.vars.xAxisScaleInSeconds);
     },
 
     getCurrentWindowStartReactive: function() {
@@ -2302,8 +2351,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _reloadCurrentWindow: function() {
+        console.log("_reloadCurrentWindow");
         var that = this;
-        that._switchToWindow(that.options.recordingName, that.vars.currentWindowStart, that.vars.xAxisScaleInSeconds);
+        that._switchToWindow(that.options.allRecordings, that.vars.currentWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
     _reinitChart: function() {
@@ -2314,6 +2364,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that.vars.chart = undefined;
         that.vars.annotationsLoaded = false;
         that.vars.annotationsCache = {};
+        console.log("_reinitChart");
         that._reloadCurrentWindow();
     },
 
@@ -2341,31 +2392,36 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var that = this;
         if (!that.vars.lastActiveWindowStart) {
             that.vars.lastActiveWindowStart = 0;
-        }        that._switchToWindow(that.options.recordingName, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
-
+        }
+        that._switchToWindow(that.options.allRecordings, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
-    _requestData: function(options, callback) {
+    _requestData: function(options, options2, callback) {
         
         var that = this;
+        // identifierKey includes:
+        // 'recording_name'
+        // 'start_time'
+        // 'window_length'
+        // 'channels_displayed'
         var identifierKey = that._getIdentifierKeyForDataRequest(options);
-        
+        console.log("identifierKey", identifierKey);
         var noDataError = 'No data available for window with options ' + JSON.stringify(options);
 
        // console.log(options.start_time);
        // console.log(that.vars.recordingMetadata.LengthInSeconds);
         if (options.start_time < 0) {
             that.vars.windowsCache[identifierKey] = false;
-            //console.log("1");
+            console.log("options.start_time < 0");
         }
         else if (options.start_time > that.vars.recordingMetadata.LengthInSeconds) {
             that.vars.windowsCache[identifierKey] = false;
-           // console.log("2");
+            console.log("options.start_time > that.vars.recordingMetadata.LengthInSeconds");
         }
-      //  console.log(that.vars.windowsCache[identifierKey]);
+        // console.log(that.vars.windowsCache[identifierKey]);
         if (that.vars.windowsCache[identifierKey] === false) {
             if (callback) {
-               // console.log("3");
+                console.log("that.vars.windowsCache[identifierKey] === false");
                 
                 callback(null, noDataError);
                 
@@ -2375,6 +2431,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
         
         var reprint = that.vars.reprint;
+        console.log("reprint", reprint);
         if(that.vars.timeChange == true ){
             that.vars.timeChange = false;
         } 
@@ -2386,28 +2443,33 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 }
                 return;
             }
-    }
+        }
         const numSecondsToPadBeforeAndAfter = 2;
         
         const optionsPadded = JSON.parse(JSON.stringify(options));
+        const optionsPadded2 = JSON.parse(JSON.stringify(options2));
     
         optionsPadded.start_time -= numSecondsToPadBeforeAndAfter;
+        optionsPadded2.start_time -= numSecondsToPadBeforeAndAfter;
        
         optionsPadded.start_time = Math.max(0, optionsPadded.start_time);
+        optionsPadded2.start_time = Math.max(0, optionsPadded2.start_time);
        
         const numSecondsPaddedBefore = options.start_time - optionsPadded.start_time ;
-        optionsPadded.window_length = options.window_length + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter;
+        const numSecondsPaddedBefore2 = options2.start_time - optionsPadded2.start_time;
 
-       // console.log("crossed");
+        optionsPadded.window_length = options.window_length + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter;
+        optionsPadded2.window_length = options2.window_length + numSecondsPaddedBefore2 + numSecondsToPadBeforeAndAfter;
+
+        // console.log("crossed");
         //console.log(that.vars.delayAmount);
-        console.log("optionsPadded", optionsPadded);
-        Meteor.call('get.edf.data', optionsPadded, (error, data) => {
+        Meteor.call('get.edf.data', optionsPadded, optionsPadded2, (error, data) => {
             if (error) {
                 console.log(error.message);
                 callback(null, error.message);
                 return;
             }
-            //console.log(data);
+            console.log("edf.data", data);
             if (!that._isDataValid(data)) {
                 that.vars.windowsCache[identifierKey] = false;
                 
@@ -2935,7 +2997,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 enabled: false
             },
             title: {
-                text: (that.options.recordingName.split('/'))[(that.options.recordingName.split('/')).length - 1 ]
+                text: (that.options.allRecordings[0].split('/'))[(that.options.allRecordings[0].split('/')).length - 1 ]
             },
             tooltip: {
                 enabled: false
@@ -3019,7 +3081,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                             var startTimeSnapped = Math.round(e.min / that.vars.xAxisScaleInSeconds) * that.vars.xAxisScaleInSeconds;
                             startTimeSnapped = Math.max(0, startTimeSnapped);
                             startTimeSnapped = Math.min(that._getLatestPossibleWindowStartInSeconds(), startTimeSnapped);
-                            that._switchToWindow(that.options.recordingName, startTimeSnapped, that.vars.xAxisScaleInSeconds);
+                            that._switchToWindow(that.options.allRecordings, startTimeSnapped, that.vars.xAxisScaleInSeconds);
                             return false;
                         }
                     }
@@ -4964,7 +5026,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         var that = this;
         if (!that._isHITModeEnabled()) return;
         that._saveUserEvent('window_' + beginOrComplete, {
-            recordingName: that.options.recordingName,
+            recordingName: that.options.allRecordings[0],
             windowStart: that.vars.currentWindowStart,
             windowSizeInSeconds: that.vars.xAxisScaleInSeconds,
             channelsDisplayed: that._getChannelsDisplayed(),
@@ -5337,7 +5399,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
                         end: parseFloat(end),
                     },
                     metadata: {
-                        recording: that.options.recordingName,
+                        recording: that.options.allRecordings[0],
                         channels_displayed: that._getChannelsDisplayed(),
                         comment: comment,
                         metadata: metadata,

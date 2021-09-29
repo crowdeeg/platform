@@ -55,8 +55,12 @@ Router.route('/assignment/:_id', {
             this.redirect('home');
             return;
         }
+        console.log("assignment.data", assignment.data);
         var data = Data.findOne(assignment.data);
-        const data2 = Data.findOne(assignment.data2);
+        var data2 = Data.findOne(assignment.data2);
+        let dataset = Data.find().fetch();
+        console.log("Data set:", dataset);
+        console.log("data2:", data2);
         const task = Tasks.findOne(assignment.task);
         const annotations = Annotations.find({ assignment: assignmentId }).fetch();
         var preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false });

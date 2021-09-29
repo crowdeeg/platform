@@ -49,9 +49,10 @@ Template.AnnotatorEDF.onCreated(function() {
 Template.AnnotatorEDF.onRendered(function() {
     const annotatorContainer = $(this.find('.annotator-container'));
     const template = this;
-    console.log(this);
+    console.log("Template:", this);
     let config = $.extend({}, this.data.task.annotatorConfig);
     config = $.extend(config, this.data.preferences.annotatorConfig);
+    console.log("here");
     config = $.extend(config, {
         recordingName: this.data.data.path,
         context: this.data,
@@ -63,6 +64,9 @@ Template.AnnotatorEDF.onRendered(function() {
             toggleFloatingPanel(undefined, template, '.info-panel-container');
         },
     });
+    console.log("Template2:", this);
+    console.log("data2:", this.data.data2);
+    console.log("config", config);
     annotatorContainer.TimeSeriesAnnotator(config);
 
     

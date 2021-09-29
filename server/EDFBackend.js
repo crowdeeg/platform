@@ -52,17 +52,17 @@ let WFDB = {
     }
   },
   rdsamp (options) {
-    // console.log("rdsamp started");
+    console.log("rdsamp started");
     const isCallFromClient = !!this.connection;
-   
     if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
+      console.log("Access denied");
       throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
     // console.time('rdsamp');
     try {
       // console.log("try");
       const useHighPrecisionSamplingString = options.useHighPrecisionSampling ? ' -P' : ' -p';
-      console.log(recordingName);
+      console.log("options.recordingName:", options.recordingName);
       const recordingPathSegments = [options.recordingName]//split('/');
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
@@ -90,11 +90,15 @@ let WFDB = {
         return value.substr(1).slice(0, -1);
       });
       const channelNames = columnNames.slice(1);
+      // console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
+      // comsole.log('\nchannelNames:', channelNames);
       rows.shift();
       const columnUnits = rows[0].map((value) => {
         return value.substr(1).slice(0, -1);
       });
       const channelUnits = columnUnits.slice(1);
+      // console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits); 
+      // console.log("\nchannelUnits", channelUnits); 
       rows.shift();
       const numSamplesRaw = rows.length;
       const lastSampleIndex = numSamplesRaw - 1;
@@ -140,7 +144,7 @@ let WFDB = {
       };
       // console.timeEnd('parseRawOutput');
       // console.timeEnd('rdsamp');
-      return dataFrame;
+      return dataFrame; 
     }
     catch (e) {
       // console.timeEnd('rdsamp');
@@ -452,14 +456,14 @@ Meteor.methods({
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
   },
   'get.edf.data' (options, options2) {
-    // console.time('get.edf.data');
+    console.log('get.edf.data');
     options = options || {};
     options2 = options2 || {};
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
     let count = 0;
     let channelsDisplayed = options.channels_displayed;
-    let channelsDisplayed2 = options.channels_displayed;
+    let channelsDisplayed2 = options2.channels_displayed;
     let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
     let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
     let channelsDelayed = options.channelsDelayed;
@@ -470,10 +474,12 @@ Meteor.methods({
     let delayExists = options.delayExists;
     let atLeast1 = 0;
     let dataFrame = {};
-    let dataFrame2 = {}
- 
+    let dataFrame2 = {};
+    
+    console.log("get.edf.data init finished");
+    
     if(channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length > 0 ){
-
+      console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length > 0");
       let notDelayed = channelsDisplayed.filter( x => !channelsDelayed.channelNames.includes(x));
       
     
@@ -532,7 +538,7 @@ Meteor.methods({
 
       
       else{
-       
+        console.log("no delay");
         dataFrame = WFDB.rdsamp({
         recordingName,
         startTime,
@@ -569,41 +575,49 @@ Meteor.methods({
     }
     }
     else {
-      // console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length <= 0");
+      console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length <= 0");
       dataFrame = WFDB.rdsamp({
-      recordingName,
-      startTime,
-      windowLength,
-      channelsDisplayed: channelsDisplayedParsed.individualChannelsRequired,
-      targetSamplingRate,
-      useHighPrecisionSampling,
-    });
+        recordingName,
+        startTime,
+        windowLength,
+        channelsDisplayed: channelsDisplayedParsed.individualChannelsRequired,
+        targetSamplingRate,
+        useHighPrecisionSampling,
+      });
+      console.log("dataFrame1 loaded");
 
-    let temprName = recordingName;
-    recordingName = tempName;
-    dataFrame2 = WFDB.rdsamp({
-      recordingName,
-      startTime,
-      windowLength,
-      channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
-      targetSamplingRate,
-      useHighPrecisionSampling,
-    });
-    dataFrame2.channelNames.forEach( channel => {
-      dataFrame.channelNames.push(channel);
-    })
-   
-       
-    dataFrame2.data.forEach( dataSet => {
-      dataFrame.data.push(dataSet);
-    })
-   dataFrame.numSamples = dataFrame.numSamples + dataFrame2.numSamples;
-   recordingName =temprName
-  };
+      // let temprName = recordingName;
+      // recordingName = recordingName2;
+      dataFrame2 = WFDB.rdsamp({
+        recordingName: recordingName2,
+        startTime,
+        windowLength,
+        channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
+        targetSamplingRate,
+        useHighPrecisionSampling,
+      });
+      console.log("dataFrame2 loaded ");
+
+      // Combine two channel sets
+      dataFrame2.channelNames.forEach( channel => {
+        dataFrame.channelNames.push(channel);
+      });
+        
+      dataFrame2.data.forEach( dataSet => {
+        dataFrame.data.push(dataSet);
+      })
+      dataFrame.numSamples += dataFrame2.numSamples;
+      // recordingName = temprName;
+      console.log("dataFrame combined channel:", dataFrame.channelNames);
+    };
+
     if (dataFrame.numSamples == 0) {
       return {};
     }
     // console.time('computeSubtractions');
+    channelsDisplayedParsed.subtractions = channelsDisplayedParsed.subtractions.concat(channelsDisplayedParsed2.subtractions);
+    channelsDisplayedParsed.individualChannelsRequired = channelsDisplayedParsed.individualChannelsRequired.concat(channelsDisplayedParsed2.individualChannelsRequired);
+    console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
     let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired.slice();
     let channelNames = dataFrame.channelNames;
 
