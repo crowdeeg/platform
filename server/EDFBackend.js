@@ -50,12 +50,14 @@ let WFDB = {
     }
   },
   rdsamp (options) {
+    // console.log("rdsamp started");
     const isCallFromClient = !!this.connection;
     if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
       throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
     // console.time('rdsamp');
     try {
+      // console.log("try");
       const useHighPrecisionSamplingString = options.useHighPrecisionSampling ? ' -P' : ' -p';
       const recordingPathSegments = options.recordingName.split('/');
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
@@ -63,22 +65,23 @@ let WFDB = {
       const recordingDirectory = recordingPathSegments.join('/');
       var reqSignals = options.channelsDisplayed.join();
      
-     // console.log(reqSignals);
-    //console.log(options.startTime)
+      // console.log("reqSignals", reqSignals);
+      //console.log(options.startTime) 
       var allsignals = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v'  , recordingDirectory);
       var signalName = allsignals.split("'seconds'");
       
       allsignals = signalName[0].split(",");
-      console.log(allsignals);
-     /* signalName = [];
-      allsignals.forEach((Currsignal) => {
-        csignal = Currsignal.split("'");
-        signalName.push(csignal[1]);
-      });
-      allsignals = signalName;
-      console.log(allsignals);
-      */
-     //console.log(alllsignals);
+      // console.log('2:', allsignals);
+
+      /* signalName = [];
+        allsignals.forEach((Currsignal) => {
+          csignal = Currsignal.split("'");
+          signalName.push(csignal[1]);
+        });
+        allsignals = signalName;
+        console.log(allsignals);
+      */ 
+      //console.log(allsignals); 
      
       allsignals = allsignals.filter(oneSignal => reqSignals.includes(oneSignal));
      // console.log(allsignals);
@@ -524,7 +527,7 @@ Meteor.methods({
     }
     }
     else {
-      console.log("fromHere");
+      // console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length <= 0");
       dataFrame = WFDB.rdsamp({
       recordingName,
       startTime,

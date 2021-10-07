@@ -114,6 +114,58 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 },
             ],
         }],
+        xAxisTimescales: [{
+            title: 'Timescale:',
+            options: [
+                {
+                    name: '1 Sec/page',
+                    value: 1,
+                },
+                {
+                    name: '2 Sec/page',
+                    value: 2,
+                },
+                {
+                    name: '5 Sec/page',
+                    value: 5,
+                },
+                {
+                    name: '10 Sec/page',
+                    value: 10,
+                },
+                {
+                    name: '15 Sec/page',
+                    value: 15,
+                },
+                {
+                    name: '20 Sec/page',
+                    value: 20,
+                },
+                {
+                    name: '30 Sec/page',
+                    value: 30,
+                    // default: true,
+                },
+                {
+                    name: '60 Sec/page',
+                    value: 60,
+                    default: true,
+                },
+                {
+                    name: '5 min/page',
+                    value: 300,
+                },
+                // maximum buffer for edf data sampling is 300 seconds for the current algorithm
+                // {
+                //     name: '20 min/page',
+                //     value: 1200,
+                // },
+                // {
+                //     name: '1 hour/page',
+                //     value: 3600,
+                // },
+            ]
+        }],
         boxAnnotationUserSelection: [{
             title: 'Box Annotations',
             options: []
@@ -313,6 +365,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _create: function() {
         var that = this;
+        console.log("_create.that:", that);
         that._initializeVariables();
         that._keyDownCallback = that._keyDownCallback.bind(that);
         that._reinitChart = that._reinitChart.bind(that);
@@ -384,6 +437,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             currType: "",
             increaseOnce: 0,
             oldIndex: -1,
+            xAxisScaleInSeconds: 60,
             currentTrainingWindowIndex: 0,
             cheatSheetOpenedBefore: false,
             scrollThroughExamplesIntervalId: undefined,
@@ -453,7 +507,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 });
             }
             else {
-                that.vars.channelGains = that._Displayed().map(function() {
+                that.vars.channelGains = that._getChannelsDisplayed().map(function() {
                     return 1.0;
                 });
             }
@@ -540,6 +594,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         <div style="margin-bottom: 20px" class="montage_panel select_panel"></div> \
                         <div style="margin-bottom: 20px" class="annotation_type_select_panel"></div> \
                         <div style="margin-bottom: 20px" class="frequency_filter_panel"></div> \
+                        <div style="margin-bottom: 20px" class="timescale_panel"></div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
                                     <span class="fa fa-bookmark" aria-hidden="true"></span> \
@@ -809,7 +864,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             // on page load, the user cannot change
             // any annotations made before submitting
             that._saveUserEventWindowComplete();
-            that._savePreferences({ startTime: that.vars.currentWindowStart + that.options.windowSizeInSeconds })
+            that._savePreferences({ startTime: that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds })
             $(that.element).find('.submit-annotations').prop('disabled', true);
             $(that.element).find('.next-window').prop('disabled', false);
         });
@@ -841,7 +896,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _getCurrentWindowIndexInVisibleRegion: function() {
         var that = this;
         if (!that._isHITModeEnabled()) return;
-        var windowIndex = Math.floor((that.vars.currentWindowStart - that.options.visibleRegion.start) / that.options.windowSizeInSeconds);
+        var windowIndex = Math.floor((that.vars.currentWindowStart - that.options.visibleRegion.start) / that.vars.xAxisScaleInSeconds);
         return windowIndex;
     },
 
@@ -957,7 +1012,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _revealCorrectAnnotations: function() {
         var that = this;
-        that._getAnnotations(that.vars.currentWindowRecording, that.vars.currentWindowStart, that.vars.currentWindowStart + that.options.windowSizeInSeconds, true);
+        that._getAnnotations(that.vars.currentWindowRecording, that.vars.currentWindowStart, that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds, true);
     },
 
     _setupExamplesMode: function() {
@@ -1094,7 +1149,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             var example = that.options.features.examples[that.vars.currentExampleIndex];
             var nextWindowStart = that._getWindowStartForTime(example.start);
         } while (nextWindowStart == that.vars.currentWindowStart);
-        that._switchToWindow(that.options.recordingName, nextWindowStart, that.options.windowSizeInSeconds);
+        that._switchToWindow(that.options.recordingName, nextWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
     _getMontages: function() {
@@ -1170,13 +1225,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _getWindowStartForTime: function(time) {
         var that = this;
-        var windowStart = Math.floor(time / that.options.windowSizeInSeconds);
-        windowStart *= that.options.windowSizeInSeconds;
+        var windowStart = Math.floor(time / that.vars.xAxisScaleInSeconds);
+        windowStart *= that.vars.xAxisScaleInSeconds;
         return windowStart;
     },
 
     _setup: function() {
         var that = this;
+        console.log("_setup.that:", that);
         that._adaptContent();
         that._setupTimer();
         that._setupFeaturePanel();
@@ -1509,8 +1565,39 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     },
 
-   
-        
+    _setupXAxisScaleSelector: function() {
+        let that = this;
+        let timescales = that.options.xAxisTimescales || [];
+        timescales.forEach((timescaleSetting) => {
+            let selectContainer = $('<div class="select_panel"><select></select></div>').appendTo(that.element.find('.timescale_panel'));
+            let select = selectContainer.find('select');
+
+            let defaultOptionIndex = null;
+            timescaleSetting.options.forEach((timescale, t) => {
+                let selectedString = '';
+                
+                if (timescale.default) {
+                    selectedString = ' selected="selected"';
+                    defaultOptionIndex = t;
+                }
+                select.append(`<option value=${timescale.value}` + selectedString + '>' + timescaleSetting.title + ': ' + timescale.name + '</option>');
+            });
+            
+            select.material_select();
+            select.change(function() {
+                console.log("timescale onchange");
+                if (defaultOptionIndex) delete timescaleSetting.options[defaultOptionIndex].default;
+                timescaleSetting.options[select.prop('selectedIndex')].default = true;
+                // that._savePreferences({
+                //     xAxisTimescales: xAxisTimescales,
+                // })
+                that.vars.xAxisScaleInSeconds = parseInt(select.val());
+                that._reloadCurrentWindow();
+                console.log("timescale here");
+            });
+            select.change();
+        });
+    },
 
     _setupFeaturePanel: function() {
         var that = this;
@@ -1556,9 +1643,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         // For local debugging, only
         // preload a maximum of 10 epochs
         if (!Meteor.isProduction) {
-            recordingLengthInSeconds = Math.min(10 * that.options.windowSizeInSeconds, recordingLengthInSeconds);
+            recordingLengthInSeconds = Math.min(10 * that.vars.xAxisScaleInSeconds, recordingLengthInSeconds);
         }
-        var numWindowsToRequestPerMontage = Math.ceil(recordingLengthInSeconds / that.options.windowSizeInSeconds);
+        var numWindowsToRequestPerMontage = Math.ceil(recordingLengthInSeconds / that.vars.xAxisScaleInSeconds);
         var numWindowsToRequestTotal = numWindowsToRequestPerMontage * channelsDisplayedPerMontage.length;
         var numWindowsLoaded = 0;
         var progressBar = $('<div class="progress"><div class="indicator determinate"></div></div>').appendTo(that.element.find('.graph_container'));
@@ -1577,12 +1664,12 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         updateLoadingProgress();
         channelsDisplayedPerMontage.forEach(function(channelsDisplayed, m) {
             for (var i = 0; i < numWindowsToRequestPerMontage; ++i) {
-                var startTime = i * that.options.windowSizeInSeconds;
+                var startTime = i * that.vars.xAxisScaleInSeconds;
                 var options = {
                     recording_name: that.options.recordingName,
                     channels_displayed: channelsDisplayed,
-                    start_time: i * that.options.windowSizeInSeconds + 90,
-                    window_length: that.options.windowSizeInSeconds,
+                    start_time: i * that.vars.xAxisScaleInSeconds + 90,
+                    window_length: that.vars.xAxisScaleInSeconds,
                     target_sampling_rate: that.options.targetSamplingRate,
                     use_high_precision_sampling: that.options.useHighPrecisionSampling,
                 };
@@ -1623,15 +1710,18 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _getUserStatus: function() {
         var that = this;
+        console.log("_getUserStatus.that:", that);
         //that._getDelay();
         //that._setDelay();
         that._setupMontageSelector();
        
         that._setupFrequencyFilterSelector();
-        
+        console.log("Finish _setupFrequencyFilterSelector");
+        that._setupXAxisScaleSelector();
+        console.log("Finish _setupXAxisScaleSelector");
         that._setupAnnotationChoice();
         that._setupAnnotationDisplayType();
-        
+        console.log("Finish _setupAnnotationDisplayType");
        
         
         
@@ -1642,7 +1732,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that.options.recordingName = that.options.experiment.current_condition.recording_name;
             var initialWindowStart = conditionWindows[currentWindowIndex];
             that.vars.lastActiveWindowStart = initialWindowStart;
-            that._switchToWindow(that.options.recordingName, initialWindowStart, that.options.windowSizeInSeconds);
+            that._switchToWindow(that.options.recordingName, initialWindowStart, that.vars.xAxisScaleInSeconds);
         }
         else if (that._areTrainingWindowsSpecified()) {
             var trainingWindow = that._getCurrentTrainingWindow();
@@ -1662,7 +1752,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     that.vars.lastActiveWindowStart = that.options.startTime;
                 }
             }
-            that._switchToWindow(that.options.recordingName, that.vars.lastActiveWindowStart, that.options.windowSizeInSeconds);
+            that._switchToWindow(that.options.recordingName, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
         }
         else {
             alert('Could not retrieve user data.');
@@ -2008,7 +2098,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (!that.vars.backwardEnabled && windows <= -1) return;
         if (!that.vars.fastBackwardEnabled && windows <= -that.options.windowJumpSizeFastForwardBackward) return;
         var nextRecordingName = that.options.recordingName;
-        var nextWindowSizeInSeconds = that.options.windowSizeInSeconds;
+        var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
         var nextWindowStart = that.options.currentWindowStart;
         if (that.options.experiment.running) {
             var currentWindowIndex = that.options.experiment.current_condition.current_window_index;
@@ -2030,7 +2120,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
             else {
                 nextWindowStart = that.options.startTime;
-                nextWindowSizeInSeconds = that.options.windowSizeInSeconds;
+                nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
             }
             that._flushAnnotations();
         }
@@ -2038,13 +2128,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             if (that._areTrainingWindowsSpecified()) {
                 that.vars.currentTrainingWindowIndex += windows;
             }
-            nextWindowStart = Math.max(0, that.vars.currentWindowStart + that.options.windowSizeInSeconds * windows);
+            nextWindowStart = Math.max(0, that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds * windows);
         }
         that._switchToWindow(nextRecordingName, nextWindowStart, nextWindowSizeInSeconds);
     },
 
     _switchToWindow: function (recording_name, start_time, window_length) {
         var that = this;
+        console.log("_switchToWindow.that:", that);
         if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
             if (that.options.visibleRegion.start !== undefined) {
                 start_time = Math.max(that.options.visibleRegion.start, start_time );
@@ -2184,7 +2275,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             console.error('Cannot jump to epoch with start time', epochStartTimeInSeconds);
             return;
         }
-        that._switchToWindow(that.options.recordingName, epochStartTimeInSeconds, that.options.windowSizeInSeconds);
+        that._switchToWindow(that.options.recordingName, epochStartTimeInSeconds, that.vars.xAxisScaleInSeconds);
     },
 
     getCurrentWindowStartReactive: function() {
@@ -2194,7 +2285,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _reloadCurrentWindow: function() {
         var that = this;
-        that._switchToWindow(that.options.recordingName, that.vars.currentWindowStart, that.options.windowSizeInSeconds);
+        that._switchToWindow(that.options.recordingName, that.vars.currentWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
     _reinitChart: function() {
@@ -2211,7 +2302,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _getProgressInPercent: function() {
         var that = this;
         if (!that._isVisibleRegionDefined()) return;
-        var windowSize = that.options.windowSizeInSeconds;
+        var windowSize = that.vars.xAxisScaleInSeconds;
         var start = windowSize * Math.ceil(that.options.visibleRegion.start / windowSize);
         var end = windowSize * Math.floor((that.options.visibleRegion.end - windowSize) / windowSize);
         if (!that._areTrainingWindowsSpecified()) {
@@ -2232,7 +2323,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var that = this;
         if (!that.vars.lastActiveWindowStart) {
             that.vars.lastActiveWindowStart = 0;
-        }        that._switchToWindow(that.options.recordingName, that.vars.lastActiveWindowStart, that.options.windowSizeInSeconds);
+        }        that._switchToWindow(that.options.recordingName, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
 
     },
 
@@ -2291,6 +2382,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
        // console.log("crossed");
         //console.log(that.vars.delayAmount);
+        console.log("optionsPadded", optionsPadded);
         Meteor.call('get.edf.data', optionsPadded, (error, data) => {
             if (error) {
                 console.log(error.message);
@@ -2663,11 +2755,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (!that.vars.chart) {
             //console.log("here")
             // if this is the first pageload, then we'll need to load the entire
+            console.time("_initGraph");
             that._initGraph(data);
+            console.log("[[time end]]");
+            console.timeEnd("_initGraph");
         // if the plot area has already been initialized, simply update the data displayed using AJAX calls
         }
         that._updateChannelDataInSeries(that.vars.chart.series, data);
-        that.vars.chart.xAxis[0].setExtremes(that.vars.currentWindowStart, that.vars.currentWindowStart + that.options.windowSizeInSeconds, false, false);
+        that.vars.chart.xAxis[0].setExtremes(that.vars.currentWindowStart, that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds, false, false);
         that.vars.chart.redraw(); // efficiently redraw the entire window in one go
         var chart = that.vars.chart;
         // use the chart start/end so that data and annotations can never
@@ -2700,7 +2795,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             var seriesData = xValues.map(function(x, i) {
                 return [x, samplesScaledAndOffset[i]];
             });
-            seriesData.unshift([-that.options.windowSizeInSeconds, offsetPostScale]);
+            seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
             seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
             series[c].setData(seriesData, false, false, false);
         });
@@ -2715,6 +2810,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             var offset = that._getOffsetForChannelIndexPostScale(c);
             return {
                 name: channel.name,
+                boostThreshold: 1,
                 data: [[0, offset], [recordingEndInSecondsSnapped, offset]],
             };
         });
@@ -2722,12 +2818,12 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _getRecordingEndInSecondsSnapped: function() {
         var that = this;
-        return (Math.ceil(that.vars.recordingMetadata.LengthInSeconds / that.options.windowSizeInSeconds) + 1) * that.options.windowSizeInSeconds;
+        return (Math.ceil(that.vars.recordingMetadata.LengthInSeconds / that.vars.xAxisScaleInSeconds) + 1) * that.vars.xAxisScaleInSeconds;
     },
 
     _getLatestPossibleWindowStartInSeconds: function() {
         var that = this;
-        return Math.floor(that.vars.recordingMetadata.LengthInSeconds / that.options.windowSizeInSeconds) * that.options.windowSizeInSeconds;
+        return Math.floor(that.vars.recordingMetadata.LengthInSeconds / that.vars.xAxisScaleInSeconds) * that.vars.xAxisScaleInSeconds;
     },
 
     _getClassificationSummaryElement: function() {
@@ -2742,6 +2838,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         subsequent changes to this plot to scroll through the signal use the much computationally expensive
         series update and axis update methods.
         */
+        console.log("!!!!!!init gragh");
         var that = this;
         var channels = data.channels;
         
@@ -2773,7 +2870,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
         bookmarkData.sort((a, b) => a - b);
         bookmarkData = bookmarkData.map((pageKey) => {
-            return [pageKey + that.options.windowSizeInSeconds / 2, 1];
+            return [pageKey + that.vars.xAxisScaleInSeconds / 2, 1];
         });
 
         myFunction = function() {
@@ -2781,7 +2878,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             popup.classList.toggle("show");
         },
 
-        that.vars.chart = new Highcharts.Chart({
+        that.vars.chart = new Highcharts.chart({
             boost: {
                 enabled: true,
                 seriesThreshold: 1,
@@ -2805,6 +2902,16 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         that._setupYAxisLinesAndLabels();
                     }
                 },
+                zoomType: 'xy',
+                resetZoomButton: {
+                    position: {
+                        align: 'left',
+                        verticalAlign: 'bottom',
+                        x: -87.5,
+                        y: 25
+                    },
+                    relativeTo: 'spacingBox'
+                }
             },
             credits: {
                 enabled: false
@@ -2878,23 +2985,23 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     style: {
                         textOverflow: 'none',
                     },
-                    step: that.options.windowSizeInSeconds / 6,
+                    step: that.vars.xAxisScaleInSeconds / 6,
                     formatter: that._formatXAxisLabel,
                 },
                 tickInterval: 1,
                 minorTickInterval: 0.5,
                 min: that.vars.currentWindowStart,
-                max: that.vars.currentWindowStart + that.options.windowSizeInSeconds,
+                max: that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
                 unit: [
                     ['second', 1]
                 ],
                 events: {
                     setExtremes: function (e) {
                         if (e.trigger == 'navigator') {
-                            var startTimeSnapped = Math.round(e.min / that.options.windowSizeInSeconds) * that.options.windowSizeInSeconds;
+                            var startTimeSnapped = Math.round(e.min / that.vars.xAxisScaleInSeconds) * that.vars.xAxisScaleInSeconds;
                             startTimeSnapped = Math.max(0, startTimeSnapped);
                             startTimeSnapped = Math.min(that._getLatestPossibleWindowStartInSeconds(), startTimeSnapped);
-                            that._switchToWindow(that.options.recordingName, startTimeSnapped, that.options.windowSizeInSeconds);
+                            that._switchToWindow(that.options.recordingName, startTimeSnapped, that.vars.xAxisScaleInSeconds);
                             return false;
                         }
                     }
@@ -2933,7 +3040,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 },
                 title: {
                     text: null
-                }
+                },
+                scrollbar: {
+                    enabled: true,
+                    showFull: false
+                },
+            },
+            scrollbar: {
+                liveRedraw: false
             },
             legend: {
                 enabled: false
@@ -4168,7 +4282,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         if (that._isHITModeEnabled()) {
             metadata = {
                 visibleRegion: that.options.visibleRegion,
-                windowSizeInSeconds: that.options.windowSizeInSeconds,
+                windowSizeInSeconds: that.vars.xAxisScaleInSeconds,
                 isTrainingWindow: that._isCurrentWindowTrainingWindow(),
             }
             if (that.options.projectUUID) {
@@ -4194,7 +4308,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         var that = this;
         var label = label;
         var time_start = that.vars.currentAnnotationTime;
-        var time_end = time_start + that.options.windowSizeInSeconds;
+        var time_end = time_start + that.vars.xAxisScaleInSeconds;
         var channel = undefined;
         var confidence = 1;
         var comment = '';
@@ -4218,7 +4332,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
 
     _refreshAnnotations: function() {
         var that = this;
-        that._getAnnotations(that.vars.currentWindowRecording, that.vars.currentWindowStart, that.vars.currentWindowStart + that.options.windowSizeInSeconds);
+        that._getAnnotations(that.vars.currentWindowRecording, that.vars.currentWindowStart, that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds);
     },
     
 
@@ -4834,7 +4948,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         that._saveUserEvent('window_' + beginOrComplete, {
             recordingName: that.options.recordingName,
             windowStart: that.vars.currentWindowStart,
-            windowSizeInSeconds: that.options.windowSizeInSeconds,
+            windowSizeInSeconds: that.vars.xAxisScaleInSeconds,
             channelsDisplayed: that._getChannelsDisplayed(),
             features: that.options.features.order,
             isTraining: that._isCurrentWindowTrainingWindow(),
@@ -4931,8 +5045,8 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
             return annotationFormatted;
         });
         annotations.forEach(function(annotation) {
-            var annotationWindowStart = Math.floor(annotation.position.start / that.options.windowSizeInSeconds) * that.options.windowSizeInSeconds;
-            var annotationWindowEnd = annotationWindowStart + that.options.windowSizeInSeconds;
+            var annotationWindowStart = Math.floor(annotation.position.start / that.vars.xAxisScaleInSeconds) * that.vars.xAxisScaleInSeconds;
+            var annotationWindowEnd = annotationWindowStart + that.vars.xAxisScaleInSeconds;
             var annotationCacheKey = that._getAnnotationsCacheKey(recording_name, annotationWindowStart, annotationWindowEnd, correctAnswers);
             if (!that.vars.annotationsCache[annotationCacheKey]) {
                 that.vars.annotationsCache[annotationCacheKey] = {
