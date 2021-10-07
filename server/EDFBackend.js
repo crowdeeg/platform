@@ -21,7 +21,7 @@ const runWFDBCommand = (command, runInDirectory = '') => {
   if (EDFDir) {
     WFDBCommand = 'WFDB="' + EDFDir + '" ' + WFDBCommand;
   }
-  const output = runCommand(WFDBCommand, { maxBuffer: 1024 * 500 * 10 });
+  const output = runCommand(WFDBCommand, { maxBuffer: 2048 * 500 * 10 });
   // console.timeEnd('runWFDBCommand');
   return output;
 };
@@ -50,18 +50,43 @@ let WFDB = {
     }
   },
   rdsamp (options) {
+    // console.log("rdsamp started");
     const isCallFromClient = !!this.connection;
     if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
       throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
     // console.time('rdsamp');
     try {
+      // console.log("try");
       const useHighPrecisionSamplingString = options.useHighPrecisionSampling ? ' -P' : ' -p';
       const recordingPathSegments = options.recordingName.split('/');
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
       const recordingDirectory = recordingPathSegments.join('/');
-      const signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
+      var reqSignals = options.channelsDisplayed.join();
+     
+      // console.log("reqSignals", reqSignals);
+      //console.log(options.startTime) 
+      var allsignals = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v'  , recordingDirectory);
+      var signalName = allsignals.split("'seconds'");
+      
+      allsignals = signalName[0].split(",");
+      // console.log('2:', allsignals);
+
+      /* signalName = [];
+        allsignals.forEach((Currsignal) => {
+          csignal = Currsignal.split("'");
+          signalName.push(csignal[1]);
+        });
+        allsignals = signalName;
+        console.log(allsignals);
+      */ 
+      //console.log(allsignals); 
+     
+      allsignals = allsignals.filter(oneSignal => reqSignals.includes(oneSignal));
+     // console.log(allsignals);
+      //console.time(allsignals);
+      const signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + allsignals.join(' '), recordingDirectory);
       // console.time('parseRawOutput');
       let rows = dsvFormat(',').parseRows(signalRawOutput);
       const columnNames = rows[0].map((value) => {
@@ -137,25 +162,41 @@ let WFDB = {
 let isInteger = (expression) => {
   return expression == '' + parseInt(expression);
 }
+/*
+let filterName = (allSignals) => {
+  returnSignals = [];
 
+  allSignals.forEach((fixSignal) => {
+  if(fixSignal.){
+
+  }
+  });
+  return returnSignals = [];
+
+}
+*/
 let parseComputedChannelString = (computedChannelString) => {
   const parts = computedChannelString.split('=');
   const channelName = parts[0].trim();
-  const formula = parts[1].trim();
-  const formulaParts = formula.split('(');
-  let functionName;
-  let functionParameters;
   let channelKey;
-  if (formulaParts.length == 1) {
-    functionName = 'IDENTITY';
-    functionParameters = [ formulaParts[0] ];
-    channelKey = functionParameters[0];
-  }
-  else {
-    functionName = formulaParts[0];
-    functionParameters = formulaParts[1].slice(0, -1).split(',').map((parameter) => { return parameter.trim(); })
-    channelKey = functionName + '(' + functionParameters.join(',') + ')';
-  }
+  let functionParameters;
+  let functionName;
+ if(parts.length > 1 ){
+    const formula = parts[1].trim();
+    const formulaParts = formula.split('(');
+    
+    if (formulaParts.length == 1) {
+      functionName = 'IDENTITY';
+      functionParameters = [ formulaParts[0] ];
+      channelKey = functionParameters[0];
+    }
+    else {
+      functionName = formulaParts[0];
+      functionParameters = formulaParts[1].slice(0, -1).split(',').map((parameter) => { return parameter.trim(); })
+      channelKey = functionName + '(' + functionParameters.join(',') + ')';
+    }
+  
+  
   let individualChannelsRequired;
   switch (functionName) {
     case 'MEAN':
@@ -165,6 +206,13 @@ let parseComputedChannelString = (computedChannelString) => {
     default:
       throw new Meteor.Error('get.edf.data.computed.channel.unknown.function', 'Unknown function name for computed channel: ' + functionName);
       break;
+  }
+}
+  else{
+    functionName = 'IDENTITY';
+    functionParameters = [ channelName];
+    channelKey = functionParameters[0];
+    individualChannelsRequired = functionParameters;
   }
   return {
     computed: true,
@@ -204,6 +252,8 @@ let computeChannelData = (computedChannel, dataFrame, subtractionOrder) => {
 
 let parseChannelsDisplayed = (channelsDisplayed) => {
   individualChannelsRequired = new Set();
+  var individualChannels= [];
+  
   let channelsDisplayedParsed = {
     subtractions: [],
   }
@@ -215,6 +265,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
       plus: undefined,
       minus: undefined,
     }
+    
     channelsDisplayedParsed.subtractions.push(subtraction);
     let operandNames = ['plus', 'minus']
     channelParts.forEach((channelPart, c) => {
@@ -225,20 +276,48 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
       if (isInteger(channelPart)) {
         subtraction[operandName] = channelPart;
         individualChannelsRequired.add(subtraction[operandName]);
+        
       }
       else {
+        
+        individualChannels = [];
+        var count = 15;
+        channelsDisplayed.forEach((myChannel) => {
+        
+          count++;
+          computedChannel = parseComputedChannelString(myChannel);
+          
+         (computedChannel.individualChannelsRequired).forEach((r) => {
+            
+            individualChannels.push(r)
+           
+          })
+        });
+/*
         computedChannel = parseComputedChannelString(channelPart);
         subtraction[operandName] = computedChannel;
-        computedChannel.individualChannelsRequired.forEach((c) => {
-          individualChannelsRequired.add(c);
+        //console.log(computedChannel.individualChannelsRequired);
+        (computedChannel.individualChannelsRequired).forEach((r) => {
+          //console.log(individualChannelsRequired);
+          if(!individualChannelsRequired.includes(c)){
+            individualChannelsRequired.push(r);
+           // individualChannelsRequired.push("Pleth");
+            //console.log(individualChannelsRequired);
+            //individualChannelsRequired.push("Snore");
+            //console.log(individualChannelsRequired);
+            individualChannelsRequired = Array.from(individualChannelsRequired);
+*/
+          }
         });
-      }
-    });
-  });
-  individualChannelsRequired = Array.from(individualChannelsRequired);
-  channelsDisplayedParsed.individualChannelsRequired = individualChannelsRequired;
+      })
+
+ 
+  
+
+  channelsDisplayedParsed.individualChannelsRequired = individualChannels;
+  
   return channelsDisplayedParsed;
-}
+};
 
 let parseWFDBMetadata = (metadata) => {
   let overallAndSignals = metadata.split('\nGroup ');
@@ -328,12 +407,128 @@ Meteor.methods({
     options = options || {};
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
+    let count = 0;
     let channelsDisplayed = options.channels_displayed;
     let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
+    let channelsDelayed = options.channelsDelayed;
     let recordingName = options.recording_name;
     let targetSamplingRate = options.target_sampling_rate;
     let useHighPrecisionSampling = options.use_high_precision_sampling;
-    let dataFrame = WFDB.rdsamp({
+    let delayExists = options.delayExists;
+    let atLeast1 = 0;
+    let dataFrame = {};
+ 
+    if(channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length > 0 ){
+
+      let notDelayed = channelsDisplayed.filter( x => !channelsDelayed.channelNames.includes(x));
+      
+    
+    
+      let notDelayedParsed = parseChannelsDisplayed(notDelayed); 
+      var sTime = startTime;
+      if(notDelayed.length == 0 )
+      { 
+        
+      let currParsed = {};
+      let delayedTime = 0;
+    //  console.log(channelsDelayed.channelNames);
+      
+      channelsDelayed.channelNames.forEach(channel => {
+       // console.log(channel);
+        currParsed = parseChannelsDisplayed([channel]);
+        
+        //console.log(startTime);
+       // console.log(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]);
+        if(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]){
+             
+          startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
+          //atLeast1 = 0;
+        }
+      
+       // console.log(startTime);
+       // console.log(delayedTime);
+       //console.log(currParsed.individualChannelsRequired);
+        currDataframe = WFDB.rdsamp({
+          recordingName,
+          startTime,
+          windowLength,
+          channelsDisplayed: currParsed.individualChannelsRequired,
+          targetSamplingRate,
+          useHighPrecisionSampling,
+        });
+       
+        //console.log("dataframe");
+        //console.log(dataFrame);
+       // console.log(channel);
+       //console.log(dataFrame);
+        if(atLeast1 == 0|| !dataFrame ||dataFrame.size == 0 || dataFrame.length == 0 || dataFrame == {} || !dataFrame.channelNames){
+         // console.log("yes1");
+          dataFrame = currDataframe;
+          dataFrame.channelNames = currDataframe.channelNames;
+          dataFrame.data = currDataframe.data;
+          atLeast1 = 1;
+        }
+        else{
+       //   console.log("not1");
+        //console.log(dataFrame);
+        dataFrame.channelNames.push(currDataframe.channelNames[0]);
+       // console.log(dataFrame.channelNames);
+        dataFrame.data.push(currDataframe.data[0]);
+       // console.log(dataFrame);
+       // dataFrame.channelsDisplayed.extend(currDataframe.channelsDisplayed);
+        
+        //console.log(currDataframe);
+        }
+        startTime = sTime;
+        //console.log(count);
+        count++;
+      } )
+    
+      console.log("enddataFrame");
+    }
+
+      
+      else{
+       // console.log("notDelayed");
+        dataFrame = WFDB.rdsamp({
+        recordingName,
+        startTime,
+        windowLength,
+        channelsDisplayed: notDelayedParsed.individualChannelsRequired,
+        targetSamplingRate,
+        useHighPrecisionSampling,
+      });
+      //console.log(dataFrame);
+      let currParsed = {};
+      let delayedTime = 0;
+      channelsDelayed.channelNames.forEach(channel => {
+        currParsed = parseChannelsDisplayed([channel]);
+        
+
+        startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
+       // console.log("delayedTime");
+        currDataframe = WFDB.rdsamp({
+          recordingName,
+          startTime,
+          windowLength,
+          channelsDisplayed: currParsed.individualChannelsRequired,
+          targetSamplingRate,
+          useHighPrecisionSampling,
+        });
+        dataFrame.channelNames.push(currDataframe.channelNames[0]);
+        dataFrame.data.push(currDataframe.data[0]);
+       // dataFrame.channelsDisplayed.extend(currDataframe.channelsDisplayed);
+        startTime = sTime;
+        //console.log(currDataframe);
+      } )
+      
+     // console.log("we are here");
+      //console.log(dataFrame);
+    }
+    }
+    else {
+      // console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length <= 0");
+      dataFrame = WFDB.rdsamp({
       recordingName,
       startTime,
       windowLength,
@@ -341,12 +536,14 @@ Meteor.methods({
       targetSamplingRate,
       useHighPrecisionSampling,
     });
+  };
     if (dataFrame.numSamples == 0) {
       return {};
     }
     // console.time('computeSubtractions');
     let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired.slice();
     let channelNames = dataFrame.channelNames;
+    //console.log(channelNames);
     channelsDisplayedParsed.subtractions.forEach((subtraction) => {
       if (subtractionOrder.indexOf(subtraction.key) > -1) {
         return;
@@ -429,6 +626,7 @@ Meteor.methods({
     dataFrame.channelNames.forEach((channelName, c) => {
       dataDict[channelName] = dataFrame.data[c];
     });
+    //console.log(dataFrame.channelNames);
     return {
       channel_order: dataFrame.channelNames,
       sampling_rate: dataFrame.samplingRate,
