@@ -1618,7 +1618,7 @@ Schemas.Preferences = new SimpleSchema({
 ensureIndicesForCollection(Preferences, ['assignment', 'user', 'data', 'arbitration']);
 Preferences.attachSchema(Schemas.Preferences);
 Preferences.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
-Preferences.permit(['insert']).ifForOwnAssignment().allowInClientCode();
+Preferences.permit(['insert', 'update']).ifForOwnAssignment().allowInClientCode();
 Preferences.permit(['update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
 exports.Preferences = Preferences;
 
