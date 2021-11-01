@@ -144,26 +144,29 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 {
                     name: '30 Sec/page',
                     value: 30,
-                    // default: true,
                 },
                 {
                     name: '60 Sec/page',
                     value: 60,
                     default: true,
                 },
+                // below will lower the data sampling rates i.e. lower the resolution
                 {
                     name: '5 min/page',
                     value: 300,
                 },
-                // maximum buffer for edf data sampling is 300 seconds for the current algorithm
-                // {
-                //     name: '20 min/page',
-                //     value: 1200,
-                // },
-                // {
-                //     name: '1 hour/page',
-                //     value: 3600,
-                // },
+                {
+                    name: '1 hour/page',
+                    value: 3600,
+                },
+                {
+                    name: '4 hours/page',
+                    value: 14400,
+                },
+                {
+                    name: '8 hours/page',
+                    value: 28800,
+                },
             ]
         }],
         boxAnnotationUserSelection: [{
@@ -1241,16 +1244,18 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._setupSleepStagePanel();
         that._setupTrainingPhase();
         that._setupArbitration();
-        that._getRecordingMetadata(function(metadata) {
-            that.vars.recordingMetadata = metadata;
-            if (that.options.preloadEntireRecording) {
-                that._preloadEntireRecording(function() {
+        that._setupDownsampledRecording(() => {
+            that._getRecordingMetadata(function(metadata) {
+                that.vars.recordingMetadata = metadata;
+                if (that.options.preloadEntireRecording) {
+                    that._preloadEntireRecording(function() {
+                        that._getUserStatus();
+                    });
+                }
+                else {
                     that._getUserStatus();
-                });
-            }
-            else {
-                that._getUserStatus();
-            }
+                }
+            });
         });
     },
 
@@ -1596,6 +1601,19 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 console.log("timescale here");
             });
             select.change();
+        });
+    },
+
+    _setupDownsampledRecording: function(callback) {
+        var that = this;
+        Meteor.call('setup.edf.downsampled', that.options.recordingName, (error, results) => {
+            if (error) {
+                console.log(error.message);
+                return;
+            } else if (results && callback) {
+                callback();
+            }
+            return;
         });
     },
 
@@ -2230,7 +2248,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             };
            
             that._requestData(options, (data, errorData) => {
-               // console.log(options);
+                console.log("_requestData");
                 var windowAvailable = !errorData;
                 if (windowAvailable && windowStartTime == that.vars.currentWindowStart) {
                     that._applyFrequencyFilters(data, (dataFiltered) => {

@@ -15,14 +15,15 @@ const FloatArrayType = Float32Array;
 const exec = Npm.require('child_process').exec;
 const runCommand = Meteor.wrapAsync(exec);
 const runWFDBCommand = (command, runInDirectory = '') => {
-  // console.time('runWFDBCommand');
+  console.time('runWFDBCommand');
   let WFDBCommand = command;
-  const EDFDir = process.env.EDF_DIR + '/' + runInDirectory;
+  const EDFDir = process.env.EDF_DIR + runInDirectory;
   if (EDFDir) {
     WFDBCommand = 'WFDB="' + EDFDir + '" ' + WFDBCommand;
   }
-  const output = runCommand(WFDBCommand, { maxBuffer: 2048 * 500 * 10 });
-  // console.timeEnd('runWFDBCommand');
+  console.log('WFDBCommand:', WFDBCommand);
+  const output = runCommand(WFDBCommand, { maxBuffer: 2048 * 500 * 10, cwd: EDFDir });
+  console.timeEnd('runWFDBCommand');
   return output;
 };
 
@@ -63,30 +64,23 @@ let WFDB = {
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
       const recordingDirectory = recordingPathSegments.join('/');
-      var reqSignals = options.channelsDisplayed.join();
-     
-      // console.log("reqSignals", reqSignals);
-      //console.log(options.startTime) 
-      var allsignals = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v'  , recordingDirectory);
-      var signalName = allsignals.split("'seconds'");
+      const downsampledFileName = recordingFilename.substring(0, recordingFilename.length - 4) + '_downsampled';
+      const downsampledFile = downsampledFileName + '.dat';
+      const downsampledHeaderFile = downsampledFileName + '.hea';
       
-      allsignals = signalName[0].split(",");
-      // console.log('2:', allsignals);
-
-      /* signalName = [];
-        allsignals.forEach((Currsignal) => {
-          csignal = Currsignal.split("'");
-          signalName.push(csignal[1]);
-        });
-        allsignals = signalName;
-        console.log(allsignals);
-      */ 
-      //console.log(allsignals); 
-     
-      allsignals = allsignals.filter(oneSignal => reqSignals.includes(oneSignal));
-     // console.log(allsignals);
-      //console.time(allsignals);
-      const signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + allsignals.join(' '), recordingDirectory);
+      var signalRawOutput = null;
+      if (options.windowLength <= 304) {
+        // if the x-axis scale is less then 5 mins/page (+4 sec padded)
+        // rdsamp the original high sampling rate .edf file
+        signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
+      } else {
+        let downsampledExists = runWFDBCommand(`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`, recordingDirectory).replace(/\r?\n/, '');
+        if (downsampledExists != 't') {
+          throw new Meteor.Error('wfdb.rdsamp.command.downsampled.file.missing', 'The downsampled file .dat or its header file .hea is missing, please reload the page and try again later.');
+        }
+        // rdsamp the downsampled .dat file with lower sampling rate
+        signalRawOutput = runWFDBCommand('rdsamp -r "' + downsampledFileName + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
+      }
       // console.time('parseRawOutput');
       let rows = dsvFormat(',').parseRows(signalRawOutput);
       const columnNames = rows[0].map((value) => {
@@ -157,6 +151,70 @@ let WFDB = {
       }
     }
   },
+  downsamp (options) {
+    const isCallFromClient = !!this.connection;
+    if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
+      throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
+    }
+    try {
+      const recordingPathSegments = options.recordingName.split('/');
+      const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
+      delete recordingPathSegments[recordingPathSegments.length - 1];
+      const recordingDirectory = recordingPathSegments.join('/');
+
+      const downsampledFileName = recordingFilename.substring(0, recordingFilename.length - 4) + '_downsampled';
+      const downsampledFile = downsampledFileName + '.dat';
+      const downsampledHeaderFile = downsampledFileName + '.hea';
+      console.log('filenames:', downsampledFileName, downsampledFile, downsampledHeaderFile);
+      
+      // setup the low resolution file if it does not exist
+      let downsampledExists = runWFDBCommand(`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`, recordingDirectory).replace(/\r?\n/, '');
+      console.log(`downsampledExists: "${downsampledExists}"`);
+      
+      if (downsampledExists != 't') {
+        // convert the edf format to mit format
+        // modify the header file
+        // then downsample the file using xform
+        runWFDBCommand(`edf2mit -i "${recordingFilename}" -r "${downsampledFileName}" -v`, recordingDirectory);
+        let headerRaw = runWFDBCommand(`cat ${downsampledHeaderFile}`, recordingDirectory);
+        console.log('cat headerRaw:', headerRaw);
+        let header = headerRaw.split(/\r?\n/);
+
+        // set the sampling frequency to targetDownsamplingRate
+        // and the number of samples per signal to zero to turn off the checksum verification
+        let headerLine = header[0].trim().split(/[ \t]+/);
+        headerLine[2] = options.targetDownsamplingRate;
+        headerLine[3] = '0';
+        header[0] = headerLine.join(' ');
+        
+        // for each signal specification line
+        // remove sample per frame if specified and set the checksum to 0 as a placeholder
+        for (let i = 1; i < header.length; i++) {
+          let signalLine = header[i].trim().split(/[ \t]+/);
+          console.log(`signalLine (header[${i}]): ${signalLine}`);
+          if (signalLine.length > 1) signalLine[1] = signalLine[1].replace(/x[1-9]*/, '');
+          if (signalLine.length > 6) signalLine[6] = '0';
+          header[i] = signalLine.join(' ');
+        }
+
+        // write into the header file and perform xform to downsample
+        const modifiedHeader = header.join('\r\n');
+        runWFDBCommand(`echo "${modifiedHeader}" > ${downsampledHeaderFile}`, recordingDirectory);
+        runWFDBCommand(`xform -i "${recordingFilename}" -H -o "${downsampledHeaderFile}"`, recordingDirectory);
+      }
+      return true;
+
+    } catch (e) {
+      if (e.message.split('\n')[1] !== undefined && e.message.split('\n')[1].trim() == '') {
+        return {
+          numSamples: 0,
+        };
+      }
+      else {
+        throw new Meteor.Error('wfdb.downsamp.command.failed', e.message);
+      }
+    }
+  }
 }
 
 let isInteger = (expression) => {
@@ -632,5 +690,12 @@ Meteor.methods({
       sampling_rate: dataFrame.samplingRate,
       channel_values: dataDict,
     }
+  },
+  'setup.edf.downsampled' (recordingName) {
+    let targetDownsamplingRate = '2';
+    return WFDB.downsamp({
+      recordingName,
+      targetDownsamplingRate
+    });
   }
 });
