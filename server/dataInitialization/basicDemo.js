@@ -27,6 +27,8 @@ const recordingPaths = [
     '/physionet/edfx/200930_761428_PSGfiltered.edf'
 ];
 
+var recordingIds = [];
+
 Meteor.startup(() => {
     for (let userName in userAccounts) {
         const user = userAccounts[userName];
@@ -50,7 +52,53 @@ Meteor.startup(() => {
         }
     }
 
-    const taskName = 'Sleep Staging (Physionet EDFX)28';
+    recordingPaths.forEach((recordingPath) => {
+    	const recordingPathParts = recordingPath.split('/');
+        const recordingFilename = recordingPathParts[recordingPathParts.length - 1];
+        let data = Data.findOne({
+            name: recordingFilename,
+            type: 'EDF',
+            path: recordingPath,
+        });
+        if (data) {
+            recordingIds.push(data._id);
+            return;
+        };
+        let patientNumber = recordingFilename.split('-')[0];
+        patientNumber = '' + patientNumber;
+        let patient = Patients.findOne({
+            id: patientNumber,
+        });
+        let patientId;
+        if (patient) {
+            patientId = patient._id;
+            console.log('Patient #' + patientNumber + ' (' + patientId + ') already exists. Re-using patient ...');                
+        }
+        else {
+            patientId = Patients.insert({
+                id: patientNumber,
+            });
+            console.log('Created Patient #' + patientNumber + ' (' + patientId + ')');
+        }
+        console.log(recordingFilename, patientNumber);
+        const metadataEDF = Meteor.call('get.edf.metadata', recordingPath);
+        const metadata = {
+            wfdbdesc: metadataEDF,
+        };
+        const dataId = Data.insert({
+            name: recordingFilename,
+            type: 'EDF',
+            patient: patientId,
+            path: recordingPath,
+            metadata: metadata,
+        });
+        recordingIds.push(dataId);
+        data = Data.findOne(dataId);
+        console.log('Created Data "' + recordingPath + '" (' + dataId + ')');
+        console.log(metadata.wfdbdesc.Groups[0]);
+    });
+
+    const taskName = 'Sleep Staging (Physionet EDFX)31';
     
     let task = Tasks.findOne({ name: taskName });
     let taskId;
@@ -67,8 +115,45 @@ Meteor.startup(() => {
             allowedDataTypes: ['EDF'],
             annotator: 'EDF',
             annotatorConfig: {
-                defaultMontage: 'Psg + Anne',
+                defaultMontage: 'Multifiles',
                 channelsDisplayed: {
+                    'Multifiles': {
+                        [recordingIds[1]]: [
+                            "'F4-A1'",
+                            "'C4-A1'",
+                            "'O2-A1'",
+                            "'LOC-A2'",
+                            "'ROC-A1'",
+                            "'Chin 1-Chin 2'",
+                            "'ECG'",
+                            "'Leg/L'",
+                            "'Leg/R'",
+                            "'Snore'",
+                            "'Airflow'",
+                            "'Nasal Pressure'",
+                            "'Thor'",
+                            "'Abdo'",
+                            "'SpO2'",
+                        ],
+                        [recordingIds[0]]: [
+                            "'ECG'",
+                            "'Pleth'",
+                            "'Accl Pitch'",
+                            "'Accl Roll'",
+                            "'Resp Effort'",
+                            "'PAT(ms)'",
+                            "'PR(bpm)'",
+                            //"'PAT_resp'",
+                            "'Snore'",
+                            //"'PAT_trend'",
+                            "'PI(%)'",
+                            "'HR(bpm)'",
+                            "'RR(rpm)'",
+                            "'SpO2(%)'",
+                            "'Chest Temp(A C)'",
+                            "'Limb Temp(A C)'",
+                        ]
+                    },
                     'Show all Signals': [
                        // "'Pleth'",
                         "'Snore'",
@@ -162,6 +247,37 @@ Meteor.startup(() => {
 
                 },
                 channelGains: {
+                    'Multifiles': [
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                    ],
                     "Show all Signals": [
                         0,
                         //1,
@@ -335,87 +451,38 @@ Meteor.startup(() => {
         console.log('Created Task "' + taskName + '" (' + taskId + ')');
     }
 
-    recordingPaths.forEach((recordingPath) => {
-    	const recordingPathParts = recordingPath.split('/');
-        const recordingFilename = recordingPathParts[recordingPathParts.length - 1];
-        let data = Data.findOne({
-            name: recordingFilename,
-            type: 'EDF',
-            path: recordingPath,
-        });
-        if (data) return;
-        let patientNumber = recordingFilename.split('-')[0];
-        patientNumber = '' + patientNumber;
-        let patient = Patients.findOne({
-            id: patientNumber,
-        });
-        let patientId;
-        if (patient) {
-            patientId = patient._id;
-            console.log('Patient #' + patientNumber + ' (' + patientId + ') already exists. Re-using patient ...');                
-        }
-        else {
-            patientId = Patients.insert({
-                id: patientNumber,
+    if(recordingPaths.length > 1) {
+        let dataIds = [];
+        let dataNames = '';
+        recordingPaths.forEach((recordingPath) => {
+            const recordingPathParts = recordingPath.split('/');
+            const recordingFilename = recordingPathParts[recordingPathParts.length - 1];
+            let data = Data.findOne({
+                name: recordingFilename,
+                type: 'EDF',
+                path: recordingPath,
             });
-            console.log('Created Patient #' + patientNumber + ' (' + patientId + ')');
-        }
-        console.log(recordingFilename, patientNumber);
-        const metadataEDF = Meteor.call('get.edf.metadata', recordingPath);
-        const metadata = {
-            wfdbdesc: metadataEDF,
-        };
-        const dataId = Data.insert({
-            name: recordingFilename,
-            type: 'EDF',
-            patient: patientId,
-            path: recordingPath,
-            metadata: metadata,
+            if (!data) return;
+            dataIds.push(data._id);
+            dataNames += data.name + ', ';
         });
-        data = Data.findOne(dataId);
-        console.log('Created Data "' + recordingPath + '" (' + dataId + ')');
-        console.log(metadata.wfdbdesc.Groups[0]);
-    });
-
-    if(recordingPaths.length > 1){
-
-        const recordingPathParts = recordingPaths[0].split('/');
-        const recordingFilename = recordingPathParts[recordingPathParts.length - 1];
-
-        const recordingPathParts2 = recordingPaths[1].split('/');
-        const recordingFilename2 = recordingPathParts2[recordingPathParts2.length - 1];
-
-        let data = Data.findOne({
-            name: recordingFilename,
-            type: 'EDF',
-            path: recordingPaths[0],
-        });
-        let data2 =Data.findOne({
-            name: recordingFilename2,
-            type: 'EDF',
-            path: recordingPaths[1],
-        });
-        if (!data || !data2) return;
-
+        dataNames = dataNames.slice(0, -2);
+        
         assignment = Assignments.findOne({
             users: testUser._id,
             task: taskId,
-            data: data._id,
-            data2: data2._id
+            dataFiles: dataIds,
         });
         if (!assignment) {
             const assignmentId = Assignments.insert({
                 users: [ testUser._id ],
                 task: taskId,
-                data: data._id,
-                data2: data2._id,
+                dataFiles: dataIds,
                 status: 'Pending',
                 channelsDelayed: '',
             });
-            console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + data.name + 'and' + data2.name+'" (' + assignmentId + ')');
+            console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
         }
-
-
     }
     else
     {
@@ -432,13 +499,13 @@ Meteor.startup(() => {
         assignment = Assignments.findOne({
             users: testUser._id,
             task: taskId,
-            data: data._id,
+            dataFiles: [data._id],
         });
         if (!assignment) {
             const assignmentId = Assignments.insert({
                 users: [ testUser._id ],
                 task: taskId,
-                data: data._id,
+                dataFiles: [data._id],
                 status: 'Pending',
                 channelsDelayed: '',
             });

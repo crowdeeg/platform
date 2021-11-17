@@ -161,7 +161,7 @@ Template.Assignment.onRendered(function() {
         const annotation = Annotations.findOne({
             assignment: data.assignment._id,
             user: Meteor.userId(),
-            data: data.data._id,
+            dataFiles: data.assignment.dataFiles,
             type: annotationType,
         });
         if (annotation) {
@@ -208,7 +208,7 @@ Template.Assignment.events({
         const annotationSelector = {
             assignment: data.assignment._id,
             user: Meteor.userId(),
-            data: data.data._id,
+            dataFiles: data.dataset,  // a list of datafile ids
             type: annotationType,
         };
         const annotationDocument = $.extend($.extend(true, {}, annotationSelector), {

@@ -54,9 +54,17 @@ Template.AnnotatorEDF.onRendered(function() {
     config = $.extend(config, this.data.preferences.annotatorConfig);
     console.log("here");
     config = $.extend(config, {
-        recordingName: this.data.data.path,
+        // recordingName: this.data.data.path,
+        // allRecordings: [this.data.data.path, this.data.data2.path],
+        recordingName: this.data.dataset.reduce((combined, data) => {
+            let dataPathSegments = data.path.split('/');
+            if (!combined.length) return dataPathSegments[dataPathSegments.length - 1];
+            return combined + ' + ' + dataPathSegments[dataPathSegments.length - 1];
+        }, ''),
+        allRecordings: this.data.dataset.map((data) => {
+            return { _id: data._id, path: data.path };
+        }),
         context: this.data,
-        allRecordings: [this.data.data.path, this.data.data2.path],
         setVisibilityStatusForInfoPanel: (isVisible) => {
             setVisibilityStatusForFloatingPanel(isVisible, template, '.info-panel-container');
         },
@@ -65,7 +73,7 @@ Template.AnnotatorEDF.onRendered(function() {
         },
     });
     console.log("Template2:", this);
-    console.log("data2:", this.data.data2);
+    console.log("dataset:", this.data.dataset);
     console.log("config", config);
     annotatorContainer.TimeSeriesAnnotator(config);
 

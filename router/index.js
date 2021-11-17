@@ -55,12 +55,15 @@ Router.route('/assignment/:_id', {
             this.redirect('home');
             return;
         }
-        console.log("assignment.data", assignment.data);
-        var data = Data.findOne(assignment.data);
-        var data2 = Data.findOne(assignment.data2);
-        let dataset = Data.find().fetch();
+        // console.log("assignment.dataFiles", assignment.dataFiles);
+        // var data = Data.findOne(assignment.data);
+        // var data2 = Data.findOne(assignment.data2);
+        
+        let queryArray = assignment.dataFiles.map((dataId) => { return { _id: dataId }; });
+        let dataset = Data.find({ $or: queryArray }).fetch();
+
         console.log("Data set:", dataset);
-        console.log("data2:", data2);
+        // let data = Data.findOne(assignment.data);
         const task = Tasks.findOne(assignment.task);
         const annotations = Annotations.find({ assignment: assignmentId }).fetch();
         var preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false });
@@ -68,15 +71,13 @@ Router.route('/assignment/:_id', {
             const preferencesId = Preferences.insert({
                 assignment: assignment._id,
                 user: Meteor.userId(),
-                data: assignment.data,
-                //data2: assignment.data2,
+                dataFiles: assignment.dataFiles,
                 annotatorConfig: {},
             });
             preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false })
         }
         this.render('Assignment', {
-            data: { assignment, data, data2, task, annotations, preferences },
-            //data2 : { assignment, data2, task, annotations, preferences },
+            data: { assignment, dataset, task, annotations, preferences },
         });    
         /*   
         data = Data.findOne(assignment.data2);

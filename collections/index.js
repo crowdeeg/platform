@@ -350,6 +350,29 @@ Data = new Meteor.Collection('data');
 Schemas.Data = new SimpleSchema({
     createdAt: SchemaHelpers.createdAt,
     updatedAt: SchemaHelpers.updatedAt,
+    // files: {
+    //     type: Array,
+    //     label: 'Files',
+    // },
+    // 'files.$': {
+    //     name: {
+    //         type: String,
+    //         label: 'Name',
+    //     },
+    //     patient: SchemaHelpers.fromCollection(Patients, {
+    //         optional: true,
+    //     }),
+    //     path: {
+    //         type: String,
+    //         label: 'Path',
+    //     },
+    //     metadata: {
+    //         type: Object,
+    //         label: 'Metadata',
+    //         blackbox: true,
+    //         defaultValue: {},
+    //     },
+    // },
     name: {
         type: String,
         label: 'Name',
@@ -409,7 +432,7 @@ Data.helpers({
     },
     assignmentsCursor(filter, options) {
         filter = filter || {};
-        filter = _.extend({}, filter, { data: this._id });
+        filter = _.extend({}, filter, { dataFiles: [this._id] });
         const assignments = Assignments.find(filter, options);
         return assignments;
     },
@@ -683,22 +706,19 @@ Schemas.Assignments = new SimpleSchema({
     task: SchemaHelpers.fromCollection(Tasks, {
         optional: true,
     }),
-    data: SchemaHelpers.fromCollection(Data, {
-       optional: true,
-    }),
-    data2: SchemaHelpers.fromCollection(Data, {
-        optional: true,
-     }),
-    /*
+    // data: SchemaHelpers.fromCollection(Data, {
+    //     optional: true,
+    // }),
+    // data2: SchemaHelpers.fromCollection(Data, {
+    //     optional: true,
+    // }),
     dataFiles: {
         type: Array,
         label: 'Data file',
         minCount: 0,
         optional: true,
-
     },
     'dataFiles.$': SchemaHelpers.fromCollection(Data),
-    */
     name: {
         type: String,
         label: 'Name',
@@ -798,13 +818,22 @@ Assignments.helpers({
     return task.name;
   },
   dataDoc() {
-    return Data.findOne(this.data) || false;
+    // only return the first data in dataFiles
+    let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    return Data.findOne({ $or: queryArray }) || false;
   },
-  dataDoc2() {
-    return Data.findOne(this.data) || false;
+  dataDocs() {
+    // return Data.findOne(this.data) || false;
+    let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    return Data.find({ $or: queryArray }) || false;
   },
+//   dataDoc2() {
+//     return Data.findOne(this.data) || false;
+//   },
 
   patientDoc() {
+    // only return the patient of the first data in dataFiles
+    // const data = this.dataDocs().next((err, doc) => err ? false : doc);
     const data = this.dataDoc();
     if (!data) return false;
     return data.patientDoc();
@@ -845,35 +874,35 @@ Assignments.helpers({
     return patient.id;
   },
   dataPath() {
-    const data = this.dataDoc();
+    const data = this.dataDoc().fetch();
     if (!data) return 'Loading ...';
-    return data.path;
+    return data.map((data) => data.path);
   },
-  dataPath2() {
-    const data = this.dataDoc2();
-    if (!data) return 'Loading ...';
-    return data.path;
-  },
+//   dataPath2() {
+//     const data = this.dataDoc2();
+//     if (!data) return 'Loading ...';
+//     return data.path;
+//   },
   dataLengthInSeconds() {
     const data = this.dataDoc();
     if (!data) return 'Loading ...';
     return data.lengthInSeconds();
   },
-  dataLengthInSeconds2() {
-    const data = this.dataDoc2();
-    if (!data) return 'Loading ...';
-    return data.lengthInSeconds();
-  },
+//   dataLengthInSeconds2() {
+//     const data = this.dataDoc2();
+//     if (!data) return 'Loading ...';
+//     return data.lengthInSeconds();
+//   },
   dataLengthFormatted() {
     const data = this.dataDoc();
     if (!data) return 'Loading ...';
     return data.lengthFormatted();
   },
-  dataLengthFormatted2() {
-    const data = this.dataDoc2();
-    if (!data) return 'Loading ...';
-    return data.lengthFormatted();
-  },
+//   dataLengthFormatted2() {
+//     const data = this.dataDoc2();
+//     if (!data) return 'Loading ...';
+//     return data.lengthFormatted();
+//   },
   userDocs() {
     return Meteor.users.find({ _id: { $in: this.users } } ).fetch();
   },
@@ -941,7 +970,7 @@ Assignments.helpers({
   isLeafAssignment() {
     return (
             this.task
-        &&  this.data
+        &&  this.dataFiles.length
         &&  (
                 !this.childAssignments
             ||  !this.childAssignments.length
@@ -1188,7 +1217,7 @@ Assignments.helpers({
     if (source.userId) {
         return Assignments.find({
             users: source.userId,
-            data: this.data,
+            dataFiles: this.dataFiles,
         }, {
             limit: 1,
         });
@@ -1378,7 +1407,13 @@ Schemas.Annotations = new SimpleSchema({
     updatedAt: SchemaHelpers.updatedAt,
     assignment: SchemaHelpers.fromCollection(Assignments),
     user: SchemaHelpers.fromCollection(Meteor.users),
-    data: SchemaHelpers.fromCollection(Meteor.data),
+    // data: SchemaHelpers.fromCollection(Meteor.data),
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 1
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     type: SchemaHelpers.annotationType,
     value: {
         type: Match.OneOf(Boolean, Number, String, Object),
@@ -1635,7 +1670,13 @@ Schemas.Preferences = new SimpleSchema({
     updatedAt: SchemaHelpers.updatedAt,
     assignment: SchemaHelpers.fromCollection(Assignments),
     user: SchemaHelpers.fromCollection(Meteor.users),
-    data: SchemaHelpers.fromCollection(Meteor.data),
+    // data: SchemaHelpers.fromCollection(Meteor.data),
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 1
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     annotatorConfig: SchemaHelpers.annotatorConfig,
     arbitration: SchemaHelpers.fromCollection(Arbitrations, {
         optional: true,

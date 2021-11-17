@@ -53,7 +53,7 @@ Template.Status.helpers({
             assignment.source = renderAnnotationsImported(assignment.annotationsImported);
             const annotations = Annotations.find({
                 assignment: assignment._id,
-                data: assignment.data,
+                dataFiles: assignment.dataFiles,
                 type: { $ne: 'SIGNAL_ANNOTATION' },
             }, { fields: { 'value.metadata': 0 } }).fetch();
             annotations.forEach((annotation) => {

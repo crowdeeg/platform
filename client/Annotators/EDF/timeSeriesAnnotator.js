@@ -395,7 +395,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         else {
             var recordingNameFromGetParameter = that._getUrlParameter('recording_name');
             if (recordingNameFromGetParameter) {
-                that.options.allRecordings = [recordingNameFromGetParameter];
+                let id = Data.findOne({ path: recordingNameFromGetParameter })._id;
+                that.options.allRecordings = [{ _id: id, path: recordingNameFromGetParameter }];
             }
             that._setup();
         }
@@ -431,8 +432,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             printedBox: false,
             delayExists: true,
             timeChange: false,
-            channelsDealyedNames: [],
+            channelsDelayedNames: [],
             delayAmount: [],
+            channelTimeshift: {},
+            recordingMetadata: {},
+            recordingLengthInSeconds: 0,
             numberOfAnnotationsInCurrentWindow: 0,
             specifiedTrainingWindows: undefined,
             requiredName:"",
@@ -1033,7 +1037,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var firstExample = examples[0];
         var recordingName = firstExample.recording;
         var channelsDisplayed = [firstExample.channels_displayed[firstExample.channels]];
-        that.options.allRecordings = [recordingName];
+        let id = Data.findOne({ path: recordingName })._id;
+        that.options.allRecordings = [{ _id: id, path: recordingName }];
         that.options.channelsDisplayed = channelsDisplayed;
         that.options.graph.height = 200;
         that.options.features.showUserAnnotations = false;
@@ -1199,16 +1204,16 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     },
 
-    _dealyChannel: function(channelName, amount){
+    _delayChannel: function(channelName, amount){
         var that = this;
-        if(that.vars.channelsDealyedNames.includes(channelName)){
-            var index = that.vars.channelsDealyedNames.indexOf(channelName);
+        if(that.vars.channelsDelayedNames.includes(channelName)){
+            var index = that.vars.channelsDelayedNames.indexOf(channelName);
             that.vars.delayAmount[index] = amount + that.vars.delayAmount[index];
            // console.log(channelName);
         }
         else{
            // console.log(channelName);
-            that.vars.channelsDealyedNames.push(channelName);
+            that.vars.channelsDelayedNames.push(channelName);
             that.vars.delayAmount.push(amount);
         }
         that.vars.timeChange = true;
@@ -1262,10 +1267,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._setupSleepStagePanel();
         that._setupTrainingPhase();
         that._setupArbitration();
-        that._setupDownsampledRecording(() => {
+        // that._setupDownsampledRecording(() => {
             that._getRecordingMetadata(function(metadata) {
-            console.log("metadata", metadata);
-                that.vars.recordingMetadata = metadata;
+                console.log("metadata and length", metadata);
                 if (that.options.preloadEntireRecording) {
                     console.log("preloadEntireRecording", that.options.preloadEntireRecording);
                     that._preloadEntireRecording(function() {
@@ -1275,7 +1279,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     that._getUserStatus();
                 }
             });
-        });
+        // });
     },
 
     _getUrlParameter: function(sParam) {
@@ -1482,7 +1486,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
            // that._setDelay();
             assign = Assignments.find({
                 task: that.options.context.task._id,
-                data: that.options.context.data._id,
+                dataFiles: that.options.context.dataset.map((data) => data._id),
             }, {
                 sort: { updatedAt: -1 },
                 }).fetch();
@@ -1586,7 +1590,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             
             select.change(function(){
                 that.options.features.annotationType = select.val();
-                that._setupAnnotationInteraction();
+                // that._setupAnnotationInteraction();
                 
             })
             select.change();
@@ -1630,14 +1634,16 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _setupDownsampledRecording: function(callback) {
         var that = this;
-        Meteor.call('setup.edf.downsampled', that.options.recordingName, (error, results) => {
-            if (error) {
-                console.log(error.message);
+        that.options.allRecordings.forEach((recording) => {
+            Meteor.call('setup.edf.downsampled', recording.path, (error, results) => {
+                if (error) {
+                    console.log(error.message);
+                    return;
+                } else if (results && callback) {
+                    callback();
+                }
                 return;
-            } else if (results && callback) {
-                callback();
-            }
-            return;
+            });
         });
     },
 
@@ -1680,7 +1686,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         else {
             channelsDisplayedPerMontage = [ that._getChannelsDisplayed() ];
         }
-        var recordingLengthInSeconds = that.vars.recordingMetadata.LengthInSeconds;
+        var recordingLengthInSeconds = that.vars.recordingLengthInSeconds;
         //console.log(that.vars.recordingMetadata);
         // For local debugging, only
         // preload a maximum of 10 epochs
@@ -1709,7 +1715,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             for (var i = 0; i < numWindowsToRequestPerMontage; ++i) {
                 var startTime = i * that.vars.xAxisScaleInSeconds;
                 var options = {
-                    recording_name: that.options.allRecordings[0],
+                    recordings: that.options.allRecordings,
                     channels_displayed: channelsDisplayed,
                     start_time: i * that.vars.xAxisScaleInSeconds + 90,
                     window_length: that.vars.xAxisScaleInSeconds,
@@ -1731,19 +1737,23 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _getRecordingMetadata: function(callback) {
         var that = this;
         that._getDelay();
-        if (that.vars.recordingMetadata) {
+        if (Object.keys(that.vars.recordingMetadata).length) {
             callback(that.vars.recordingMetadata);
             return;
         }
-        Meteor.call('get.edf.metadata', that.options.allRecordings[0], function(error, metadata) {
-            if (error) {
-                callback(null, error.message);
-                return;
-            }
-            
-            that.vars.recordingMetadata = metadata;
-            callback(that.vars.recordingMetadata);
+        that.options.allRecordings.forEach((recording) => {
+            Meteor.call('get.edf.metadata', recording.path, function(error, metadata) {
+                if (error) {
+                    callback(null, error.message);
+                    return;
+                }
+                that.vars.recordingMetadata[recording._id] = metadata;
+                if (metadata.LengthInSeconds > that.vars.recordingLengthInSeconds) {
+                    that.vars.recordingLengthInSeconds = metadata.LengthInSeconds;
+                }
+            });
         });
+        callback(that.vars.recordingMetadata);
     },
 
     _triggerOnReadyEvent: function() {
@@ -1774,7 +1784,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that._updateNavigationStatusForExperiment();
             var currentWindowIndex = that.options.experiment.current_condition.current_window_index;
             var conditionWindows = that.options.experiment.current_condition.windows;
-            that.options.allRecordings = [that.options.experiment.current_condition.recording_name];
+            let id = Data.findOne({ path: that.options.experiment.current_condition.recording_name })._id;
+            that.options.allRecordings = [{ _id: id, path: that.options.experiment.current_condition.recording_name }];
             var initialWindowStart = conditionWindows[currentWindowIndex];
             that.vars.lastActiveWindowStart = initialWindowStart;
             that._switchToWindow(that.options.allRecordings, initialWindowStart, that.vars.xAxisScaleInSeconds);
@@ -1782,9 +1793,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         else if (that._areTrainingWindowsSpecified()) {
             console.log("that._areTrainingWindowsSpecified")
             var trainingWindow = that._getCurrentTrainingWindow();
-            that._switchToWindow(trainingWindow.allRecordings, trainingWindow.timeStart, trainingWindow.windowSizeInSeconds);
+            let id = Data.findOne({ path: trainingWindow.recordingName })._id;
+            trainingWindow.recordingName = [{ _id: id, path: trainingWindow.recordingName }];
+            that._switchToWindow(trainingWindow.recordingName, trainingWindow.timeStart, trainingWindow.windowSizeInSeconds);
         }
-        else if (that.options.allRecordings[0]) {
+        else if (that.options.allRecordings.length > 0) {
             console.log("that.options.allRecordings")
             that.vars.lastActiveWindowStart = + that.options.startTime;
             const context = that.options.context;
@@ -2144,7 +2157,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (!that.vars.fastForwardEnabled && windows >= that.options.windowJumpSizeFastForwardBackward) return;
         if (!that.vars.backwardEnabled && windows <= -1) return;
         if (!that.vars.fastBackwardEnabled && windows <= -that.options.windowJumpSizeFastForwardBackward) return;
-        var nextRecordingName = that.options.allRecordings;
+        var nextRecordings = that.options.allRecordings;
         var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
         var nextWindowStart = that.options.currentWindowStart;
         if (that.options.experiment.running) {
@@ -2161,7 +2174,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that.vars.currentTrainingWindowIndex += windows;
             if (that._isCurrentWindowTrainingWindow()) {
                 var nextTrainingWindow = that._getCurrentTrainingWindow();
-                nextRecordingName = [nextTrainingWindow.recordingName]; // need to be fixed with multi recoding loaded
+                let id = Data.findOne({ path: nextTrainingWindow.recordingName })._id;
+                nextRecordings = [{ _id: id, path: nextTrainingWindow.recordingName }];
                 nextWindowStart = nextTrainingWindow.timeStart;
                 nextWindowSizeInSeconds = nextTrainingWindow.windowSizeInSeconds;
             }
@@ -2177,10 +2191,10 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
             nextWindowStart = Math.max(0, that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds * windows);
         }
-        that._switchToWindow(nextRecordingName, nextWindowStart, nextWindowSizeInSeconds);
+        that._switchToWindow(nextRecordings, nextWindowStart, nextWindowSizeInSeconds);
     },
 
-    _switchToWindow: function (recording_names, start_time, window_length) {
+    _switchToWindow: function (allRecordings, start_time, window_length) {
         var that = this;
         console.log("_switchToWindow.that:", that);
         if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
@@ -2213,7 +2227,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
 
         that.vars.currentWindowStart = start_time;
-        that.vars.currentWindowRecording = recording_names[0];
+        that.vars.currentWindowRecording = that.options.recordingName;
         that._updateJumpToClosestDisagreementWindowButtonsEnabledStatus();
 
         if (that._isVisibleRegionDefined()) {
@@ -2273,30 +2287,29 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         windowsToRequest.forEach((windowStartTime) => {
             console.log("6, windowStartTime:", windowStartTime);
             channelsDelayed = {
-                channelNames: that.vars.channelsDealyedNames,
+                channelNames: that.vars.channelsDelayedNames,
                 delayAmount: that.vars.delayAmount,
             }
             var options = {
-                recording_name: recording_names[0],
-                channels_displayed: that._getChannelsDisplayed(that._getMontageNameFromRecording(recording_names[0])),
+                recordings: allRecordings,
+                channels_displayed: that._getChannelsDisplayed('Multifiles'),
                 start_time: windowStartTime,
-                delayExists: that.vars.delayExists,
-                channelsDelayed: channelsDelayed,
+                channel_timeshift: that.channelTimeshift,
                 window_length: window_length,
                 target_sampling_rate: that.options.targetSamplingRate,
                 use_high_precision_sampling: that.options.useHighPrecisionSampling,
             };
-            var options2 = {
-                recording_name: recording_names[1],
-                channels_displayed: that._getChannelsDisplayed(that._getMontageNameFromRecording(recording_names[1])),
-                start_time: windowStartTime,
-                delayExists: that.vars.delayExists,
-                channelsDelayed: channelsDelayed,
-                window_length: window_length,
-                target_sampling_rate: that.options.targetSamplingRate,
-                use_high_precision_sampling: that.options.useHighPrecisionSampling,
-            };
-            that._requestData(options, options2, (data, errorData) => {
+            // var options2 = {
+            //     recording_name: recording_names[1],
+            //     channels_displayed: that._getChannelsDisplayed(that._getMontageNameFromRecording(recording_names[1])),
+            //     start_time: windowStartTime,
+            //     delayExists: that.vars.delayExists,
+            //     channelsDelayed: channelsDelayed,
+            //     window_length: window_length,
+            //     target_sampling_rate: that.options.targetSamplingRate,
+            //     use_high_precision_sampling: that.options.useHighPrecisionSampling,
+            // };
+            that._requestData(options, (data, errorData) => {
                 console.log("7, data:", data);
                 var windowAvailable = !errorData;
                 if (windowAvailable && windowStartTime == that.vars.currentWindowStart) {
@@ -2309,6 +2322,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     switch (windowStartTime) {
                         case that.vars.currentWindowStart + window_length:
                             if (that.options.visibleRegion.end === undefined) {
+                                console.log('winAva:', windowAvailable);
                                 that._setForwardEnabledStatus(windowAvailable);
                                 if (!windowAvailable) {
                                     that._lastWindowReached();
@@ -2396,11 +2410,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._switchToWindow(that.options.allRecordings, that.vars.lastActiveWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
-    _requestData: function(options, options2, callback) {
+    _requestData: function(options, callback) {
         
         var that = this;
         // identifierKey includes:
-        // 'recording_name'
+        // 'recordings'
         // 'start_time'
         // 'window_length'
         // 'channels_displayed'
@@ -2409,14 +2423,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var noDataError = 'No data available for window with options ' + JSON.stringify(options);
 
        // console.log(options.start_time);
-       // console.log(that.vars.recordingMetadata.LengthInSeconds);
+       // console.log(that.vars.recordingLengthInSeconds);
         if (options.start_time < 0) {
             that.vars.windowsCache[identifierKey] = false;
             console.log("options.start_time < 0");
         }
-        else if (options.start_time > that.vars.recordingMetadata.LengthInSeconds) {
+        else if (options.start_time > that.vars.recordingLengthInSeconds) {
             that.vars.windowsCache[identifierKey] = false;
-            console.log("options.start_time > that.vars.recordingMetadata.LengthInSeconds");
+            console.log("options.start_time > that.vars.recordingLengthInSeconds");
         }
         // console.log(that.vars.windowsCache[identifierKey]);
         if (that.vars.windowsCache[identifierKey] === false) {
@@ -2447,23 +2461,23 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         const numSecondsToPadBeforeAndAfter = 2;
         
         const optionsPadded = JSON.parse(JSON.stringify(options));
-        const optionsPadded2 = JSON.parse(JSON.stringify(options2));
+        // const optionsPadded2 = JSON.parse(JSON.stringify(options2));
     
         optionsPadded.start_time -= numSecondsToPadBeforeAndAfter;
-        optionsPadded2.start_time -= numSecondsToPadBeforeAndAfter;
+        // optionsPadded2.start_time -= numSecondsToPadBeforeAndAfter;
        
         optionsPadded.start_time = Math.max(0, optionsPadded.start_time);
-        optionsPadded2.start_time = Math.max(0, optionsPadded2.start_time);
+        // optionsPadded2.start_time = Math.max(0, optionsPadded2.start_time);
        
         const numSecondsPaddedBefore = options.start_time - optionsPadded.start_time ;
-        const numSecondsPaddedBefore2 = options2.start_time - optionsPadded2.start_time;
+        // const numSecondsPaddedBefore2 = options2.start_time - optionsPadded2.start_time;
 
         optionsPadded.window_length = options.window_length + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter;
-        optionsPadded2.window_length = options2.window_length + numSecondsPaddedBefore2 + numSecondsToPadBeforeAndAfter;
+        // optionsPadded2.window_length = options2.window_length + numSecondsPaddedBefore2 + numSecondsToPadBeforeAndAfter;
 
         // console.log("crossed");
         //console.log(that.vars.delayAmount);
-        Meteor.call('get.edf.data', optionsPadded, optionsPadded2, (error, data) => {
+        Meteor.call('get.edf.data', optionsPadded, (error, data) => {
             if (error) {
                 console.log(error.message);
                 callback(null, error.message);
@@ -2796,7 +2810,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _getIdentifierObjectForDataRequest: function(options) {
         var options = options || {};
         var relevantOptions = [
-            'recording_name',
+            'recordings',
             'start_time',
             'window_length',
             'channels_displayed',
@@ -2898,12 +2912,12 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _getRecordingEndInSecondsSnapped: function() {
         var that = this;
-        return (Math.ceil(that.vars.recordingMetadata.LengthInSeconds / that.vars.xAxisScaleInSeconds) + 1) * that.vars.xAxisScaleInSeconds;
+        return (Math.ceil(that.vars.recordingLengthInSeconds / that.vars.xAxisScaleInSeconds) + 1) * that.vars.xAxisScaleInSeconds;
     },
 
     _getLatestPossibleWindowStartInSeconds: function() {
         var that = this;
-        return Math.floor(that.vars.recordingMetadata.LengthInSeconds / that.vars.xAxisScaleInSeconds) * that.vars.xAxisScaleInSeconds;
+        return Math.floor(that.vars.recordingLengthInSeconds / that.vars.xAxisScaleInSeconds) * that.vars.xAxisScaleInSeconds;
     },
 
     _getClassificationSummaryElement: function() {
@@ -2922,7 +2936,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var that = this;
         var channels = data.channels;
         
-        //console.log(that.vars.channelsDealyedNames);
+        //console.log(that.vars.channelsDelayedNames);
         that.vars.graphID = 'time-series-graph-' + that._getUUID();
         var graph = $(that.element).find('.graph');
         graph.children().remove();
@@ -2997,7 +3011,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 enabled: false
             },
             title: {
-                text: (that.options.allRecordings[0].split('/'))[(that.options.allRecordings[0].split('/')).length - 1 ]
+                text: that.options.recordingName,
             },
             tooltip: {
                 enabled: false
@@ -3313,11 +3327,11 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
 
         var that = this;
         that._getDelay();
-        that.vars.channelsDealyedNames = that._getChannelsDisplayed();
+        that.vars.channelsDelayedNames = that._getChannelsDisplayed();
         //console.log( that._getChannelsDisplayed());
 
         if(that.vars.delayAmount.length == 0){
-            that.vars.channelsDealyedNames.forEach(channel => {
+            that.vars.channelsDelayedNames.forEach(channel => {
                 that.vars.delayAmount.push(0);
             })
 
@@ -3445,7 +3459,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                         channelIndices = getAnnotationChannelIndices2(e),
                         { height, yValue } = that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
                         channelIndices.forEach(channel => {
-                            that._dealyChannel(that._getChannelsDisplayed()[channel], clickXValue);
+                            that._delayChannel(that._getChannelsDisplayed()[channel], clickXValue);
                             //console.log(that._getChannelsDisplayed()[channel]);
                         });
                         var xValue = that._convertPixelsToValue(clickX, 'x');
@@ -3475,7 +3489,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                     Highcharts.removeEvent(document, 'mouseup', drop2);
             
                     var x = e.clientX - container.offsetLeft;
-                    //console.log(that.vars.channelsDealyedNames);
+                    //console.log(that.vars.channelsDelayedNames);
                     that.vars.delayExists = true;
 
                     var newList = [];
@@ -3484,8 +3498,8 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                     that._getChannelsDisplayed().forEach( channel =>
                         {
                             
-                            if(that.vars.channelsDealyedNames.includes(channel)){
-                                delayList.push(that.vars.delayAmount[that.vars.channelsDealyedNames.indexOf(channel)]);
+                            if(that.vars.channelsDelayedNames.includes(channel)){
+                                delayList.push(that.vars.delayAmount[that.vars.channelsDelayedNames.indexOf(channel)]);
                             
                             }
                             else{
@@ -3493,7 +3507,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                             }
                         })
                         that.vars.delayAmount = delayList;
-                        that.vars.channelsDealyedNames = that._getChannelsDisplayed();
+                        that.vars.channelsDelayedNames = that._getChannelsDisplayed();
                         that.vars.delayExists = true;
 
                     that._reloadCurrentWindow();
@@ -3647,7 +3661,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                         channelIndices = getAnnotationChannelIndices4(e),
                         { height, yValue } = that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
                         channelIndices.forEach(channel => {
-                            that._dealyChannel(that._getChannelsDisplayed()[channel], clickXValue);
+                            that._delayChannel(that._getChannelsDisplayed()[channel], clickXValue);
                             //console.log(that._getChannelsDisplayed()[channel]);
                         })
                         var xValue = that._convertPixelsToValue(clickX, 'x');
@@ -3679,7 +3693,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                     
                     //console.log(that.vars.delayAmount);
                     var x = e.clientX - container.offsetLeft;
-                    //console.log(that.vars.channelsDealyedNames);
+                    //console.log(that.vars.channelsDelayedNames);
                     that._reloadCurrentWindow();
                     if (x == clickX ) {
                         if (annotation && annotation.destroy) {
@@ -4933,25 +4947,27 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
 
     _getDelay: function(){
         that = this;
-        assigns = Assignments.find({
-            task: that.options.context.task._id,
-            data: that.options.context.data._id,
-         }, {
-            sort: { updatedAt: -1 },
-        }).fetch();
+        // assigns = Assignments.find({
+        //     task: that.options.context.task._id,
+        //     data: that.options.context.data._id,
+        //  }, {
+        //     sort: { updatedAt: -1 },
+        // }).fetch();
 
         
-        assign = assigns[0];
+        // assign = assigns[0];
+        assign = Assignments.findOne(that.options.context.assignment._id);
         //console.log(assign.getchannelsDelayedAmount());
      //   console.log(assign.channelsDelayed);
         if(assign.channelsDelayed){
             that.vars.delayAmount = assign.channelsDelayed.split(",");
-            that.vars.channelsDealyedNames = that._getChannelsDisplayed();
+            that.vars.channelsDelayedNames = that._getChannelsDisplayed();
         }
         else{
             that.vars.delayAmount = [];
         }
-    
+        
+
         //console.log(that.vars.delayAmount);
         //Data.find({
             //_id: that.options.context.data._id
@@ -4963,7 +4979,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         //})
         //console.log(assign);
        //console.log(delayString);
-        //assign._dealyChannels(delayString)
+        //assign._delayChannels(delayString)
 
 
           
@@ -4975,7 +4991,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         that = this;
         assigns = Assignments.find({
             task: that.options.context.task._id,
-            data: that.options.context.data._id,
+            dataFiles: that.options.context.dataset.map((data) => data._id),
         }, {
             sort: { updatedAt: -1 },
             }).fetch();
@@ -4989,15 +5005,17 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
 
     _setDelay: function(assign){
         that = this;
-        assigns = Assignments.find({
-            task: that.options.context.task._id,
-            data: that.options.context.data._id,
-        }, {
-            sort: { updatedAt: -1 },
-            }).fetch();
+        // assigns = Assignments.find({
+        //     task: that.options.context.task._id,
+        //     data: that.options.context.data._id,
+        // }, {
+        //     sort: { updatedAt: -1 },
+        //     }).fetch();
 
         
-        assign = that._getCurrAssignment();
+        // assign = that._getCurrAssignment();
+        
+
         //assigns[0];
        
        // console.log(assign);
@@ -5015,7 +5033,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
        //console.log(assign.channelsDelayed);
         //console.log(assign);
        //console.log(delayString);
-        //assign._dealyChannels(delayString);
+        //assign._delayChannels(delayString);
 
           
       
@@ -5026,7 +5044,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         var that = this;
         if (!that._isHITModeEnabled()) return;
         that._saveUserEvent('window_' + beginOrComplete, {
-            recordingName: that.options.allRecordings[0],
+            recordingName: that.options.recordingName,
             windowStart: that.vars.currentWindowStart,
             windowSizeInSeconds: that.vars.xAxisScaleInSeconds,
             channelsDisplayed: that._getChannelsDisplayed(),
@@ -5075,7 +5093,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
                // console.log(that.options.context.assignment._id);
                 annotations = Annotations.find({
                     assignment: that.options.context.assignment._id,
-                    data: that.options.context.data._id,
+                    dataFiles: that.options.context.dataset.map((data) => data._id),
                     type: 'SIGNAL_ANNOTATION',
                 }, {
                     sort: { updatedAt: -1 },
@@ -5085,7 +5103,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
                 //grab annotations from this current admin user
                 annotations = Annotations.find({
                     assignment: that.options.context.assignment._id,
-                    data: that.options.context.data._id,
+                    dataFiles: that.options.context.dataset.map((data) => data._id),
                     user: Meteor.userId(),
                     type: 'SIGNAL_ANNOTATION',
                 }, {
@@ -5095,7 +5113,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
                 //grab annotations from the selected user
                 annotations = Annotations.find({
                     assignment: that.options.context.assignment._id,
-                    data: that.options.context.data._id,
+                    dataFiles: that.options.context.dataset.map((data) => data._id),
                     user: that.options.features.showAllBoxAnnotations,
                     type: 'SIGNAL_ANNOTATION',
                 }, {
@@ -5106,7 +5124,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
             //grab annotations from this current non-admin user
             annotations = Annotations.find({
                 assignment: that.options.context.assignment._id,
-                data: that.options.context.data._id,
+                dataFiles: that.options.context.dataset.map((data) => data._id),
                 user: Meteor.userId(),
                 type: 'SIGNAL_ANNOTATION',
             }, {
@@ -5388,7 +5406,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
             var annotationDocument = {
                 assignment: that.options.context.assignment._id,
                 user: Meteor.userId(), 
-                data: that.options.context.data._id,
+                dataFiles: that.options.context.dataset.map((data) => data._id),
                 type: 'SIGNAL_ANNOTATION',
                 value: {
                     label: type,
@@ -5399,7 +5417,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
                         end: parseFloat(end),
                     },
                     metadata: {
-                        recording: that.options.allRecordings[0],
+                        recording: that.options.recordingName,
                         channels_displayed: that._getChannelsDisplayed(),
                         comment: comment,
                         metadata: metadata,
