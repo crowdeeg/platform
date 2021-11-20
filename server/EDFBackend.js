@@ -472,170 +472,74 @@ Meteor.methods({
     });
     // let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
     // let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
-    // let channelsDelayed = options.channelsDelayed;
     // let recordingName2 = options2.recording_name;
     let targetSamplingRate = options.target_sampling_rate;
     let useHighPrecisionSampling = options.use_high_precision_sampling;
-    // let delayExists = options.delayExists;
     let atLeast1 = 0;
     let dataFrame = {};
     // let dataFrame2 = {};
     
     console.log("get.edf.data init finished");
     
-    if(/*channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length*/ 0 > 0 ){
-      console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length > 0");
-      let notDelayed = channelsDisplayed.filter( x => !channelsDelayed.channelNames.includes(x));
-      
-    
-    
-      let notDelayedParsed = parseChannelsDisplayed(notDelayed); 
-      var sTime = startTime;
-      if(notDelayed.length == 0 )
-      { 
-        
-      let currParsed = {};
-      let delayedTime = 0;
-    
-      
-      channelsDelayed.channelNames.forEach(channel => {
-      
-        currParsed = parseChannelsDisplayed([channel]);
-        
-        
-        if(channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)]){
-             
-          startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
-          
-        }
-      
-        currDataframe = WFDB.rdsamp({
-          recordingName,
-          startTime,
-          windowLength,
-          channelsDisplayed: currParsed.individualChannelsRequired,
-          targetSamplingRate,
-          useHighPrecisionSampling,
-        });
-       
-     
-        if(atLeast1 == 0|| !dataFrame ||dataFrame.size == 0 || dataFrame.length == 0 || dataFrame == {} || !dataFrame.channelNames){
-      
-          dataFrame = currDataframe;
-          dataFrame.channelNames = currDataframe.channelNames;
-          dataFrame.data = currDataframe.data;
-          atLeast1 = 1;
-        }
-        else{
-      
-        dataFrame.channelNames.push(currDataframe.channelNames[0]);
-       
-        dataFrame.data.push(currDataframe.data[0]);
-       
-        }
-        startTime = sTime;
-        
-        count++;
-      } )
-    
-      
-    }
-
-      
-      else{
-        console.log("no delay");
-        dataFrame = WFDB.rdsamp({
-        recordingName,
-        startTime,
+    var currDataFrame;
+    dataFrame = allRecordings.reduce((collections, recording) => {
+      let startTimeAfterAdjustment = channelTimeshift[recording._id] ? (startTime + channelTimeshift[recording._id]) : startTime;
+      currDataFrame = WFDB.rdsamp({
+        recordingName: recording.path,
+        startTime: startTimeAfterAdjustment,
         windowLength,
-        channelsDisplayed: notDelayedParsed.individualChannelsRequired,
+        channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired,
         targetSamplingRate,
         useHighPrecisionSampling,
       });
-     
-      let currParsed = {};
-      let delayedTime = 0;
-      channelsDelayed.channelNames.forEach(channel => {
-        currParsed = parseChannelsDisplayed([channel]);
-        
+      currDataFrame.channelInfo = currDataFrame.channelNames.map((channelName) => {
+        return { name: channelName, dataId: recording._id };
+      });
+      if (!Object.keys(collections).length) return currDataFrame;
+      collections.channelNames = collections.channelNames.concat(currDataFrame.channelNames);
+      collections.channelInfo = collections.channelInfo.concat(currDataFrame.channelInfo);
+      collections.data = collections.data.concat(currDataFrame.data);
+      collections.startTime = Math.min(collections.startTime, currDataFrame.startTime);
+      collections.endTime = Math.max(collections.endTime, currDataFrame.endTime);
+      collections.duration = Math.max(collections.duration, currDataFrame.duration);
+      collections.numSamples = Math.max(collections.numSamples, currDataFrame.numSamples);
+      collections.samplingRate = Math.min(collections.samplingRate, currDataFrame.samplingRate);
+      return collections;
+    }, {});
 
-        startTime = startTime + channelsDelayed.delayAmount[channelsDelayed.channelNames.indexOf(channel)];
+    // dataFrame = WFDB.rdsamp({
+    //   recordingName,
+    //   startTime,
+    //   windowLength,
+    //   channelsDisplayed: channelsDisplayedParsed.individualChannelsRequired,
+    //   targetSamplingRate,
+    //   useHighPrecisionSampling,
+    // });
+    // console.log("dataFrame1 loaded");
+
+    // let temprName = recordingName;
+    // recordingName = recordingName2;
+    // dataFrame2 = WFDB.rdsamp({
+    //   recordingName: recordingName2,
+    //   startTime,
+    //   windowLength,
+    //   channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
+    //   targetSamplingRate,
+    //   useHighPrecisionSampling,
+    // });
+    // console.log("dataFrame2 loaded ");
+
+    // Combine two channel sets
+    // dataFrame2.channelNames.forEach( channel => {
+    //   dataFrame.channelNames.push(channel);
+    // });
       
-        currDataframe = WFDB.rdsamp({
-          recordingName,
-          startTime,
-          windowLength,
-          channelsDisplayed: currParsed.individualChannelsRequired,
-          targetSamplingRate,
-          useHighPrecisionSampling,
-        });
-        dataFrame.channelNames.push(currDataframe.channelNames[0]);
-        dataFrame.data.push(currDataframe.data[0]);
-      
-        startTime = sTime;
-    
-      } )
-      
-
-    }
-    }
-    else {
-      console.log("channelsDelayed && channelsDelayed.delayAmount && channelsDelayed.delayAmount.length <= 0");
-      var currDataFrame;
-      dataFrame = allRecordings.reduce((collections, recording) => {
-        currDataFrame = WFDB.rdsamp({
-          recordingName: recording.path,
-          startTime,
-          windowLength,
-          channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired,
-          targetSamplingRate,
-          useHighPrecisionSampling,
-        });
-        if (!Object.keys(collections).length) return currDataFrame;
-        collections.channelNames = collections.channelNames.concat(currDataFrame.channelNames);
-        collections.data = collections.data.concat(currDataFrame.data);
-        collections.startTime = Math.min(collections.startTime, currDataFrame.startTime);
-        collections.endTime = Math.max(collections.endTime, currDataFrame.endTime);
-        collections.duration = Math.max(collections.duration, currDataFrame.duration);
-        collections.numSamples = Math.max(collections.numSamples, currDataFrame.numSamples);
-        collections.samplingRate = Math.min(collections.samplingRate, currDataFrame.samplingRate);
-        return collections;
-      }, {});
-
-      // dataFrame = WFDB.rdsamp({
-      //   recordingName,
-      //   startTime,
-      //   windowLength,
-      //   channelsDisplayed: channelsDisplayedParsed.individualChannelsRequired,
-      //   targetSamplingRate,
-      //   useHighPrecisionSampling,
-      // });
-      // console.log("dataFrame1 loaded");
-
-      // let temprName = recordingName;
-      // recordingName = recordingName2;
-      // dataFrame2 = WFDB.rdsamp({
-      //   recordingName: recordingName2,
-      //   startTime,
-      //   windowLength,
-      //   channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
-      //   targetSamplingRate,
-      //   useHighPrecisionSampling,
-      // });
-      // console.log("dataFrame2 loaded ");
-
-      // Combine two channel sets
-      // dataFrame2.channelNames.forEach( channel => {
-      //   dataFrame.channelNames.push(channel);
-      // });
-        
-      // dataFrame2.data.forEach( dataSet => {
-      //   dataFrame.data.push(dataSet);
-      // })
-      // dataFrame.numSamples += dataFrame2.numSamples;
-      // // recordingName = temprName;
-      // console.log("dataFrame combined channel:", dataFrame.channelNames);
-    };
+    // dataFrame2.data.forEach( dataSet => {
+    //   dataFrame.data.push(dataSet);
+    // })
+    // dataFrame.numSamples += dataFrame2.numSamples;
+    // // recordingName = temprName;
+    // console.log("dataFrame combined channel:", dataFrame.channelNames);
 
     if (dataFrame.numSamples == 0) {
       return {};
@@ -720,25 +624,25 @@ Meteor.methods({
       dataFrame.data.push(subtractionData);
     });
     // console.timeEnd('computeSubtractions');
-    let channelNamesOrdered = [];
+    let channelInfoOrdered = [];
     let dataOrdered = [];
     channelsDisplayedParsed.subtractions.forEach((subtraction) => {
       const subtractionIndex = subtractionOrder.indexOf(subtraction.key);
-      const channelName = dataFrame.channelNames[subtractionIndex];
+      const channelInfo = dataFrame.channelInfo[subtractionIndex];
       const channelData = dataFrame.data[subtractionIndex];
-      channelNamesOrdered.push(channelName);
+      channelInfoOrdered.push(channelInfo);
       dataOrdered.push(channelData);
     });
-    dataFrame.channelNames = channelNamesOrdered;
+    dataFrame.channelInfo = channelInfoOrdered;
     dataFrame.data = dataOrdered;
     // console.timeEnd('get.edf.data');
     let dataDict = {};
-    dataFrame.channelNames.forEach((channelName, c) => {
-      dataDict[channelName] = dataFrame.data[c];
+    dataFrame.channelInfo.forEach((info, c) => {
+      dataDict[info.name] = dataFrame.data[c];
     });
 
     return {
-      channel_order: dataFrame.channelNames,
+      channel_order: dataFrame.channelInfo,
       sampling_rate: dataFrame.samplingRate,
       channel_values: dataDict,
     }

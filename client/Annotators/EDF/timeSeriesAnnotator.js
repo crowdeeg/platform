@@ -116,7 +116,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             ],
         }],
         xAxisTimescales: [{
-            title: 'Timescale:',
+            title: 'Timescale',
             options: [
                 {
                     name: '1 Sec/page',
@@ -169,6 +169,28 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     value: 28800,
                 },
             ]
+        }],
+        timeSyncOptions: [{
+            title: 'Time Sync',
+            options: [
+                {
+                    name: 'Off',
+                    value: undefined,
+                    default: true,
+                },
+                {
+                    name: 'By Crosshair',
+                    value: 'crosshair',
+                },
+                {
+                    name: 'No Timelock',
+                    value: 'notimelock'
+                },
+                {
+                    name: 'Start of File (offset)',
+                    value: 'offset',
+                },
+            ],
         }],
         boxAnnotationUserSelection: [{
             title: 'Box Annotations',
@@ -430,11 +452,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             popUpActive: 0,
             setupOn: false,
             printedBox: false,
-            delayExists: true,
-            timeChange: false,
-            channelsDelayedNames: [],
-            delayAmount: [],
             channelTimeshift: {},
+            timeSyncMode: "",
+            crosshairMode: false,
+            crosshairPosition: [],
+            crosshair: undefined,
             recordingMetadata: {},
             recordingLengthInSeconds: 0,
             numberOfAnnotationsInCurrentWindow: 0,
@@ -603,6 +625,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         <div style="margin-bottom: 20px" class="annotation_type_select_panel"></div> \
                         <div style="margin-bottom: 20px" class="frequency_filter_panel"></div> \
                         <div style="margin-bottom: 20px" class="timescale_panel"></div> \
+                        <div style="margin-bottom: 20px" class="timesync_panel"> \
+                            <button type="button" class="btn btn-default timesync" disabled>Sync</button> \
+                        </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
                                     <span class="fa fa-bookmark" aria-hidden="true"></span> \
@@ -1204,23 +1229,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     },
 
-    _delayChannel: function(channelName, amount){
-        var that = this;
-        if(that.vars.channelsDelayedNames.includes(channelName)){
-            var index = that.vars.channelsDelayedNames.indexOf(channelName);
-            that.vars.delayAmount[index] = amount + that.vars.delayAmount[index];
-           // console.log(channelName);
-        }
-        else{
-           // console.log(channelName);
-            that.vars.channelsDelayedNames.push(channelName);
-            that.vars.delayAmount.push(amount);
-        }
-        that.vars.timeChange = true;
-        that._setDelay();
-        
-
-    },
     _getChannelGains: function(montage) {
         var that = this;
         if (that.vars.channelGains instanceof Array) {
@@ -1265,6 +1273,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._setupNavigationPanel();
         that._setupArtifactPanel();
         that._setupSleepStagePanel();
+        that._setupTimeSyncPanel();
         that._setupTrainingPhase();
         that._setupArbitration();
         // that._setupDownsampledRecording(() => {
@@ -1483,7 +1492,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             //Allow admins to see all annotations from differnt users, by adding them to dropdown
         if (Roles.userIsInRole(Meteor.userId(), 'admin')) {
             temp[0].options.push({ name: "Show All", value: "all" })
-           // that._setDelay();
             assign = Assignments.find({
                 task: that.options.context.task._id,
                 dataFiles: that.options.context.dataset.map((data) => data._id),
@@ -1736,7 +1744,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _getRecordingMetadata: function(callback) {
         var that = this;
-        that._getDelay();
         if (Object.keys(that.vars.recordingMetadata).length) {
             callback(that.vars.recordingMetadata);
             return;
@@ -1764,8 +1771,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _getUserStatus: function() {
         var that = this;
         console.log("_getUserStatus.that:", that);
-        //that._getDelay();
-        //that._setDelay();
         that._setupMontageSelector();
         console.log("Finish _setupMontageSelector");
         that._setupFrequencyFilterSelector();
@@ -1799,6 +1804,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
         else if (that.options.allRecordings.length > 0) {
             console.log("that.options.allRecordings")
+            that._loadChannelTimeshift();
             that.vars.lastActiveWindowStart = + that.options.startTime;
             const context = that.options.context;
             const preferencesArbitrationRoundNumber = !!context.preferences.arbitrationRoundNumber ? context.preferences.arbitrationRoundNumber : 0;
@@ -1922,6 +1928,219 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             // setup arrow key navigation
             $(document).on('keydown', that._keyDownCallback);
         }
+    },
+
+    _destroyCrosshair: function() {
+        var that = this;
+        if (that.vars.crosshair) {
+            that.vars.crosshair.destroy();
+            that.vars.crosshair = undefined;
+        }
+        return;
+    },
+
+    _isInCrosshairSyncMode: function() {
+        var that = this;
+        return that.vars.timeSyncMode === 'crosshair';
+    },
+
+    _isInOffsetSyncMode: function () {
+        var that = this;
+        return that.vars.timeSyncMode === 'offset';
+    },
+
+    _isInNoTimelockMode: function () {
+        var that = this;
+        return that.vars.timeSyncMode === 'notimelock';
+    },
+
+    // _toggleCrosshairMode: function() {
+    //     var that = this;
+    //     let toggle = $(that.element).find('.crosshair-mode');
+    //     that.vars.crosshairMode = that.vars.crosshairMode ? false : true;
+    //     if (that._isInCrosshairSyncMode()) {
+    //         $(toggle).addClass('active');
+    //         $(that.element).find('.timesync').prop('disabled', false);
+    //         that._displayCrosshair(that.vars.crosshairPosition);
+    //     } else {
+    //         $(toggle).removeClass('active');
+    //         $(that.element).find('.timesync').prop('disabled', true);
+    //         that._destroyCrosshair();
+    //     }
+    // },
+
+    _toggleTimeSyncMode: function(mode) {
+        var that = this;
+        switch (mode) {
+            case 'crosshair':
+                $(that.element).find('.timesync').prop('disabled', false);
+                that._displayCrosshair(that.vars.crosshairPosition);
+                break;
+            case 'notimelock':
+                $(that.element).find('.timesync').prop('disabled', true);
+                that._destroyCrosshair();
+                // to be implemented
+                break;
+            case 'offset':
+                $(that.element).find('.timesync').prop('disabled', false);
+                that._destroyCrosshair();
+                break;
+            case 'undefined':
+            default:
+                $(that.element).find('.timesync').prop('disabled', true);
+                that._destroyCrosshair();
+                break;
+        }
+    },
+
+    _performCrosshairSync: function() {
+        var that = this;
+        let crosshairPosition = that.vars.crosshairPosition;
+        let ids = crosshairPosition.map((rec) => rec.dataId);
+        let currentDiff = ids.map((id) => that.vars.channelTimeshift[id]);
+        if (crosshairPosition.length === 2) {
+            let diff = crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
+            if (diff > 0) {
+                if (currentDiff[1]) {
+                    let remainder = diff - currentDiff[1];
+                    if (remainder > 0) {
+                        that.vars.channelTimeshift[ids[1]] = 0;
+                        that.vars.channelTimeshift[ids[0]] = currentDiff[0] ? (currentDiff[0] + remainder) : remainder;
+                    } else {
+                        that.vars.channelTimeshift[ids[1]] = -remainder;
+                    }
+                } else {
+                    that.vars.channelTimeshift[ids[0]] = currentDiff[0] ? (currentDiff[0] + diff) : diff;
+                }
+            } else if (diff < 0) {
+                diff = -diff;
+                if (currentDiff[0]) {
+                    let remainder = diff - currentDiff[0];
+                    if (remainder > 0) {
+                        that.vars.channelTimeshift[ids[0]] = 0;
+                        that.vars.channelTimeshift[ids[1]] = currentDiff[1] ? (currentDiff[1] + remainder) : remainder;
+                    } else {
+                        that.vars.channelTimeshift[ids[0]] = -remainder;
+                    }
+                } else {
+                    that.vars.channelTimeshift[ids[1]] = currentDiff[1] ? (currentDiff[1] + diff) : diff;
+                }
+            }
+            that.vars.reprint = 1;
+            that.vars.crosshairPosition = [];
+            // that._toggleCrosshairMode();
+            $(this.element).find('.timesync_panel select').val('undefined').change().material_select();
+            that._savePreferences({ channelTimeshift: that.vars.channelTimeshift });
+            that._reloadCurrentWindow();
+        }
+    },
+
+    _performOffsetSync: function() {
+        var that = this;
+        that.vars.channelTimeshift = {};
+        that.vars.reprint = 1;
+        $(this.element).find('.timesync_panel select').val('undefined').change().material_select();
+        that._savePreferences({ channelTimeshift: that.vars.channelTimeshift });
+        that._reloadCurrentWindow();
+    },
+
+    _setupTimeSyncPanel: function() {
+        var that = this;
+        let timeSyncOptions = that.options.timeSyncOptions || [];
+        timeSyncOptions.forEach((timeSyncOption) => {
+            let selectContainer = $('<div class="select_panel"><select></select></div>').appendTo(that.element.find('.timesync_panel'));
+            let select = selectContainer.find('select');
+            let defaultOptionIndex = null;
+            timeSyncOption.options.forEach((option, i) => {
+                let selectedString = '';
+                if (option.default) {
+                    selectedString = ' selected="selected"';
+                    defaultOptionIndex = i;
+                }
+                select.append(`<option value=${option.value}` + selectedString + '>' + timeSyncOption.title + ': ' + option.name + '</option>');
+            });
+            
+            select.material_select();
+            select.change(function() {
+                if (defaultOptionIndex) delete timeSyncOption.options[defaultOptionIndex].default;
+                timeSyncOption.options[select.prop('selectedIndex')].default = true;
+                that.vars.timeSyncMode = select.val();
+                that._toggleTimeSyncMode(select.val());
+            });
+        });
+        // $(that.element).find('.crosshair-mode').click(function() {
+        //     that._toggleCrosshairMode();
+        // });
+        $(that.element).find('.timesync').click(function() {
+            if (that._isInCrosshairSyncMode()) {
+                that._performCrosshairSync();
+            } else if (that._isInOffsetSyncMode()) {
+                that._performOffsetSync();
+            } else if (that._isInNoTimelockMode()) {
+                // to be implemented
+            }
+        });
+    },
+
+    _isInCrosshairWindow: function(crosshair) {
+        var that = this;
+        return (that.vars.currentWindowStart <= crosshair.timeInSeconds 
+            && crosshair.timeInSeconds <= that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds);
+    },
+
+    _displayCrosshair: function(crosshairPosition) {
+        var that = this;
+        that._destroyCrosshair();
+        let chart = that.vars.chart;
+        that.vars.crosshair = chart.renderer.g().add();
+        crosshairPosition.forEach((crosshair) => {
+            if (!that._isInCrosshairSyncMode() || !that._isInCrosshairWindow(crosshair)) return;
+            let left = chart.plotLeft;
+            let top = chart.plotTop;
+            let height = chart.plotHeight;
+            let heightPerChannel = height / that.vars.currentWindowData.channels.length;
+            let firstIndexOfChannel = undefined;
+            let lastIndexOfChannel = undefined;
+            chart.series.forEach((channel, i) => {
+                if (channel.options.custom.dataId === crosshair.dataId && channel.points.length) {
+                    if (typeof firstIndexOfChannel === 'undefined') {
+                        firstIndexOfChannel = i;
+                    }
+                    lastIndexOfChannel = i;
+                }
+            });
+            let crosshairTop = firstIndexOfChannel * heightPerChannel;
+            let crosshairBottom = (lastIndexOfChannel + 1) * heightPerChannel;
+            let svgPath = ['M', left + crosshair.plotX, top + crosshairTop, 'L', left + crosshair.plotX, top + crosshairBottom];
+            chart.renderer.path(svgPath).attr({
+                'stroke-width': 1,
+                stroke: 'blue',
+            }).add(that.vars.crosshair);
+        });
+    },
+
+    _setCrosshair: function(point) {
+        var that = this;
+        if (!that._isInCrosshairSyncMode()) return;
+        let crosshairPosition = that.vars.crosshairPosition;
+        let sameRecording = false;
+        let index = undefined;
+        crosshairPosition.forEach((crosshair, i) => {
+            if (crosshair.dataId === point.dataId) {
+                sameRecording = true;
+                index = i;
+            }
+        });
+        if (sameRecording) {
+            crosshairPosition[index] = point;
+        } else {
+            crosshairPosition.push(point);
+            if (crosshairPosition.length > 2) {
+                crosshairPosition.shift();
+            }
+        }
+        that.vars.crosshairPosition = crosshairPosition;
+        that._displayCrosshair(crosshairPosition);
     },
 
     _getClosestDisagreementWindowStartTimeInSeconds: function(direction) {
@@ -2280,35 +2499,17 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 windowsToRequest.push(start_time - i * that.options.windowJumpSizeFastForwardBackward * window_length);
             }
         }
-        that._getDelay();
-        //console.log(that.vars.delayAmount);
-        //that._setDelay(assign);
-        //console.log(that.vars.delayAmount);
         windowsToRequest.forEach((windowStartTime) => {
             console.log("6, windowStartTime:", windowStartTime);
-            channelsDelayed = {
-                channelNames: that.vars.channelsDelayedNames,
-                delayAmount: that.vars.delayAmount,
-            }
             var options = {
                 recordings: allRecordings,
                 channels_displayed: that._getChannelsDisplayed('Multifiles'),
                 start_time: windowStartTime,
-                channel_timeshift: that.channelTimeshift,
+                channel_timeshift: that.vars.channelTimeshift,
                 window_length: window_length,
                 target_sampling_rate: that.options.targetSamplingRate,
                 use_high_precision_sampling: that.options.useHighPrecisionSampling,
             };
-            // var options2 = {
-            //     recording_name: recording_names[1],
-            //     channels_displayed: that._getChannelsDisplayed(that._getMontageNameFromRecording(recording_names[1])),
-            //     start_time: windowStartTime,
-            //     delayExists: that.vars.delayExists,
-            //     channelsDelayed: channelsDelayed,
-            //     window_length: window_length,
-            //     target_sampling_rate: that.options.targetSamplingRate,
-            //     use_high_precision_sampling: that.options.useHighPrecisionSampling,
-            // };
             that._requestData(options, (data, errorData) => {
                 console.log("7, data:", data);
                 var windowAvailable = !errorData;
@@ -2446,17 +2647,12 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         
         var reprint = that.vars.reprint;
         console.log("reprint", reprint);
-        if(that.vars.timeChange == true ){
-            that.vars.timeChange = false;
-        } 
-        else {
-            if (that.vars.windowsCache[identifierKey] && reprint == 0) {
-                if (that.vars.windowsCache[identifierKey].data && callback) {
-                    //console.log("optionsTime");
-                    callback(that.vars.windowsCache[identifierKey].data);
-                }
-                return;
+        if (that.vars.windowsCache[identifierKey] && reprint == 0) {
+            if (that.vars.windowsCache[identifierKey].data && callback) {
+                //console.log("optionsTime");
+                callback(that.vars.windowsCache[identifierKey].data);
             }
+            return;
         }
         const numSecondsToPadBeforeAndAfter = 2;
         
@@ -2476,7 +2672,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         // optionsPadded2.window_length = options2.window_length + numSecondsPaddedBefore2 + numSecondsToPadBeforeAndAfter;
 
         // console.log("crossed");
-        //console.log(that.vars.delayAmount);
         Meteor.call('get.edf.data', optionsPadded, (error, data) => {
             if (error) {
                 console.log(error.message);
@@ -2713,11 +2908,12 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
        
         for (var i = 0; i < input.channel_order.length; ++i) {
-            var name = input.channel_order[i];
-            
+            var name = input.channel_order[i].name;
+            let dataId = input.channel_order[i].dataId;
             if(channelNumSamples[name]){
                 var channel = {
                     name: name,
+                    dataId: dataId,
                     audio: channelAudioRepresentations[name],
                     numSamples: channelNumSamples[name],
                 }
@@ -2904,7 +3100,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             var offset = that._getOffsetForChannelIndexPostScale(c);
             return {
                 name: channel.name,
-                boostThreshold: 1,
+                custom: {
+                    dataId: channel.dataId,
+                },
                 data: [[0, offset], [recordingEndInSecondsSnapped, offset]],
             };
         });
@@ -2936,7 +3134,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var that = this;
         var channels = data.channels;
         
-        //console.log(that.vars.channelsDelayedNames);
         that.vars.graphID = 'time-series-graph-' + that._getUUID();
         var graph = $(that.element).find('.graph');
         graph.children().remove();
@@ -2996,7 +3193,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         that._setupYAxisLinesAndLabels();
                     }
                 },
-                zoomType: 'xy',
+                // zoomType: 'xy',
                 resetZoomButton: {
                     position: {
                         align: 'left',
@@ -3021,6 +3218,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 series: {
                     animation: false,
                     turboThreshold: 0,
+                    boostThreshold: 1,
                     type: 'line',
                     color: 'black',
                     lineWidth: that.options.graph.lineWidth,
@@ -3033,7 +3231,30 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         mouseOut: function(e) {
                             that._unselectChannels();
                         },
-                    }
+                    },
+                    point: {
+                        events: {
+                            click: function(e) {
+                                that._setCrosshair({
+                                    plotX: this.plotX,
+                                    plotY: this.plotY,
+                                    timeInSeconds: e.point.x,
+                                    channelName: e.point.series.name,
+                                    channelIndex: e.point.series.index,
+                                    dataId: e.point.series.options.custom.dataId,
+                                });
+                            },
+                            // workaround to trigger click event handler on point under boost mode
+                            // https://github.com/highcharts/highcharts/issues/14067
+                            mouseOver: function() {
+                                if(this.series.halo) {
+                                    this.series.halo.attr({
+                                       'class': 'highcharts-tracker' 
+                                    }).toFront();   
+                                }
+                            },
+                        },
+                    },
                 },
                 line: {
                     marker: {
@@ -3324,18 +3545,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
     },
 
     _setupAnnotationInteraction: function() {
-
         var that = this;
-        that._getDelay();
-        that.vars.channelsDelayedNames = that._getChannelsDisplayed();
-        //console.log( that._getChannelsDisplayed());
-
-        if(that.vars.delayAmount.length == 0){
-            that.vars.channelsDelayedNames.forEach(channel => {
-                that.vars.delayAmount.push(0);
-            })
-
-        }
         if( !that.vars.setupOn){
             that.vars.setupOn = true;
         }
@@ -3425,112 +3635,7 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                     $('html').on('mousedown', annotation.outsideClickHandler);
                 }
             }
-            function drag2(e) {
-                var annotation,
-                    clickX = e.pageX - container.offsetLeft,
-                    clickY = e.pageY - container.offsetTop;
-                if (!chart.isInsidePlot(clickX - chart.plotLeft, clickY - chart.plotTop)) {
-                    return;
-                }
-                Highcharts.addEvent(document, 'mousemove', step2);
-                Highcharts.addEvent(document, 'mouseup', drop2);
 
-                var annotationId = undefined;
-                var clickXValue = that._convertPixelsToValue(clickX, 'x');
-                var clickYValue = that._convertPixelsToValue(clickY, 'y');
-            // console.log(clickXValue);
-                var channelIndexStart = that._getChannelIndexFromY(clickYValue);
-                var channelIndices = [ channelIndexStart ];
-                var featureType = that.vars.activeFeatureType;
-
-                annotation = that._addAnnotationBox(annotationId, clickXValue, channelIndices, featureType);
-
-                function getAnnotationChannelIndices2(e) {
-                    var y = e.clientY - container.offsetTop,
-                        dragYValue = that._convertPixelsToValue(y, 'y'),
-                        channelIndices = that._getChannelsAnnotated(clickYValue, dragYValue);
-                    return channelIndices;
-                }
-
-                function getAnnotationAttributes2(e) {
-                    var x = e.clientX - container.offsetLeft,
-                        //dx = x - clickX,
-                        //width = that._convertPixelsToValueLength(parseInt(dx, 10) + 1, 'x'),
-                        channelIndices = getAnnotationChannelIndices2(e),
-                        { height, yValue } = that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
-                        channelIndices.forEach(channel => {
-                            that._delayChannel(that._getChannelsDisplayed()[channel], clickXValue);
-                            //console.log(that._getChannelsDisplayed()[channel]);
-                        });
-                        var xValue = that._convertPixelsToValue(clickX, 'x');
-                    
-                    return {
-                        xValue: xValue,
-                        yValue: yValue,
-                        shape: {
-                            params: {
-                                width: 0.1,
-                                height: height,
-                            }
-                        }
-                    };
-                }
-
-                function step2(e) {
-                    annotation.update(getAnnotationAttributes2(e));
-                    annotation.metadata.channelIndices = getAnnotationChannelIndices2(e);
-                }
-
-            
-            
-                function drop2(e) {
-                    //console.log("drop2");
-                    Highcharts.removeEvent(document, 'mousemove', step2);
-                    Highcharts.removeEvent(document, 'mouseup', drop2);
-            
-                    var x = e.clientX - container.offsetLeft;
-                    //console.log(that.vars.channelsDelayedNames);
-                    that.vars.delayExists = true;
-
-                    var newList = [];
-                    var delayList = [];
-                // console.log(that._getChannelsDisplayed("PSG Annotation"));
-                    that._getChannelsDisplayed().forEach( channel =>
-                        {
-                            
-                            if(that.vars.channelsDelayedNames.includes(channel)){
-                                delayList.push(that.vars.delayAmount[that.vars.channelsDelayedNames.indexOf(channel)]);
-                            
-                            }
-                            else{
-                                delayList.push(0);
-                            }
-                        })
-                        that.vars.delayAmount = delayList;
-                        that.vars.channelsDelayedNames = that._getChannelsDisplayed();
-                        that.vars.delayExists = true;
-
-                    that._reloadCurrentWindow();
-                    if (x == clickX) {
-                        if (annotation && annotation.destroy) {
-                            annotation.destroy();
-                            $('html').off('mousedown', annotation.outsideClickHandler);
-                        }
-                        that.vars.chart.selectedAnnotation = null;
-                        return;
-                    }
-                    if (annotation) {
-                        annotation.update(getAnnotationAttributes2(e));
-                    }
-                    annotation.outsideClickHandler = function() {
-                        annotation.destroy();
-                        $('html').off('mousedown', annotation.outsideClickHandler);
-                        that.vars.chart.selectedAnnotation = null;
-                    }
-                $('html').on('mousedown', annotation.outsideClickHandler);
-                }
-
-            }
             function drag3(e) {
                 var annotation,
                     clickX = e.pageX - container.offsetLeft,
@@ -3588,7 +3693,6 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                     annotation.update(getAnnotationAttributes3(e));
                     annotation.metadata.channelIndices = getAnnotationChannelIndices3(e);
                 }
-
             
             
                 function drop3(e) {
@@ -3617,116 +3721,9 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
                         
                         that.vars.chart.selectedAnnotation = null;
                     }
-                //  $('html').on('mousedown', annotation.outsideClickHandler);
-
-                    
                 }
-
             }
-            function drag4(e) {
-                var annotation,
-                    clickX = e.pageX - container.offsetLeft,
-                    clickY = e.pageY - container.offsetTop;
-                if (!chart.isInsidePlot(clickX - chart.plotLeft, clickY - chart.plotTop)) {
-                    return;
-                }
-                Highcharts.addEvent(document, 'mousemove', step4);
-                Highcharts.addEvent(document, 'mouseup', drop4);
-
-                var annotationId = undefined;
-                var clickXValue = that._convertPixelsToValue(clickX, 'x');
-                that.vars.currentAnnotationTime = clickXValue;
-                var clickYValue = that._convertPixelsToValue(clickY, 'y');
-                //console.log(clickXValue);
-                var channelIndexStart = that._getChannelIndexFromY(clickYValue);
-                var channelIndices = [ channelIndexStart ];
-                var featureType = that.vars.activeFeatureType;
-
-                annotation = that._addAnnotationChangePoint(annotationId, clickXValue, channelIndices, featureType);
-        
-                //that._addAnnotationChangePoint(annotationId, clickXValue, channelIndices, "");
-
-                function getAnnotationChannelIndices4(e) {
-                    var y = e.clientY - container.offsetTop,
-                        dragYValue = that._convertPixelsToValue(y, 'y'),
-                        channelIndices = that._getChannelsAnnotated(0, that.vars.currentWindowData.channels.length * that.options.graph.channelSpacing -1 );
-                        //console.log(channelIndices);
-                    return channelIndices;
-                }
-
-                function getAnnotationAttributes4(e) {
-                    var x = e.clientX - container.offsetLeft,
-                        //dx = x - clickX,
-                        //width = that._convertPixelsToValueLength(parseInt(dx, 10) + 1, 'x'),
-                        channelIndices = getAnnotationChannelIndices4(e),
-                        { height, yValue } = that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
-                        channelIndices.forEach(channel => {
-                            that._delayChannel(that._getChannelsDisplayed()[channel], clickXValue);
-                            //console.log(that._getChannelsDisplayed()[channel]);
-                        })
-                        var xValue = that._convertPixelsToValue(clickX, 'x');
-                    
-                    return {
-                        xValue: xValue,
-                        yValue: yValue,
-                        shape: {
-                            params: {
-                                width: 0.1,
-                                height: 8000,
-                            }
-                        }
-                    };
-                }
-
-                function step4(e) {
-                    annotation.update(getAnnotationAttributes4(e));
-                    annotation.metadata.channelIndices = getAnnotationChannelIndices4(e);
-                }
-
-            
-            
-                function drop4(e) {
-                //   console.log("drop2");
-                    Highcharts.removeEvent(document, 'mousemove', step4);
-                    Highcharts.removeEvent(document, 'mouseup', drop4);
-                    that.vars.delayExists = true;
-                    
-                    //console.log(that.vars.delayAmount);
-                    var x = e.clientX - container.offsetLeft;
-                    //console.log(that.vars.channelsDelayedNames);
-                    that._reloadCurrentWindow();
-                    if (x == clickX ) {
-                        if (annotation && annotation.destroy) {
-                            annotation.destroy();
-                            $('html').off('mousedown', annotation.outsideClickHandler);
-                            
-                        }
-                        that.vars.chart.selectedAnnotation = null;
-                        
-                        return;
-                    }
-                    if (annotation) {
-                        annotation.update(getAnnotationAttributes4(e));
-                    }
-                    annotation.outsideClickHandler = function() {
-                        //console.log("doing this");
-                        annotation.destroy();
-                        $('html').off('mousedown', annotation.outsideClickHandler);
-                        
-                        that.vars.chart.selectedAnnotation = null;
-                    }
-                //  $('html').on('mousedown', annotation.outsideClickHandler);
-
-                    
-                }
-
-            }
-           
-            
             if( that.options.features.annotationType == "box" ){
-            // Highcharts.removeEvent(container, 'mousedown', drag2);
-                //Highcharts.removeEvent(container, 'mousedown', drag3);
-                //Highcharts.removeEvent(container, 'mousedown', drag4);
                 Highcharts.removeEvent(container, 'mousedown');
                 Highcharts.addEvent(container, 'mousedown', drag);
             }
@@ -3734,31 +3731,13 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
             {
                 Highcharts.removeEvent(container, 'mousedown', drag);
                 Highcharts.removeEvent(container, 'mousedown', drag3);
-                Highcharts.removeEvent(container, 'mousedown', drag4);
-                Highcharts.removeEvent(container, 'mousedown', drag2);
             }
             else if (that.options.features.annotationType == "cpoint" )
             {
-          //      console.log("here");
-                
                 Highcharts.removeEvent(container, 'mousedown');
                 Highcharts.addEvent(container, 'mousedown', drag3);
             }
-            else if (that.options.features.annotationType == "tadjust" )
-            {
-               // console.log("here as well");
-                //Highcharts.removeEvent(container, 'mousedown', drag2);
-            // Highcharts.removeEvent(container, 'mousedown', drag3);
-            // Highcharts.removeEvent(container, 'mousedown', drag);
-            Highcharts.removeEvent(container, 'mousedown');
-                Highcharts.addEvent(container, 'mousedown', drag2);
-            }
-            //Highcharts.addEvent(container, 'mousedown', drag);
-       
-        
-        
-    }
-
+        }
     },
 
     _getAnnotationBoxHeightAndYValueForChannelIndices: function(channelIndices) {
@@ -4945,46 +4924,9 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         console.error('Trying to save a user event, but this feature is not implemented yet.');
     },
 
-    _getDelay: function(){
-        that = this;
-        // assigns = Assignments.find({
-        //     task: that.options.context.task._id,
-        //     data: that.options.context.data._id,
-        //  }, {
-        //     sort: { updatedAt: -1 },
-        // }).fetch();
-
-        
-        // assign = assigns[0];
-        assign = Assignments.findOne(that.options.context.assignment._id);
-        //console.log(assign.getchannelsDelayedAmount());
-     //   console.log(assign.channelsDelayed);
-        if(assign.channelsDelayed){
-            that.vars.delayAmount = assign.channelsDelayed.split(",");
-            that.vars.channelsDelayedNames = that._getChannelsDisplayed();
-        }
-        else{
-            that.vars.delayAmount = [];
-        }
-        
-
-        //console.log(that.vars.delayAmount);
-        //Data.find({
-            //_id: that.options.context.data._id
-        //})
-        //var delayString ="";
-       // that.vars.delayAmount.forEach( channelAmount =>{
-            //delayString = delayString + channelAmount + ",";
-
-        //})
-        //console.log(assign);
-       //console.log(delayString);
-        //assign._delayChannels(delayString)
-
-
-          
-      
-
+    _loadChannelTimeshift: function() {
+        var that = this;
+        that.vars.channelTimeshift = that.options.context.preferences.annotatorConfig.channelTimeshift;
     },
 
     _getCurrAssignment(){
@@ -5000,43 +4942,6 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         assign = assigns[0];
        
         return assign;
-
-    },
-
-    _setDelay: function(assign){
-        that = this;
-        // assigns = Assignments.find({
-        //     task: that.options.context.task._id,
-        //     data: that.options.context.data._id,
-        // }, {
-        //     sort: { updatedAt: -1 },
-        //     }).fetch();
-
-        
-        // assign = that._getCurrAssignment();
-        
-
-        //assigns[0];
-       
-       // console.log(assign);
-        var delayString ="";
-        that.vars.delayAmount.forEach( channelAmount =>{
-            delayString = delayString + channelAmount + ",";
-        });
-        delayString = delayString.substring(0,delayString.length-1);
-        assign.delayChannels(delayString);
-        //Data.find({
-            //_id: that.options.context.data._id
-        //})
-       
-        //})
-       //console.log(assign.channelsDelayed);
-        //console.log(assign);
-       //console.log(delayString);
-        //assign._delayChannels(delayString);
-
-          
-      
 
     },
 

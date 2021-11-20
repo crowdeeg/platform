@@ -174,7 +174,7 @@
 }
 
 .frequency_filter_panel .select_panel {
-  width: 160px;
+  width: 110px;
 }
 
 .user_selection_panel {
@@ -183,7 +183,7 @@
 }
 
 .user_selection_panel .select_panel {
-  width: 320px;
+  width: 210px;
 }
 
 .user_selection_panel .optgroup {
@@ -197,12 +197,34 @@
 }
 
 .annotation_type_select_panel .select_panel {
-  width: 320px;
+  width: 290px;
 }
 
 .annotation_type_select_panel .optgroup {
   text-align: center;
   font-weight: normal;
+}
+
+.timescale_panel {
+  float: left;
+  margin: 0;
+}
+
+.timescale_panel .select_panel {
+  width: 180px;
+}
+
+.timesync_panel {
+  float: left;
+  margin: 0;
+}
+
+.timesync_panel .select_panel {
+  width: 210px;
+}
+
+.timesync_panel button {
+  margin: 0 0 0 20px !important;
 }
 
 .button_container {

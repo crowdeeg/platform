@@ -953,20 +953,6 @@ Assignments.helpers({
     if (allParentAssignments.length == 0) return;
     return allParentAssignments[allParentAssignments.length - 1];
   },
-    getchannelsDelayedAmount(){
-      const doc = this.dataDoc();
-      if (!doc) return "";
-      return this.channelsDelayed;
-  },
-  delayChannels(delayedUnit){
-    console.log(Assignments.update(this._id, { $set: { channelsDelayed: delayedUnit } }));
-   
-    this.channelsDelayed = delayedUnit;
-    console.log(this.channelsDelayed);
-      //if (doc) Assignments.update(this._id, { $set: { channelsDelayed: delayedUnit } });
-
-  },
-
   isLeafAssignment() {
     return (
             this.task
