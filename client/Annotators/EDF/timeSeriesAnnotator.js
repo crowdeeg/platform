@@ -1744,7 +1744,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
     _getRecordingMetadata: function(callback) {
         var that = this;
-        if (Object.keys(that.vars.recordingMetadata).length) {
+        if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
             callback(that.vars.recordingMetadata);
             return;
         }
@@ -1754,13 +1754,15 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     callback(null, error.message);
                     return;
                 }
-                that.vars.recordingMetadata[recording._id] = metadata;
                 if (metadata.LengthInSeconds > that.vars.recordingLengthInSeconds) {
                     that.vars.recordingLengthInSeconds = metadata.LengthInSeconds;
                 }
+                that.vars.recordingMetadata[recording._id] = metadata;
+                if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
+                    callback(that.vars.recordingMetadata);
+                }
             });
         });
-        callback(that.vars.recordingMetadata);
     },
 
     _triggerOnReadyEvent: function() {
@@ -1804,7 +1806,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
         else if (that.options.allRecordings.length > 0) {
             console.log("that.options.allRecordings")
-            that._loadChannelTimeshift();
+            that._loadChannelTimeshiftFromPreference();
             that.vars.lastActiveWindowStart = + that.options.startTime;
             const context = that.options.context;
             const preferencesArbitrationRoundNumber = !!context.preferences.arbitrationRoundNumber ? context.preferences.arbitrationRoundNumber : 0;
@@ -2091,10 +2093,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _displayCrosshair: function(crosshairPosition) {
         var that = this;
         that._destroyCrosshair();
+        if (!that._isInCrosshairSyncMode()) return;
         let chart = that.vars.chart;
         that.vars.crosshair = chart.renderer.g().add();
         crosshairPosition.forEach((crosshair) => {
-            if (!that._isInCrosshairSyncMode() || !that._isInCrosshairWindow(crosshair)) return;
+            if (!that._isInCrosshairWindow(crosshair)) return;
             let left = chart.plotLeft;
             let top = chart.plotTop;
             let height = chart.plotHeight;
@@ -2519,6 +2522,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         that._populateGraph(that.vars.currentWindowData);
                     });
                 }
+                that._displayCrosshair(that.vars.crosshairPosition);
                 if (!that.options.experiment.running) {
                     switch (windowStartTime) {
                         case that.vars.currentWindowStart + window_length:
@@ -4928,7 +4932,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
         console.error('Trying to save a user event, but this feature is not implemented yet.');
     },
 
-    _loadChannelTimeshift: function() {
+    _loadChannelTimeshiftFromPreference: function() {
         var that = this;
         that.vars.channelTimeshift = that.options.context.preferences.annotatorConfig.channelTimeshift;
     },
