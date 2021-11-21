@@ -240,7 +240,7 @@ let filterName = (allSignals) => {
 
 }
 */
-let parseComputedChannelString = (computedChannelString) => {
+let parseComputedChannelString = (computedChannelString, recordingId) => {
   const parts = computedChannelString.split('=');
   const channelName = parts[0].trim();
   let channelKey;
@@ -252,13 +252,13 @@ let parseComputedChannelString = (computedChannelString) => {
     
     if (formulaParts.length == 1) {
       functionName = 'IDENTITY';
-      functionParameters = [ formulaParts[0] ];
-      channelKey = functionParameters[0];
+      functionParameters = [ { name: formulaParts[0], dataId: recordingId } ];
+      channelKey = functionParameters[0].name;
     }
     else {
       functionName = formulaParts[0];
-      functionParameters = formulaParts[1].slice(0, -1).split(',').map((parameter) => { return parameter.trim(); })
-      channelKey = functionName + '(' + functionParameters.join(',') + ')';
+      functionParameters = formulaParts[1].slice(0, -1).split(',').map((parameter) => { return { name: parameter.trim(), dataId: recordingId }; })
+      channelKey = functionName + '(' + functionParameters.map((parameter) => parameter.name).join(',') + ')';
     }
   
   
@@ -275,8 +275,8 @@ let parseComputedChannelString = (computedChannelString) => {
 }
   else{
     functionName = 'IDENTITY';
-    functionParameters = [ channelName];
-    channelKey = functionParameters[0];
+    functionParameters = [ { name: channelName, dataId: recordingId } ];
+    channelKey = functionParameters[0].name;
     individualChannelsRequired = functionParameters;
   }
   return {
@@ -289,15 +289,15 @@ let parseComputedChannelString = (computedChannelString) => {
   }
 }
 
-let computeChannelData = (computedChannel, dataFrame, subtractionOrder) => {
+let computeChannelData = (computedChannel, dataFrame, subtractionOrder, dataId) => {
   const functionName = computedChannel.functionName;
   switch (functionName) {
     case 'MEAN':
       let computedChannelData = new FloatArrayType(dataFrame.numSamples);
       computedChannelData.fill(0);
       computedChannel.functionParameters.forEach((functionParameter) => {
-        const channelIndex = subtractionOrder.indexOf(functionParameter);
-        const channelData = dataFrame.data[channelIndex];
+        const channelIndex = indexOfChannel(subtractionOrder, functionParameter, dataId);
+        const channelData = dataFrame.data[channelIndex].data;
         computedChannelData = computedChannelData.map((value, v) => { return value + channelData[v]; });
       });
       const numChannelsToAverage = computedChannel.functionParameters.length;
@@ -306,8 +306,8 @@ let computeChannelData = (computedChannel, dataFrame, subtractionOrder) => {
       }
       return computedChannelData;
     case 'IDENTITY':
-      const channelIndex = subtractionOrder.indexOf(computedChannel.functionParameters[0]);
-      const channelData = dataFrame.data[channelIndex];
+      const channelIndex = indexOfChannel(subtractionOrder, computedChannel.functionParameters[0], dataId);
+      const channelData = dataFrame.data[channelIndex].data;
       return channelData;
     default:
       throw new Meteor.Error('get.edf.data.computed.channel.unknown.function', 'Unknown function name for computed channel: ' + functionName);
@@ -315,7 +315,7 @@ let computeChannelData = (computedChannel, dataFrame, subtractionOrder) => {
   }
 }
 
-let parseChannelsDisplayed = (channelsDisplayed) => {
+let parseChannelsDisplayed = (channelsDisplayed, recordingId) => {
   individualChannelsRequired = new Set();
   var individualChannels= [];
   
@@ -328,6 +328,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
     const channelParts = channelString.split('-');
     const subtraction = {
       key: channelString,
+      dataId: recordingId,
       plus: undefined,
       minus: undefined,
     }
@@ -341,7 +342,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
       let operandName = operandNames[c];
       if (isInteger(channelPart)) {
         subtraction[operandName] = channelPart;
-        individualChannelsRequired.add(subtraction[operandName]);
+        individualChannelsRequired.add({ name: subtraction[operandName], dataId: recordingId });
         
       }
       else {
@@ -351,7 +352,7 @@ let parseChannelsDisplayed = (channelsDisplayed) => {
         channelsDisplayed.forEach((myChannel) => {
         
           count++;
-          computedChannel = parseComputedChannelString(myChannel);
+          computedChannel = parseComputedChannelString(myChannel, recordingId);
           
          (computedChannel.individualChannelsRequired).forEach((r) => {
             
@@ -451,6 +452,19 @@ let convertEntriesToTypedFloatArrays = (dict) => {
   return dictTyped;
 }
 
+var isChannel = function(element) {
+  if (!this || !this.name || !this.dataId) return false;
+  if (!element.name || !element.dataId) throw new TypeError(`Argument is not a channel array`);
+  return (element.name === this.name && element.dataId === this.dataId);
+};
+
+function indexOfChannel(channelArray, index, dataId) {
+  if (!channelArray || !Array.isArray(channelArray)) {
+    throw new TypeError(`Argument is not a channel array`);
+  }
+  return channelArray.findIndex(isChannel, { name: index, dataId: dataId });
+};
+
 Meteor.methods({
   'get.edf.metadata' (recordingName) {
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
@@ -467,7 +481,7 @@ Meteor.methods({
     let channelTimeshift = options.channel_timeshift;
     let allRecordings = options.recordings;
     allRecordings = allRecordings.map((recording) => {
-      recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording._id]);
+      recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording._id], recording._id);
       return recording;
     });
     // let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
@@ -488,15 +502,19 @@ Meteor.methods({
         recordingName: recording.path,
         startTime: startTimeAfterAdjustment,
         windowLength,
-        channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired,
+        channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired.map((channel) => channel.name),
         targetSamplingRate,
         useHighPrecisionSampling,
       });
+      // currDataFrame.data = { [recording._id]: currDataFrame.data };
       currDataFrame.channelInfo = currDataFrame.channelNames.map((channelName) => {
         return { name: channelName, dataId: recording._id };
       });
+      delete currDataFrame.channelNames;
+      currDataFrame.data = currDataFrame.data.map((data) => {
+        return { data: data, dataId: recording._id };
+      });
       if (!Object.keys(collections).length) return currDataFrame;
-      collections.channelNames = collections.channelNames.concat(currDataFrame.channelNames);
       collections.channelInfo = collections.channelInfo.concat(currDataFrame.channelInfo);
       collections.data = collections.data.concat(currDataFrame.data);
       collections.startTime = Math.min(collections.startTime, currDataFrame.startTime);
@@ -555,13 +573,16 @@ Meteor.methods({
     // channelsDisplayedParsed.subtractions = channelsDisplayedParsed.subtractions.concat(channelsDisplayedParsed2.subtractions);
     // channelsDisplayedParsed.individualChannelsRequired = channelsDisplayedParsed.individualChannelsRequired.concat(channelsDisplayedParsed2.individualChannelsRequired);
     console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
-    let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired.slice();
-    let channelNames = dataFrame.channelNames;
+    let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired;
+    // let channelNames = dataFrame.channelNames;
+    let allChannelInfo = dataFrame.channelInfo;
 
     channelsDisplayedParsed.subtractions.forEach((subtraction) => {
-      if (subtractionOrder.indexOf(subtraction.key) > -1) {
-        return;
-      }
+      let dataId = subtraction.dataId;
+      if (indexOfChannel(subtractionOrder, subtraction.key, dataId) > -1) return;
+      // if (subtractionOrder[dataId].indexOf(subtraction.key) > -1) {
+      //   return;
+      // }
       let has = {};
       let channelIndex = {};
       let channelName = {};
@@ -573,20 +594,20 @@ Meteor.methods({
           return;
         }
         if (operand.computed) {
-          if (subtractionOrder.indexOf(operand.channelKey) < 0) {
-            let computedChannelData = computeChannelData(operand, dataFrame, subtractionOrder);
-            channelNames.push(operand.channelKey);
-            subtractionOrder.push(operand.channelKey);
-            dataFrame.data.push(computedChannelData);
+          if (indexOfChannel(subtractionOrder, operand.channelKey, dataId) < 0) {
+            let computedChannelData = computeChannelData(operand, dataFrame, subtractionOrder, dataId);
+            allChannelInfo.push({ name: operand.channelKey, dataId: dataId });
+            subtractionOrder.push({ name: operand.channelKey, dataId: dataId });
+            dataFrame.data.push({ data: computedChannelData, dataId: dataId });
           }
-          let channelIndex = subtractionOrder.indexOf(operand.channelKey);
-          channelData[operandName] = dataFrame.data[channelIndex];
+          let channelIndex = indexOfChannel(subtractionOrder, operand.channelKey, dataId);
+          channelData[operandName] = dataFrame.data[channelIndex].data;
           channelName[operandName] = operand.channelName;
         }
         else {
-          let channelIndex = subtractionOrder.indexOf(operand);
-          channelData[operandName] = dataFrame.data[channelIndex];
-          channelName[operandName] = channelNames[channelIndex];
+          let channelIndex = indexOfChannel(subtractionOrder, operand, dataId);
+          channelData[operandName] = dataFrame.data[channelIndex].data;
+          channelName[operandName] = allChannelInfo[channelIndex].name;
         }
       });
       let subtractionName = '';
@@ -619,17 +640,17 @@ Meteor.methods({
           subtractionData.fill(0);
         }
       }
-      channelNames.push(subtractionName);
-      subtractionOrder.push(subtraction.key);
-      dataFrame.data.push(subtractionData);
+      allChannelInfo.push({ name: subtractionName, dataId: dataId });
+      subtractionOrder.push({ name: subtraction.key, dataId: dataId });
+      dataFrame.data.push({ data: subtractionData, dataId: dataId });
     });
     // console.timeEnd('computeSubtractions');
     let channelInfoOrdered = [];
     let dataOrdered = [];
     channelsDisplayedParsed.subtractions.forEach((subtraction) => {
-      const subtractionIndex = subtractionOrder.indexOf(subtraction.key);
+      const subtractionIndex = indexOfChannel(subtractionOrder, subtraction.key, subtraction.dataId);
       const channelInfo = dataFrame.channelInfo[subtractionIndex];
-      const channelData = dataFrame.data[subtractionIndex];
+      const channelData = dataFrame.data[subtractionIndex].data;
       channelInfoOrdered.push(channelInfo);
       dataOrdered.push(channelData);
     });
@@ -638,7 +659,8 @@ Meteor.methods({
     // console.timeEnd('get.edf.data');
     let dataDict = {};
     dataFrame.channelInfo.forEach((info, c) => {
-      dataDict[info.name] = dataFrame.data[c];
+      if (!dataDict[info.dataId]) dataDict[info.dataId] = {};
+      dataDict[info.dataId][info.name] = dataFrame.data[c];
     });
 
     return {

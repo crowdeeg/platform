@@ -2713,214 +2713,215 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var channelAudioRepresentations = {};
         var channelNumSamples = {};
         var samplingRate = input.sampling_rate;
-        for (var name in input.channel_values) {
-            var values = input.channel_values[name];
-            //console.log(that.vars.audioContextSampleRate);
-            var offlineCtx = new OfflineAudioContext(1, values.length, that.vars.audioContextSampleRate);
-            var audioBuffer = offlineCtx.createBuffer(1, values.length, offlineCtx.sampleRate);
-            var scaleFactorFrequency = offlineCtx.sampleRate / samplingRate;
-            
-            var scaleFactorAmplitude = values.map(Math.abs).reduce((a, b) => Math.max(a,b));
-            var maxIn = scaleFactorAmplitude;
-            //console.log(maxIn);
-            var thisCounting = values.reduce((a,b) => a + 1);
-            var y95 = 0;
-            var y05 = 0;
-            scaleFactorAmplitude = values.map(Math.abs).reduce((a, b) => Math.max(a,b));//that._findMeanPercentile(0.95,0.005,values, thisCounting);
-            //console.log(name);
-            var avg = (values.reduce((a,b) => a + b))/thisCounting;
-            avg = Math.abs(avg);
-            //console.log(avg);
-            var changeVal = values.reduce((a,b) => a + Math.abs(avg -b));
-            //console.log(changeVal);
-           
-           // console.log(name);
-         //   console.log(scaleFactorAmplitude) ;
-            var valuesScaled = values;
-
-            var scaleValueChange = maxIn*scaleFactorAmplitude;
-          
-            if (scaleFactorAmplitude != 0) {
-              //  console.log(name);
-                valuesScaled = values.map(v => v/scaleFactorAmplitude);//(500*(v-scaleFactorAmplitude))/(y95-y05));
-    
-               // console.log(valuesScaled);
-            }
-            audioBuffer.copyToChannel(valuesScaled, 0, 0);
-          var scaleFault = 0;
-            if( options == 0){
-                switch(name){
-                    case  "F4-A1":
-                        scaleFault = 1;
-                        break;
-        
-                    case "C4-A1":
-                        scaleFault = 1;
-                        break;
-                    case "O2-A1":
-                        scaleFault = 1;
-                        break;
-                    case "LOC-A2":
-                        scaleFault = 1;
-                        break;
-                    case "ROC-A1":
-                        scaleFault = 1;
-                        break;
-                    case "Chin 1-Chin 2":
-                        scaleFault = 1000;
-                        break;
-        
-                    case "ECG":
-                        scaleFault = 100;
-                        break;
-                    case "Leg/L":
-                        scaleFault = 50;
-                        break;
-                    case "Leg/R":
-                        scaleFault = 50;
-                        break;
-                    case "Snore":
-                        scaleFault = 600;
-                        break;
-                    case "Airflow":
-                        scaleFault = 100;
-                        break;
-                    case "Nasal Pressure":
-                        scaleFault = 100;     
-                        break;
-                    case "Thor":
-                        scaleFault = 500;
-                        break;
-                    
-                    case "Abdo":
-                        scaleFault = 100;
-                        break;
-                    case "SpO2":
-                        scaleFault = 1.5;
-                        break;
-                    case "Pleth":
-                        scaleFault = 0.03;
-                         break;
-                    case "Accl Pitch":
-                        scaleFault = 10;
-                        break;
-                    case "Accl Roll":
-                        scaleFault = 10;
-                        break;
-                    case "Resp Effort":
-                        scaleFault = 100;
-                        break;
-                    case "HR(bpm)":
-                        scaleFault = 3.5;
-                        break;
-                    case "SpO2(%)":
-                        scaleFault = 3.5;
-                        break;
-                    case "PI(%)":
-                        scaleFault = 85;
-                        break;
-                    case "PAT(ms)":
-                        scaleFault = 0.1;
-                        break;
-                    case "Chest Temp(A C)":
-                        scaleFault = 10;
-                            break;
-                    case "Limb Temp(A C)":
-                        scaleFault = 10;
-                        break;
-                }
-                scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
-                sessionStorage.setItem(name+"scaleFactorAmplitude", scaleFault);
+        for (var dataId in input.channel_values) {
+            for (var name in input.channel_values[dataId]) {
+                var values = input.channel_values[dataId][name];
+                //console.log(that.vars.audioContextSampleRate);
+                var offlineCtx = new OfflineAudioContext(1, values.length, that.vars.audioContextSampleRate);
+                var audioBuffer = offlineCtx.createBuffer(1, values.length, offlineCtx.sampleRate);
+                var scaleFactorFrequency = offlineCtx.sampleRate / samplingRate;
                 
+                var scaleFactorAmplitude = values.map(Math.abs).reduce((a, b) => Math.max(a,b));
+                var maxIn = scaleFactorAmplitude;
+                //console.log(maxIn);
+                var thisCounting = values.reduce((a,b) => a + 1);
+                var y95 = 0;
+                var y05 = 0;
+                scaleFactorAmplitude = values.map(Math.abs).reduce((a, b) => Math.max(a,b));//that._findMeanPercentile(0.95,0.005,values, thisCounting);
                 //console.log(name);
-               // console.log(scaleFactorAmplitude);
-            }
-            else if(options == 2){
-            //console.log(changeVal);
-           // console.log(scaleFactorAmplitude);
-            while(changeVal > 0 && scaleValueChange > 0 && changeVal < 10000 && (scaleValueChange*10) < 500){
-               //       console.log(changeVal);
-                scaleFactorAmplitude = scaleFactorAmplitude*3;
-                //scaleValueChange = scaleFactorAmplitude*maxIn;
-              //  console.log(scaleFactorAmplitude*maxIn);
-                changeVal = changeVal*7;
-            }
-           // console.log(name);
-          //  console.log(scaleFactorAmplitude);
-            sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFactorAmplitude);
-        }
-        else if(options == 1){
-            //requiredName = "Thor"//sessionStorage.getItem("requiredName");
-            requiredName = that.vars.requiredName;
-            //console.log(name);
-           // console.log(requiredName);
-            var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
-            var oncecheck = that.vars.increaseOnce;
-            if(name == requiredName && oncecheck == 1 ){
-                scaleFault = scaleFault*5;
-               // console.log(scaleFault);
-                that.vars.increaseOnce = 0;
-            }
+                var avg = (values.reduce((a,b) => a + b))/thisCounting;
+                avg = Math.abs(avg);
+                //console.log(avg);
+                var changeVal = values.reduce((a,b) => a + Math.abs(avg -b));
+                //console.log(changeVal);
+               
+               // console.log(name);
+             //   console.log(scaleFactorAmplitude) ;
+                var valuesScaled = values;
+    
+                var scaleValueChange = maxIn*scaleFactorAmplitude;
+              
+                if (scaleFactorAmplitude != 0) {
+                  //  console.log(name);
+                    valuesScaled = values.map(v => v/scaleFactorAmplitude);//(500*(v-scaleFactorAmplitude))/(y95-y05));
+        
+                   // console.log(valuesScaled);
+                }
+                audioBuffer.copyToChannel(valuesScaled, 0, 0);
+                var scaleFault = 0;
+                if( options == 0){
+                    switch(name){
+                        case  "F4-A1":
+                            scaleFault = 1;
+                            break;
             
-            sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
-            //sessionStorage.setItem(("requiredName"),"");
-            scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
-           // console.log(sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault));
-          //  console.log(scaleFault);
-            //console.log(scaleFactorAmplitude);
-        }
-        else if(options == -1){
-            //requiredName = "Thor"//sessionStorage.getItem("requiredName");
-            var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
-            requiredName = that.vars.requiredName;
-            var oncecheck = that.vars.increaseOnce;
-            if(name == requiredName && oncecheck == 1){
-                scaleFault = scaleFault/5;
-                that.vars.increaseOnce = 0;
+                        case "C4-A1":
+                            scaleFault = 1;
+                            break;
+                        case "O2-A1":
+                            scaleFault = 1;
+                            break;
+                        case "LOC-A2":
+                            scaleFault = 1;
+                            break;
+                        case "ROC-A1":
+                            scaleFault = 1;
+                            break;
+                        case "Chin 1-Chin 2":
+                            scaleFault = 1000;
+                            break;
+            
+                        case "ECG":
+                            scaleFault = 100;
+                            break;
+                        case "Leg/L":
+                            scaleFault = 50;
+                            break;
+                        case "Leg/R":
+                            scaleFault = 50;
+                            break;
+                        case "Snore":
+                            scaleFault = 600;
+                            break;
+                        case "Airflow":
+                            scaleFault = 100;
+                            break;
+                        case "Nasal Pressure":
+                            scaleFault = 100;     
+                            break;
+                        case "Thor":
+                            scaleFault = 500;
+                            break;
+                        
+                        case "Abdo":
+                            scaleFault = 100;
+                            break;
+                        case "SpO2":
+                            scaleFault = 1.5;
+                            break;
+                        case "Pleth":
+                            scaleFault = 0.03;
+                             break;
+                        case "Accl Pitch":
+                            scaleFault = 10;
+                            break;
+                        case "Accl Roll":
+                            scaleFault = 10;
+                            break;
+                        case "Resp Effort":
+                            scaleFault = 100;
+                            break;
+                        case "HR(bpm)":
+                            scaleFault = 3.5;
+                            break;
+                        case "SpO2(%)":
+                            scaleFault = 3.5;
+                            break;
+                        case "PI(%)":
+                            scaleFault = 85;
+                            break;
+                        case "PAT(ms)":
+                            scaleFault = 0.1;
+                            break;
+                        case "Chest Temp(A C)":
+                            scaleFault = 10;
+                                break;
+                        case "Limb Temp(A C)":
+                            scaleFault = 10;
+                            break;
+                    }
+                    scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
+                    sessionStorage.setItem(dataId+name+"scaleFactorAmplitude", scaleFault);
+                    
+                    //console.log(name);
+                   // console.log(scaleFactorAmplitude);
+                }
+                else if(options == 2){
+                //console.log(changeVal);
+               // console.log(scaleFactorAmplitude);
+                while(changeVal > 0 && scaleValueChange > 0 && changeVal < 10000 && (scaleValueChange*10) < 500){
+                   //       console.log(changeVal);
+                    scaleFactorAmplitude = scaleFactorAmplitude*3;
+                    //scaleValueChange = scaleFactorAmplitude*maxIn;
+                  //  console.log(scaleFactorAmplitude*maxIn);
+                    changeVal = changeVal*7;
+                }
+                // console.log(name);
+                //  console.log(scaleFactorAmplitude);
+                sessionStorage.setItem((dataId+name+"scaleFactorAmplitude"), scaleFactorAmplitude);
+                }
+                else if(options == 1){
+                    //requiredName = "Thor"//sessionStorage.getItem("requiredName");
+                    let channelOnChange = that.vars.channelAmplitudeOnChange;
+                // console.log(requiredName);
+                    var scaleFault = sessionStorage.getItem(dataId+name+"scaleFactorAmplitude");
+                    var oncecheck = that.vars.increaseOnce;
+                    if(name === channelOnChange.name && dataId === channelOnChange.dataId && oncecheck == 1 ){
+                        scaleFault = scaleFault*5;
+                        that.vars.increaseOnce = 0;
+                    }
+                    
+                    sessionStorage.setItem((dataId+name+"scaleFactorAmplitude"), scaleFault);
+                    //sessionStorage.setItem(("requiredName"),"");
+                    scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
+                    // console.log(sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault));
+                    //  console.log(scaleFault);
+                    //console.log(scaleFactorAmplitude);
+                }
+                else if(options == -1){
+                    //requiredName = "Thor"//sessionStorage.getItem("requiredName");
+                    var scaleFault = sessionStorage.getItem(dataId+name+"scaleFactorAmplitude");
+                    let channelOnChange = that.vars.channelAmplitudeOnChange;
+                    var oncecheck = that.vars.increaseOnce;
+                    if(name === channelOnChange.name && dataId === channelOnChange.dataId && oncecheck == 1){
+                        scaleFault = scaleFault/5;
+                        that.vars.increaseOnce = 0;
+                    }
+                    // console.log(sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault));
+                    //console.log(scaleFault);
+                    sessionStorage.setItem((dataId+name+"scaleFactorAmplitude"), scaleFault);
+                    scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
+                }
+                /*   
+                    if(scaleValueChange > 500 ){
+                        scaleValueChange = 500/maxIn;
+                        scaleFactorAmplitude = scaleValueChange;
+                    }
+                */
+                if (!channelAudioRepresentations[dataId]) channelAudioRepresentations[dataId] = {};
+                channelAudioRepresentations[dataId][name] = {
+                    buffer: audioBuffer,
+                    scaleFactors: {
+                        frequency: scaleFactorFrequency,
+                        amplitude:scaleFactorAmplitude,
+                    },
+                };
+                var numSamplesPaddedBefore = numSecondsPaddedBefore * samplingRate;
+                var numSamplesDataOfInterest = Math.min(numSecondsDataOfInterest * samplingRate, values.length - numSamplesPaddedBefore);
+    
+                var numSamplesPaddedAfter = values.length - numSamplesPaddedBefore - numSamplesDataOfInterest;
+                if (!channelNumSamples[dataId]) channelNumSamples[dataId] = {};
+                channelNumSamples[dataId][name] = {
+                    paddedBefore: numSamplesPaddedBefore,
+                    dataOfInterest: numSamplesDataOfInterest,
+                    paddedAfter: numSamplesPaddedAfter,
+                };
             }
-           // console.log(sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault));
-            //console.log(scaleFault);
-            sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
-            scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
-        }
-         /*   
-            if(scaleValueChange > 500 ){
-                scaleValueChange = 500/maxIn;
-                scaleFactorAmplitude = scaleValueChange;
-            }
-*/
-            channelAudioRepresentations[name] = {
-                buffer: audioBuffer,
-                scaleFactors: {
-                    frequency: scaleFactorFrequency,
-                    amplitude:scaleFactorAmplitude,
-                },
-            };
-            var numSamplesPaddedBefore = numSecondsPaddedBefore * samplingRate;
-            var numSamplesDataOfInterest = Math.min(numSecondsDataOfInterest * samplingRate, values.length - numSamplesPaddedBefore);
-
-            var numSamplesPaddedAfter = values.length - numSamplesPaddedBefore - numSamplesDataOfInterest;
-            channelNumSamples[name] = {
-                paddedBefore: numSamplesPaddedBefore,
-                dataOfInterest: numSamplesDataOfInterest,
-                paddedAfter: numSamplesPaddedAfter,
-            };
         }
        
         for (var i = 0; i < input.channel_order.length; ++i) {
             var name = input.channel_order[i].name;
             let dataId = input.channel_order[i].dataId;
-            if(channelNumSamples[name]){
+            if(channelNumSamples[dataId][name]){
                 var channel = {
                     name: name,
                     dataId: dataId,
-                    audio: channelAudioRepresentations[name],
-                    numSamples: channelNumSamples[name],
+                    audio: channelAudioRepresentations[dataId][name],
+                    numSamples: channelNumSamples[dataId][name],
                 }
-                channel.valuesPadded = new Float32Array(channel.audio.buffer.length - channel.numSamples.paddedBefore);
-    
+                channel.valuesPadded = new Float32Array(channel.audio.buffer.length - channel.numSamples.paddedBefore);    
                 channels.push(channel);
-        }
+            }
         }
         var output = {
             channels: channels,
@@ -3029,11 +3030,17 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (!data.sampling_rate) return false;
         if (!data.channel_order) return false;
         if (!data.channel_values) return false;
-        for (let c = 0; c < data.channel_values.length; ++c) {
-            if (data.channel_values[c].length == 0) {
-                return false;
+        for (let dataId in data.channel_values) {
+            if (Object.keys(data.channel_values[dataId]).length == 0) return false;
+            for (let channelName in data.channel_values[dataId]) {
+                if (Object.keys(data.channel_values[dataId][channelName]).length == 0) return false;
             }
         }
+        // for (let c = 0; c < data.channel_values.length; ++c) {
+        //     if (data.channel_values[c].length == 0) {
+        //         return false;
+        //     }
+        // }
         return true;
     },
 
@@ -3433,7 +3440,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
      var increaser = $("#increase-"+(index)).on('click', (evt) => {
        //  console.log()
        
-        name = channel.name;
        // console.log(name);
         //var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
         //scaleFault = scaleFault*5;
@@ -3441,7 +3447,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
         that.vars.valueOptions = 1;
         that.vars.increaseOnce = 1;
-        that.vars.requiredName = name;
+        that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
         that.vars.reprint = 1;
        // console.log("inbutton");
         that._reloadCurrentWindow();
@@ -3454,14 +3460,13 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
   
   var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
     //  console.log()
-     name = channel.name;
     // console.log(name);
      //var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
      //scaleFault = scaleFault*5;
     // sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
      
     that.vars.valueOptions = -1;
-    that.vars.requiredName = name;
+    that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
     that.vars.increaseOnce = 1;
     that.vars.reprint = 1;
     that._reloadCurrentWindow();
@@ -3473,14 +3478,13 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 });
 var defaulter = $("#default-"+(index)).on('click', (evt) => {
     //  console.log()
-    name = channel.name;
     // console.log(name);
      //var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
      //scaleFault = scaleFault*5;
     // sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
     
     that.vars.valueOptions = 0;
-    that.vars.requiredName = name;
+    that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
     that.vars.reprint = 1;
     that._reloadCurrentWindow();
    
