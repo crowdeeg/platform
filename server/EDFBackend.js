@@ -179,38 +179,39 @@ let WFDB = {
       console.log(`downsampledExists: "${downsampledExists}"`);
       
       if (downsampledExists != 't') {
-        // convert the edf format to mit format
-        // modify the header file
-        // then downsample the file using xform
-        runWFDBCommand(`edf2mit -i "${recordingFilename}" -r "${downsampledFileName}" -v`, recordingDirectory);
-        let headerRaw = runWFDBCommand(`cat ${downsampledHeaderFile}`, recordingDirectory);
-        console.log('cat headerRaw:', headerRaw);
-        let header = headerRaw.split(/\r?\n/);
+        // create a header file .hea (https://www.physionet.org/physiotools/wag/header-5.htm)
+        // then downsample the recording using xform (https://www.physionet.org/physiotools/wag/xform-1.htm)
+        // it will create downsampled file in mit format (.dat + .hea)
+        
+        let metadata = options.recordingMetadata;
+        let headerFile = [];
 
         // set the sampling frequency to targetDownsamplingRate
         // and the number of samples per signal to zero to turn off the checksum verification
-        let headerLine = header[0].trim().split(/[ \t]+/);
-        headerLine[2] = options.targetDownsamplingRate;
-        headerLine[3] = '0';
-        header[0] = headerLine.join(' ');
-        
-        // for each signal specification line
-        // remove sample per frame if specified and set the checksum to 0 as a placeholder
-        for (let i = 1; i < header.length; i++) {
-          let signalLine = header[i].trim().split(/[ \t]+/);
-          console.log(`signalLine (header[${i}]): ${signalLine}`);
-          if (signalLine.length > 1) signalLine[1] = signalLine[1].replace(/x[1-9]*/, '');
-          if (signalLine.length > 6) signalLine[6] = '0';
-          header[i] = signalLine.join(' ');
-        }
+        let recordLine = [downsampledFileName, metadata.Groups[0].Signals.length, options.targetDownsamplingRate, 0];
+        let recordingTimeAndDate = metadata.StartingTime.slice(1, -1);
+        recordLine.push(recordingTimeAndDate);
+        headerFile.push(recordLine.join(' '));
+
+        metadata.Groups[0].Signals.forEach((signal) => {
+          let signalLine = [downsampledFile];
+          signalLine.push(signal.StorageFormat.match(/[0-9.]+/)[0]);
+          let adc = signal.Gain.replace(' adu', '(' + signal.Baseline + ')').match(/[\S]+/);
+          signalLine.push(adc);
+          signalLine.push(signal.ADCResolution.match(/[0-9.]+/)[0]);
+          signalLine.push(signal.ADCZero);
+          signalLine.push(signal.InitialValue);
+          signalLine.push('0'); // set the checksum to 0 as a placeholder
+          signalLine.push('0');
+          signalLine.push(signal.Description);
+          headerFile.push(signalLine.join(' '));
+        });
 
         // write into the header file and perform xform to downsample
-        const modifiedHeader = header.join('\r\n');
+        const modifiedHeader = headerFile.join('\r\n');
         runWFDBCommand(`echo "${modifiedHeader}" > ${downsampledHeaderFile}`, recordingDirectory);
         runWFDBCommand(`xform -i "${recordingFilename}" -H -o "${downsampledHeaderFile}"`, recordingDirectory);
       }
-      return true;
-
     } catch (e) {
       if (e.message.split('\n')[1] !== undefined && e.message.split('\n')[1].trim() == '') {
         return {
@@ -466,8 +467,21 @@ function indexOfChannel(channelArray, index, dataId) {
 };
 
 Meteor.methods({
-  'get.edf.metadata' (recordingName) {
-    return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
+  'get.edf.metadata' (allRecordings) {
+    let lengthInSeconds = 0;
+    let allMetadata = {};
+    allRecordings.forEach((recording) => {
+      let metadata = parseWFDBMetadata(WFDB.wfdbdesc(recording.path));
+      if (metadata.LengthInSeconds > lengthInSeconds) {
+        lengthInSeconds = metadata.LengthInSeconds;
+      }
+      allMetadata[recording._id] = metadata;
+    });
+    console.log(allMetadata, lengthInSeconds);
+    return {
+      allMetadata,
+      lengthInSeconds,
+    }
   },
   'get.edf.data' (options) {
     console.log('get.edf.data');
@@ -669,11 +683,16 @@ Meteor.methods({
       channel_values: dataDict,
     }
   },
-  'setup.edf.downsampled' (recordingName) {
+  'setup.edf.downsampled' (allRecordings, metadata) {
     let targetDownsamplingRate = '2';
-    return WFDB.downsamp({
-      recordingName,
-      targetDownsamplingRate
+    allRecordings.forEach((recording) => {
+      let recordingName = recording.path;
+      let recordingMetadata = metadata[recording._id];
+      WFDB.downsamp({
+        recordingName,
+        recordingMetadata,
+        targetDownsamplingRate
+      });
     });
   }
 });

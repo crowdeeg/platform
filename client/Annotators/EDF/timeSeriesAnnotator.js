@@ -1276,9 +1276,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._setupTimeSyncPanel();
         that._setupTrainingPhase();
         that._setupArbitration();
-        // that._setupDownsampledRecording(() => {
-            that._getRecordingMetadata(function(metadata) {
-                console.log("metadata and length", metadata);
+        that._getRecordingMetadata()
+            .then(that._setupDownsampledRecording)
+            .then(() => {
                 if (that.options.preloadEntireRecording) {
                     console.log("preloadEntireRecording", that.options.preloadEntireRecording);
                     that._preloadEntireRecording(function() {
@@ -1287,8 +1287,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 } else {
                     that._getUserStatus();
                 }
-            });
-        // });
+            })
+            .catch(error => console.error(error));
     },
 
     _getUrlParameter: function(sParam) {
@@ -1640,17 +1640,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         });
     },
 
-    _setupDownsampledRecording: function(callback) {
-        var that = this;
-        that.options.allRecordings.forEach((recording) => {
-            Meteor.call('setup.edf.downsampled', recording.path, (error, results) => {
-                if (error) {
-                    console.log(error.message);
-                    return;
-                } else if (results && callback) {
-                    callback();
-                }
-                return;
+    _setupDownsampledRecording: function(that) {
+        return new Promise((resolve, reject) => {
+            Meteor.call('setup.edf.downsampled', that.options.allRecordings, that.vars.recordingMetadata, (error, results) => {
+                if (error) throw new Error('Cannot downsample EDF file\n' + error);
+                else resolve();
             });
         });
     },
@@ -1742,25 +1736,19 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         });
     },
 
-    _getRecordingMetadata: function(callback) {
+    _getRecordingMetadata: function() {
         var that = this;
-        if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
-            callback(that.vars.recordingMetadata);
-            return;
-        }
-        that.options.allRecordings.forEach((recording) => {
-            Meteor.call('get.edf.metadata', recording.path, function(error, metadata) {
+        return new Promise((resolve, reject) => {
+            if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
+                return resolve(that);
+            }
+            Meteor.call('get.edf.metadata', that.options.allRecordings, (error, results) => {
                 if (error) {
-                    callback(null, error.message);
-                    return;
+                    throw new Error('Cannot get recording metadata\n' + error);
                 }
-                if (metadata.LengthInSeconds > that.vars.recordingLengthInSeconds) {
-                    that.vars.recordingLengthInSeconds = metadata.LengthInSeconds;
-                }
-                that.vars.recordingMetadata[recording._id] = metadata;
-                if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
-                    callback(that.vars.recordingMetadata);
-                }
+                that.vars.recordingLengthInSeconds = results.lengthInSeconds;
+                that.vars.recordingMetadata = results.allMetadata;
+                return resolve(that);
             });
         });
     },
@@ -2654,7 +2642,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (that.vars.windowsCache[identifierKey] && reprint == 0) {
             if (that.vars.windowsCache[identifierKey].data && callback) {
                 //console.log("optionsTime");
-                callback(that.vars.windowsCache[identifierKey].data);
+            callback(that.vars.windowsCache[identifierKey].data);
             }
             return;
         }
