@@ -91,7 +91,7 @@ let WFDB = {
       });
       const channelNames = columnNames.slice(1);
       // console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
-      // comsole.log('\nchannelNames:', channelNames);
+      // console.log('\nchannelNames:', channelNames);
       rows.shift();
       const columnUnits = rows[0].map((value) => {
         return value.substr(1).slice(0, -1);
@@ -149,7 +149,14 @@ let WFDB = {
     catch (e) {
       // console.timeEnd('rdsamp');
       if (e.message.split('\n')[1] !== undefined && e.message.split('\n')[1].trim() == '') {
+        // if output has no data
+        const channelNames = options.channelsDisplayed.map(channelName => channelName.slice(1, -1));
+        const data = channelNames.map(() => {
+          return new FloatArrayType(1);
+        });
         return {
+          channelNames: channelNames,
+          data: data,
           numSamples: 0,
         };
       }
@@ -528,6 +535,12 @@ Meteor.methods({
       currDataFrame.data = currDataFrame.data.map((data) => {
         return { data: data, dataId: recording._id };
       });
+      if (currDataFrame.numSamples === 0) {
+        currDataFrame.startTime = Number.POSITIVE_INFINITY;
+        currDataFrame.endTime =  Number.NEGATIVE_INFINITY;
+        currDataFrame.duration = Number.NEGATIVE_INFINITY;
+        currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
+      }
       if (!Object.keys(collections).length) return currDataFrame;
       collections.channelInfo = collections.channelInfo.concat(currDataFrame.channelInfo);
       collections.data = collections.data.concat(currDataFrame.data);
@@ -573,7 +586,7 @@ Meteor.methods({
     // // recordingName = temprName;
     // console.log("dataFrame combined channel:", dataFrame.channelNames);
 
-    if (dataFrame.numSamples == 0) {
+    if (dataFrame.numSamples === 0) {
       return {};
     }
     // console.time('computeSubtractions');

@@ -2639,11 +2639,10 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         
         var reprint = that.vars.reprint;
         console.log("reprint", reprint);
-        if (that.vars.windowsCache[identifierKey] && reprint == 0) {
-            if (that.vars.windowsCache[identifierKey].data && callback) {
-                //console.log("optionsTime");
+        if (reprint === 1) {
+            Object.keys(that.vars.windowsCache).forEach(identifierKey => that.vars.windowsCache[identifierKey] = { request: 'placeholder' });
+        } else if (that.vars.windowsCache[identifierKey] && that.vars.windowsCache[identifierKey].data && callback) {
             callback(that.vars.windowsCache[identifierKey].data);
-            }
             return;
         }
         const numSecondsToPadBeforeAndAfter = 2;
@@ -2911,7 +2910,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                     audio: channelAudioRepresentations[dataId][name],
                     numSamples: channelNumSamples[dataId][name],
                 }
-                channel.valuesPadded = new Float32Array(channel.audio.buffer.length - channel.numSamples.paddedBefore);    
+                let arrayLength = Math.max(channel.audio.buffer.length - channel.numSamples.paddedBefore, 1);
+                channel.valuesPadded = new Float32Array(arrayLength);    
                 channels.push(channel);
             }
         }
@@ -3024,9 +3024,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (!data.channel_values) return false;
         for (let dataId in data.channel_values) {
             if (Object.keys(data.channel_values[dataId]).length == 0) return false;
-            for (let channelName in data.channel_values[dataId]) {
-                if (Object.keys(data.channel_values[dataId][channelName]).length == 0) return false;
-            }
         }
         // for (let c = 0; c < data.channel_values.length; ++c) {
         //     if (data.channel_values[c].length == 0) {
@@ -4922,7 +4919,8 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
 
     _loadChannelTimeshiftFromPreference: function() {
         var that = this;
-        that.vars.channelTimeshift = that.options.context.preferences.annotatorConfig.channelTimeshift;
+        let timeshiftFromPreference = that.options.context.preferences.annotatorConfig.channelTimeshift
+        that.vars.channelTimeshift = timeshiftFromPreference ? timeshiftFromPreference : {};
     },
 
     _getCurrAssignment(){
