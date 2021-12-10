@@ -72,7 +72,7 @@ let WFDB = {
       const downsampledHeaderFile = downsampledFileName + '.hea';
       
       var signalRawOutput = null;
-      if (options.windowLength <= 304) {
+      if (!options.lowResolutionData) {
         // if the x-axis scale is less then 5 mins/page (+4 sec padded)
         // rdsamp the original high sampling rate .edf file
         signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
@@ -509,6 +509,7 @@ Meteor.methods({
     // let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
     // let recordingName2 = options2.recording_name;
     let targetSamplingRate = options.target_sampling_rate;
+    let lowResolutionData = options.low_resolution_data;
     let useHighPrecisionSampling = options.use_high_precision_sampling;
     let atLeast1 = 0;
     let dataFrame = {};
@@ -525,6 +526,7 @@ Meteor.methods({
         windowLength,
         channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired.map((channel) => channel.name),
         targetSamplingRate,
+        lowResolutionData,
         useHighPrecisionSampling,
       });
       // currDataFrame.data = { [recording._id]: currDataFrame.data };

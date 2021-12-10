@@ -1598,7 +1598,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             
             select.change(function(){
                 that.options.features.annotationType = select.val();
-                // that._setupAnnotationInteraction();
+                that._setupAnnotationInteraction();
                 
             })
             select.change();
@@ -1944,6 +1944,34 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         return that.vars.timeSyncMode === 'notimelock';
     },
 
+    _toggleNoTimelockScroll: function (toggle) {
+        var that = this;
+        var chart = that.vars.chart;
+
+        function scroll(e) {
+            let dist = e.deltaY * 0.025;
+            let channelIndex = that.vars.selectedChannelIndex;
+            if (channelIndex !== undefined) {
+                let modifiedDataId = chart.series[channelIndex].options.custom.dataId;
+                let timeshift = that.vars.channelTimeshift[modifiedDataId];
+                timeshift = timeshift ? timeshift + dist : dist;
+                let recordingLength = that.vars.recordingMetadata[modifiedDataId].LengthInSeconds;
+                that.vars.channelTimeshift[modifiedDataId] = Math.min(recordingLength, Math.max(0, timeshift));
+                that.vars.reprint = 1;
+                that._savePreferences({ channelTimeshift: that.vars.channelTimeshift });
+                that._reloadCurrentWindow();
+            }
+        }
+
+        if (toggle) {
+            Highcharts.addEvent(document, 'wheel', scroll);
+        } else {
+            Highcharts.removeEvent(document, 'wheel', scroll);
+            that.vars.reprint = 1;
+            that._reloadCurrentWindow();
+        }
+    },
+
     // _toggleCrosshairMode: function() {
     //     var that = this;
     //     let toggle = $(that.element).find('.crosshair-mode');
@@ -1964,20 +1992,24 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         switch (mode) {
             case 'crosshair':
                 $(that.element).find('.timesync').prop('disabled', false);
+                that._toggleNoTimelockScroll(false);
                 that._displayCrosshair(that.vars.crosshairPosition);
                 break;
             case 'notimelock':
                 $(that.element).find('.timesync').prop('disabled', true);
                 that._destroyCrosshair();
                 // to be implemented
+                that._toggleNoTimelockScroll(true);
                 break;
             case 'offset':
                 $(that.element).find('.timesync').prop('disabled', false);
+                that._toggleNoTimelockScroll(false);
                 that._destroyCrosshair();
                 break;
             case 'undefined':
             default:
                 $(that.element).find('.timesync').prop('disabled', true);
+                that._toggleNoTimelockScroll(false);
                 that._destroyCrosshair();
                 break;
         }
@@ -2475,6 +2507,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (
             !that._isCurrentWindowSpecifiedTrainingWindow()
             && !that.options.experiment.running
+            && !that._isInNoTimelockMode()
         ) {
             console.log("5");
             for (var i = 1; i <= that.options.numberOfForwardWindowsToPrefetch; ++i) {
@@ -2512,31 +2545,38 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 }
                 that._displayCrosshair(that.vars.crosshairPosition);
                 if (!that.options.experiment.running) {
-                    switch (windowStartTime) {
-                        case that.vars.currentWindowStart + window_length:
-                            if (that.options.visibleRegion.end === undefined) {
-                                console.log('winAva:', windowAvailable);
-                                that._setForwardEnabledStatus(windowAvailable);
-                                if (!windowAvailable) {
-                                    that._lastWindowReached();
+                    if (that._isInNoTimelockMode()) {
+                        that._setForwardEnabledStatus(false);
+                        that._setFastForwardEnabledStatus(false);
+                        that._setBackwardEnabledStatus(false);
+                        that._setFastBackwardEnabledStatus(false);
+                    } else {
+                        switch (windowStartTime) {
+                            case that.vars.currentWindowStart + window_length:
+                                if (that.options.visibleRegion.end === undefined) {
+                                    console.log('winAva:', windowAvailable);
+                                    that._setForwardEnabledStatus(windowAvailable);
+                                    if (!windowAvailable) {
+                                        that._lastWindowReached();
+                                    }
                                 }
-                            }
-                            break;
-                        case that.vars.currentWindowStart + window_length * that.options.windowJumpSizeFastForwardBackward:
-                            if (that.options.visibleRegion.end === undefined) {
-                                that._setFastForwardEnabledStatus(windowAvailable);
-                            }
-                            break;
-                        case that.vars.currentWindowStart - window_length:
-                            if (that.options.visibleRegion.start === undefined) {
-                                that._setBackwardEnabledStatus(windowAvailable);
-                            }
-                            break;
-                        case that.vars.currentWindowStart - window_length * that.options.windowJumpSizeFastForwardBackward:
-                            if (that.options.visibleRegion.start === undefined) {
-                                that._setFastBackwardEnabledStatus(windowAvailable);
-                            }
-                            break;
+                                break;
+                            case that.vars.currentWindowStart + window_length * that.options.windowJumpSizeFastForwardBackward:
+                                if (that.options.visibleRegion.end === undefined) {
+                                    that._setFastForwardEnabledStatus(windowAvailable);
+                                }
+                                break;
+                            case that.vars.currentWindowStart - window_length:
+                                if (that.options.visibleRegion.start === undefined) {
+                                    that._setBackwardEnabledStatus(windowAvailable);
+                                }
+                                break;
+                            case that.vars.currentWindowStart - window_length * that.options.windowJumpSizeFastForwardBackward:
+                                if (that.options.visibleRegion.start === undefined) {
+                                    that._setFastBackwardEnabledStatus(windowAvailable);
+                                }
+                                break;
+                        }
                     }
                 }
             });
@@ -2639,8 +2679,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         
         var reprint = that.vars.reprint;
         console.log("reprint", reprint);
-        if (reprint === 1) {
-            Object.keys(that.vars.windowsCache).forEach(identifierKey => that.vars.windowsCache[identifierKey] = { request: 'placeholder' });
+        if (reprint === 1 || that._isInNoTimelockMode()) {
+            that.vars.windowsCache = {};
+            // Object.keys(that.vars.windowsCache).forEach(identifierKey => that.vars.windowsCache[identifierKey] = { request: 'placeholder' });
         } else if (that.vars.windowsCache[identifierKey] && that.vars.windowsCache[identifierKey].data && callback) {
             callback(that.vars.windowsCache[identifierKey].data);
             return;
@@ -2663,6 +2704,9 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         // optionsPadded2.window_length = options2.window_length + numSecondsPaddedBefore2 + numSecondsToPadBeforeAndAfter;
 
         // console.log("crossed");
+
+        optionsPadded.low_resolution_data = that._isInNoTimelockMode() || (optionsPadded.window_length > 300 + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter);
+
         Meteor.call('get.edf.data', optionsPadded, (error, data) => {
             if (error) {
                 console.log(error.message);
@@ -2679,6 +2723,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
             else {
              //   console.log(data);
+                that.vars.windowsCache[identifierKey] = {};
                 that.vars.windowsCache[identifierKey].data = that._transformData(data, numSecondsPaddedBefore, options.window_length, numSecondsToPadBeforeAndAfter);
                 that.vars.reprint = 0;
                 if (callback) {
