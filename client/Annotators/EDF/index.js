@@ -62,7 +62,7 @@ Template.AnnotatorEDF.onRendered(function() {
             return combined + ' + ' + dataPathSegments[dataPathSegments.length - 1];
         }, ''),
         allRecordings: this.data.dataset.map((data) => {
-            return { _id: data._id, path: data.path };
+            return { _id: data._id, path: data.path, source: data.source };
         }),
         context: this.data,
         setVisibilityStatusForInfoPanel: (isVisible) => {

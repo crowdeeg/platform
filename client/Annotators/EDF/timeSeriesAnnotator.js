@@ -1632,7 +1632,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 // that._savePreferences({
                 //     xAxisTimescales: xAxisTimescales,
                 // })
-                that.vars.xAxisScaleInSeconds = parseInt(select.val());
+                that.vars.xAxisScaleInSeconds = +select.val();
                 that._reloadCurrentWindow();
                 console.log("timescale here");
             });
@@ -1742,7 +1742,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
                 return resolve(that);
             }
-            Meteor.call('get.edf.metadata', that.options.allRecordings, (error, results) => {
+            Meteor.call('get.edf.metadata.and.length', that.options.allRecordings, (error, results) => {
                 if (error) {
                     throw new Error('Cannot get recording metadata\n' + error);
                 }
@@ -2527,7 +2527,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             console.log("6, windowStartTime:", windowStartTime);
             var options = {
                 recordings: allRecordings,
-                channels_displayed: that._getChannelsDisplayed('Multifiles'),
+                channels_displayed: that._getChannelsDisplayed(),
                 start_time: windowStartTime,
                 channel_timeshift: that.vars.channelTimeshift,
                 window_length: window_length,

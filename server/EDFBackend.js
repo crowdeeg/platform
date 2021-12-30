@@ -58,6 +58,7 @@ let WFDB = {
       console.log("Access denied");
       throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
+
     // console.time('rdsamp');
     try {
       // console.log("try");
@@ -67,22 +68,29 @@ let WFDB = {
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
       const recordingDirectory = recordingPathSegments.join('/');
-      const downsampledFileName = recordingFilename.substring(0, recordingFilename.length - 4) + '_downsampled';
+      
+      let recordingFilenameWithoutDataType = recordingFilename.substring(0, recordingFilename.length - 4);
+      recordingFilenameWithoutDataType = recordingFilenameWithoutDataType.replace('.', '_');
+      const downsampledFileName = recordingFilenameWithoutDataType + '_downsampled';
       const downsampledFile = downsampledFileName + '.dat';
       const downsampledHeaderFile = downsampledFileName + '.hea';
-      
+      const recordingId = options.recordingId;
+      const channelDisplayed = Data.findOne(recordingId).metadata.wfdbdesc.Groups[0].Signals.reduce((channels, signal) => channels + " '" + signal.Description + "'", '-s');
+      console.log('channel displayed', channelDisplayed);
+      // const channelDisplayed = options.channelsDisplayed ? ' -s ' + options.channelsDisplayed.join(' ') : '';
+
       var signalRawOutput = null;
       if (!options.lowResolutionData) {
         // if the x-axis scale is less then 5 mins/page (+4 sec padded)
         // rdsamp the original high sampling rate .edf file
-        signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
+        signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v ' + channelDisplayed, recordingDirectory);
       } else {
         let downsampledExists = runWFDBCommand(`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`, recordingDirectory).replace(/\r?\n/, '');
         if (downsampledExists != 't') {
           throw new Meteor.Error('wfdb.rdsamp.command.downsampled.file.missing', 'The downsampled file .dat or its header file .hea is missing, please reload the page and try again later.');
         }
         // rdsamp the downsampled .dat file with lower sampling rate
-        signalRawOutput = runWFDBCommand('rdsamp -r "' + downsampledFileName + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v -s ' + options.channelsDisplayed.join(' '), recordingDirectory);
+        signalRawOutput = runWFDBCommand('rdsamp -r "' + downsampledFileName + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v ' + channelDisplayed, recordingDirectory);
       }
       // console.time('parseRawOutput');
       let rows = dsvFormat(',').parseRows(signalRawOutput);
@@ -176,7 +184,11 @@ let WFDB = {
       delete recordingPathSegments[recordingPathSegments.length - 1];
       const recordingDirectory = recordingPathSegments.join('/');
 
-      const downsampledFileName = recordingFilename.substring(0, recordingFilename.length - 4) + '_downsampled';
+      let recordingFilenameWithoutDataType = recordingFilename.substring(0, recordingFilename.length - 4);
+      // having '.' inside the downsampling file name will cause error occured when executing xform function
+      recordingFilenameWithoutDataType = recordingFilenameWithoutDataType.replace('.', '_');
+      
+      const downsampledFileName = recordingFilenameWithoutDataType + '_downsampled';
       const downsampledFile = downsampledFileName + '.dat';
       const downsampledHeaderFile = downsampledFileName + '.hea';
       console.log('filenames:', downsampledFileName, downsampledFile, downsampledHeaderFile);
@@ -474,7 +486,10 @@ function indexOfChannel(channelArray, index, dataId) {
 };
 
 Meteor.methods({
-  'get.edf.metadata' (allRecordings) {
+  'get.edf.metadata' (recordingName) {
+    return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
+  },
+  'get.edf.metadata.and.length' (allRecordings) {
     let lengthInSeconds = 0;
     let allMetadata = {};
     allRecordings.forEach((recording) => {
@@ -497,14 +512,22 @@ Meteor.methods({
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
     let count = 0;
-    let channelsDisplayed = options.channels_displayed;
-    // let channelsDisplayed2 = options2.channels_displayed;
+
+    // let channelsDisplayed = options.channels_displayed;
+    let channelsDisplayed = {};
+    
     let channelTimeshift = options.channel_timeshift;
     let allRecordings = options.recordings;
+    // allRecordings = allRecordings.map((recording) => {
+    //   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
+    //   return recording;
+    // });
     allRecordings = allRecordings.map((recording) => {
-      recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording._id], recording._id);
+      channelsDisplayed[recording.source] = Data.findOne(recording._id).metadata.wfdbdesc.Groups[0].Signals.map(signal => "'" + signal.Description + "'");
+      recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
       return recording;
     });
+
     // let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
     // let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
     // let recordingName2 = options2.recording_name;
@@ -522,6 +545,7 @@ Meteor.methods({
       let startTimeAfterAdjustment = channelTimeshift[recording._id] ? (startTime + channelTimeshift[recording._id]) : startTime;
       currDataFrame = WFDB.rdsamp({
         recordingName: recording.path,
+        recordingId: recording._id,
         startTime: startTimeAfterAdjustment,
         windowLength,
         channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired.map((channel) => channel.name),

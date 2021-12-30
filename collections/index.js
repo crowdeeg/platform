@@ -159,6 +159,20 @@ const SchemaHelpers = {
             'Questionnaire',
         ],
     },
+    dataSource: {
+        type: String,
+        label: 'Source',
+        allowedValues: [
+            'PSG',
+            'watchpat',
+            'ANNE',
+            'MUSE',
+            'Apnealink',
+            'GENEActiv',
+            'AX3',
+            'Actical',
+        ],
+    },
     annotator: {
         type: String,
         label: 'Annotator',
@@ -378,6 +392,7 @@ Schemas.Data = new SimpleSchema({
         label: 'Name',
     },
     type: SchemaHelpers.dataType,
+    source: SchemaHelpers.dataSource,
     patient: SchemaHelpers.fromCollection(Patients, {
         optional: true,
     }),
@@ -744,13 +759,6 @@ Schemas.Assignments = new SimpleSchema({
         label: 'Can be Re-opened after Completing',
         defaultValue: true,
     },
-    channelsDelayed:{
-        type: String,
-        label: 'Channels Delayed Amount',
-        //minCount: 0,
-        defaultValue: "",
-        optional: true,
-    },
     annotationsImported: {
         type: Boolean,
         label: 'Annotations Imported',
@@ -819,6 +827,7 @@ Assignments.helpers({
   },
   dataDoc() {
     // only return the first data in dataFiles
+    // console.log("this.dataFiles:", this.dataFiles);
     let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
     return Data.findOne({ $or: queryArray }) || false;
   },
@@ -834,15 +843,25 @@ Assignments.helpers({
   patientDoc() {
     // only return the patient of the first data in dataFiles
     // const data = this.dataDocs().next((err, doc) => err ? false : doc);
-    const data = this.dataDoc();
-    if (!data) return false;
-    return data.patientDoc();
+
+    // const data = this.dataDoc();
+    // if (!data) return false;
+    // return data.patientDoc();
+    const data = this.dataDocs().fetch();
+    // console.log('data', data);
+    if (!data.length) return false;
+    return data.map(data => data.patientDoc());
   },
   nameOrAnonymizedPatientDescription() {
     if (this.name) return this.name;
-    const patientDoc = this.patientDoc();
-    if (!patientDoc) return 'Loading ...';
-    return patientDoc.anonymizedDescription();
+    // const patientDoc = this.patientDoc();
+    // if (!patientDoc) return 'Loading ...';
+    // return patientDoc.anonymizedDescription();
+    const patientDocs = this.patientDoc();
+    // console.log('patientDocs', patientDocs);
+    if (!patientDocs.length) return 'Loading ...';
+    let patientDocDescriptions = patientDocs.map(patientDoc => patientDoc.anonymizedDescription());
+    return patientDocDescriptions.join(' + ');
   },
   nameOrAnonymizedPatientDescriptionWithAdjudicationInformation() {
     let description = this.nameOrAnonymizedPatientDescription();
@@ -869,40 +888,30 @@ Assignments.helpers({
     return this.annotationDocs(filter, options).length;
   },
   patientId() {
-    const patient = this.patientDoc();
-    if (!patient) return 'Loading ...';
-    return patient.id;
+    const patients = this.patientDoc();
+    if (!patients.length) return 'Loading ...';
+    return patients.map(patient => patient.id).join('\n');
   },
   dataPath() {
-    const data = this.dataDoc().fetch();
+    const data = this.dataDocs().fetch();
     if (!data) return 'Loading ...';
-    return data.map((data) => data.path);
+    return data.map((data) => data.path).join('\n');
   },
-//   dataPath2() {
-//     const data = this.dataDoc2();
-//     if (!data) return 'Loading ...';
-//     return data.path;
-//   },
+  dataIds() {
+    return this.dataFiles;
+  },
   dataLengthInSeconds() {
-    const data = this.dataDoc();
-    if (!data) return 'Loading ...';
-    return data.lengthInSeconds();
+    const data = this.dataDocs().fetch();
+    if (!data.length) return 'Loading ...';
+    return Math.max(...data.map(data => data.lengthInSeconds()));
   },
-//   dataLengthInSeconds2() {
-//     const data = this.dataDoc2();
-//     if (!data) return 'Loading ...';
-//     return data.lengthInSeconds();
-//   },
   dataLengthFormatted() {
-    const data = this.dataDoc();
-    if (!data) return 'Loading ...';
-    return data.lengthFormatted();
+    const data = this.dataDocs().fetch();
+    if (!data.length) return 'Loading ...';
+    let dataLength = data.map(data => data.lengthInSeconds());
+    let i = dataLength.indexOf(Math.max(...dataLength));
+    return data[i].lengthFormatted();
   },
-//   dataLengthFormatted2() {
-//     const data = this.dataDoc2();
-//     if (!data) return 'Loading ...';
-//     return data.lengthFormatted();
-//   },
   userDocs() {
     return Meteor.users.find({ _id: { $in: this.users } } ).fetch();
   },
@@ -2485,7 +2494,7 @@ AdminConfig = {
                 { label: 'Assignee Name', name: 'userNames()' },
                 { label: 'Task ID', name: 'task' },
                 { label: 'Task Name', name: 'taskName()' },
-                { label: 'Data ID', name: 'data' },
+                { label: 'Data IDs', name: 'dataFiles' },
                 { label: 'Data Path', name: 'dataPath()' },
                 { label: 'Status', name: 'status' },
                 { label: 'Annotations Imported', name: 'annotationsImported' },

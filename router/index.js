@@ -59,8 +59,9 @@ Router.route('/assignment/:_id', {
         // var data = Data.findOne(assignment.data);
         // var data2 = Data.findOne(assignment.data2);
         
-        let queryArray = assignment.dataFiles.map((dataId) => { return { _id: dataId }; });
-        let dataset = Data.find({ $or: queryArray }).fetch();
+        // let queryArray = assignment.dataFiles.map((dataId) => { return { _id: dataId }; });
+        // let dataset = Data.find({ $or: queryArray }).fetch();
+        let dataset = assignment.dataDocs().fetch();
 
         console.log("Data set:", dataset);
         // let data = Data.findOne(assignment.data);
