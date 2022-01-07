@@ -8,6 +8,7 @@ require('highcharts-boost')(Highcharts);
 
 $.widget('crowdeeg.TimeSeriesAnnotator', {
 
+    // initial options when the widget is created
     options: {
         optionsURLParameter: 'annotatorOptions',
         projectUUID: undefined,
@@ -432,6 +433,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _initializeVariables: function() {
+        // initializing variables for future usage by the functions
         var that = this;
         that.vars = {
             uniqueClass: that._getUUID(),
@@ -1187,6 +1189,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _getMontages: function() {
+        // get the name of all montages, which is defined in annotatorConfig under task collection
         var that = this;
         if (that.options.channelsDisplayed instanceof Array) {
             return;
@@ -1195,6 +1198,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _getChannelsDisplayed: function(montage) {
+        // return the channel to display given the montage name
         var that = this;
         
         if (that.options.channelsDisplayed instanceof Array) {
@@ -1212,24 +1216,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         return that.options.channelsDisplayed[that._getMontages()[0]];
     },
 
-    _getMontageNameFromRecording: function(name) {
-        var that = this; 
-        var parts = name.split("/");
-        var fileName = parts[parts.length - 1];
-        console.log(fileName);
-        if (fileName.indexOf("PSG") > -1 || fileName.indexOf("Psg") > -1 || fileName.indexOf("psg") > -1 ){
-         
-            return "PSG Annotation"
-        }
-        else if(fileName.indexOf("ANNE") > -1 || fileName.indexOf("Anne") > -1 || fileName.indexOf("anne") > -1){
-            
-            return "Anne Annotation"
-
-        }
-
-    },
-
     _getChannelGains: function(montage) {
+        // return the gain of each channel given the montage name
         var that = this;
         if (that.vars.channelGains instanceof Array) {
             return that.vars.channelGains;
@@ -1277,7 +1265,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._setupTrainingPhase();
         that._setupArbitration();
         that._getRecordingMetadata()
-            .then(that._setupDownsampledRecording)
+            .then(that._setupDownsampledRecording) // downsample the recording if loading for the first time
             .then(() => {
                 if (that.options.preloadEntireRecording) {
                     console.log("preloadEntireRecording", that.options.preloadEntireRecording);
@@ -1411,6 +1399,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _setupMontageSelector: function() {
+        // montage selector should be removed if we are fixing channels to be displayed by its montage or alignment mode
         var that = this;
         if (!that._getMontages()) {
             return;
@@ -1572,10 +1561,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 value: "cpoint",
             
             },
-            {
-                name: "Time Adjust",
-                value: "tadjust",
-            }
         )
 
         var selection = that.options.annotationType|| []
@@ -1629,9 +1614,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 console.log("timescale onchange");
                 if (defaultOptionIndex) delete timescaleSetting.options[defaultOptionIndex].default;
                 timescaleSetting.options[select.prop('selectedIndex')].default = true;
-                // that._savePreferences({
-                //     xAxisTimescales: xAxisTimescales,
-                // })
                 that.vars.xAxisScaleInSeconds = +select.val();
                 that._reloadCurrentWindow();
                 console.log("timescale here");
@@ -1641,6 +1623,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _setupDownsampledRecording: function(that) {
+        // downsample all recordings in the assignment to lower resolution (sampling rate) for future usage
         return new Promise((resolve, reject) => {
             Meteor.call('setup.edf.downsampled', that.options.allRecordings, that.vars.recordingMetadata, (error, results) => {
                 if (error) throw new Error('Cannot downsample EDF file\n' + error);
@@ -1737,6 +1720,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _getRecordingMetadata: function() {
+        // get the metadata and total length of the recording
         var that = this;
         return new Promise((resolve, reject) => {
             if (Object.keys(that.vars.recordingMetadata).length === that.options.allRecordings.length) {
@@ -1972,21 +1956,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         }
     },
 
-    // _toggleCrosshairMode: function() {
-    //     var that = this;
-    //     let toggle = $(that.element).find('.crosshair-mode');
-    //     that.vars.crosshairMode = that.vars.crosshairMode ? false : true;
-    //     if (that._isInCrosshairSyncMode()) {
-    //         $(toggle).addClass('active');
-    //         $(that.element).find('.timesync').prop('disabled', false);
-    //         that._displayCrosshair(that.vars.crosshairPosition);
-    //     } else {
-    //         $(toggle).removeClass('active');
-    //         $(that.element).find('.timesync').prop('disabled', true);
-    //         that._destroyCrosshair();
-    //     }
-    // },
-
     _toggleTimeSyncMode: function(mode) {
         var that = this;
         switch (mode) {
@@ -1998,7 +1967,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             case 'notimelock':
                 $(that.element).find('.timesync').prop('disabled', true);
                 that._destroyCrosshair();
-                // to be implemented
                 that._toggleNoTimelockScroll(true);
                 break;
             case 'offset':
@@ -2021,6 +1989,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         let ids = crosshairPosition.map((rec) => rec.dataId);
         let currentDiff = ids.map((id) => that.vars.channelTimeshift[id]);
         if (crosshairPosition.length === 2) {
+            // calculate the difference between two recordings after adding the current difference
             let diff = crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
             if (diff > 0) {
                 if (currentDiff[1]) {
@@ -2050,7 +2019,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
             that.vars.reprint = 1;
             that.vars.crosshairPosition = [];
-            // that._toggleCrosshairMode();
             $(this.element).find('.timesync_panel select').val('undefined').change().material_select();
             that._savePreferences({ channelTimeshift: that.vars.channelTimeshift });
             that._reloadCurrentWindow();
@@ -2090,16 +2058,15 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 that._toggleTimeSyncMode(select.val());
             });
         });
-        // $(that.element).find('.crosshair-mode').click(function() {
-        //     that._toggleCrosshairMode();
-        // });
         $(that.element).find('.timesync').click(function() {
             if (that._isInCrosshairSyncMode()) {
                 that._performCrosshairSync();
             } else if (that._isInOffsetSyncMode()) {
                 that._performOffsetSync();
             } else if (that._isInNoTimelockMode()) {
-                // to be implemented
+                // future implementations:
+                // besides free scrolling by mouse wheel, 
+                // adding [+/-] hh:mm:ss option and [shift left/right] buttons
             }
         });
     },
@@ -2134,6 +2101,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             });
             let crosshairTop = firstIndexOfChannel * heightPerChannel;
             let crosshairBottom = (lastIndexOfChannel + 1) * heightPerChannel;
+            // draw the crosshair using svgPath and add it as a highchart SVGElement
             let svgPath = ['M', left + crosshair.plotX, top + crosshairTop, 'L', left + crosshair.plotX, top + crosshairBottom];
             chart.renderer.path(svgPath).attr({
                 'stroke-width': 1,
@@ -2437,6 +2405,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     },
 
     _switchToWindow: function (allRecordings, start_time, window_length) {
+        // the main funciton called when navigating to another window
         var that = this;
         console.log("_switchToWindow.that:", that);
         if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
@@ -2507,7 +2476,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         if (
             !that._isCurrentWindowSpecifiedTrainingWindow()
             && !that.options.experiment.running
-            && !that._isInNoTimelockMode()
+            && !that._isInNoTimelockMode() // stop caching windows if in no timelock mode
         ) {
             console.log("5");
             for (var i = 1; i <= that.options.numberOfForwardWindowsToPrefetch; ++i) {
@@ -2527,7 +2496,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             console.log("6, windowStartTime:", windowStartTime);
             var options = {
                 recordings: allRecordings,
-                channels_displayed: that._getChannelsDisplayed(),
+                channels_displayed: that._getChannelsDisplayed(), // get all channels we would like to display
                 start_time: windowStartTime,
                 channel_timeshift: that.vars.channelTimeshift,
                 window_length: window_length,
@@ -2551,6 +2520,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         that._setBackwardEnabledStatus(false);
                         that._setFastBackwardEnabledStatus(false);
                     } else {
+                        // enable/disable the forward backward buttons according to the current position
                         switch (windowStartTime) {
                             case that.vars.currentWindowStart + window_length:
                                 if (that.options.visibleRegion.end === undefined) {
@@ -2655,8 +2625,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         console.log("identifierKey", identifierKey);
         var noDataError = 'No data available for window with options ' + JSON.stringify(options);
 
-       // console.log(options.start_time);
-       // console.log(that.vars.recordingLengthInSeconds);
         if (options.start_time < 0) {
             that.vars.windowsCache[identifierKey] = false;
             console.log("options.start_time < 0");
@@ -2665,7 +2633,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that.vars.windowsCache[identifierKey] = false;
             console.log("options.start_time > that.vars.recordingLengthInSeconds");
         }
-        // console.log(that.vars.windowsCache[identifierKey]);
         if (that.vars.windowsCache[identifierKey] === false) {
             if (callback) {
                 console.log("that.vars.windowsCache[identifierKey] === false");
@@ -2673,7 +2640,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 callback(null, noDataError);
                 
             }
-           // console.log("4");
             return;
         }
         
@@ -2681,7 +2647,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         console.log("reprint", reprint);
         if (reprint === 1 || that._isInNoTimelockMode()) {
             that.vars.windowsCache = {};
-            // Object.keys(that.vars.windowsCache).forEach(identifierKey => that.vars.windowsCache[identifierKey] = { request: 'placeholder' });
         } else if (that.vars.windowsCache[identifierKey] && that.vars.windowsCache[identifierKey].data && callback) {
             callback(that.vars.windowsCache[identifierKey].data);
             return;
@@ -2689,21 +2654,14 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         const numSecondsToPadBeforeAndAfter = 2;
         
         const optionsPadded = JSON.parse(JSON.stringify(options));
-        // const optionsPadded2 = JSON.parse(JSON.stringify(options2));
     
         optionsPadded.start_time -= numSecondsToPadBeforeAndAfter;
-        // optionsPadded2.start_time -= numSecondsToPadBeforeAndAfter;
        
         optionsPadded.start_time = Math.max(0, optionsPadded.start_time);
-        // optionsPadded2.start_time = Math.max(0, optionsPadded2.start_time);
        
         const numSecondsPaddedBefore = options.start_time - optionsPadded.start_time ;
-        // const numSecondsPaddedBefore2 = options2.start_time - optionsPadded2.start_time;
 
         optionsPadded.window_length = options.window_length + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter;
-        // optionsPadded2.window_length = options2.window_length + numSecondsPaddedBefore2 + numSecondsToPadBeforeAndAfter;
-
-        // console.log("crossed");
 
         optionsPadded.low_resolution_data = that._isInNoTimelockMode() || (optionsPadded.window_length > 300 + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter);
 
@@ -2722,8 +2680,8 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                 }
             }
             else {
-             //   console.log(data);
                 that.vars.windowsCache[identifierKey] = {};
+                // transform the data before storing or displaying them
                 that.vars.windowsCache[identifierKey].data = that._transformData(data, numSecondsPaddedBefore, options.window_length, numSecondsToPadBeforeAndAfter);
                 that.vars.reprint = 0;
                 if (callback) {
@@ -3070,11 +3028,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         for (let dataId in data.channel_values) {
             if (Object.keys(data.channel_values[dataId]).length == 0) return false;
         }
-        // for (let c = 0; c < data.channel_values.length; ++c) {
-        //     if (data.channel_values[c].length == 0) {
-        //         return false;
-        //     }
-        // }
         return true;
     },
 
@@ -3084,7 +3037,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         // if the chart object does not yet exist, because the user is loading the page for the first time
         // or refreshing the page, then it's necessary to initialize the plot area
         if (!that.vars.chart) {
-            //console.log("here")
             // if this is the first pageload, then we'll need to load the entire
             console.time("_initGraph");
             that._initGraph(data);
@@ -3211,7 +3163,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         },
 
         that.vars.chart = new Highcharts.chart({
-            boost: {
+            boost: { // speed up
                 enabled: true,
                 seriesThreshold: 1,
             },
@@ -3234,7 +3186,6 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
                         that._setupYAxisLinesAndLabels();
                     }
                 },
-                // zoomType: 'xy',
                 resetZoomButton: {
                     position: {
                         align: 'left',
@@ -3419,129 +3370,54 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that._displayAnnotations(that._turnExamplesIntoAnnotations(that.options.features.examples));
         }
         that._setupYAxisLinesAndLabels();
-        //that.setupSleepStagePanel();
-        
     },
 
     
     _changeAmplitude: function(index, channels){
-    var that = this;
-   
-    var check;
-    //var channel = channels[index];
-    var cid = "channel-" + index;
-    //console.log(channel.name)
-    //console.log(cid);
-   
-    //var toggler = $("#channel-"+(index)).on('click', (evt) => {
-        
-        //console.log("button clicked");
-        //console.log($('.popup').id);
-   // $(this).hide();
-     //addClass('<button>click me</button>');
-    // console.log("inside");
-     //console.log(channel.name);
-    //console.log(index);
-    var checker = that.vars.oldIndex;
-    if(checker > -1){
-     // console.log(checker);
-        $("#increase-"+(checker)).css("visibility", "hidden");
-        $("#decrease-"+(checker)).css("visibility", "hidden");
-        $("#default-"+(checker)).css("visibility", "hidden");
-     
-        $("#myPopup-"+(checker)).css("visibility", "hidden");
-        that.vars.oldIndex = -1;
-        //that._reloadCurrentWindow();
-        //console.log("here");
-    }
-   var channel = channels[index];
-   //console.log(channel);
-    check = that.vars.popUpActive;
+        var that = this;
     
-   // console.log(that.vars.popUpActive)
-    if(check == 1 ){
-        //console.log("here as well");
-        $("#myPopup-"+(index)).css("visibility", "visible");
-        
-        $("#increase-"+(index)).css("visibility", "visible");
-        $("#decrease-"+(index)).css("visibility", "visible");
-        $("#default-"+(index)).css("visibility", "visible");
-       
-      //  console.log("inside it")
-     }
-     that.vars.popUpActive = 2;
-     that.vars.oldIndex =index;
-     var increaser = $("#increase-"+(index)).on('click', (evt) => {
-       //  console.log()
-       
-       // console.log(name);
-        //var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
-        //scaleFault = scaleFault*5;
-       // sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
+        var check;
+        var cid = "channel-" + index;
+        var checker = that.vars.oldIndex;
+        if(checker > -1){
+            $("#increase-"+(checker)).css("visibility", "hidden");
+            $("#decrease-"+(checker)).css("visibility", "hidden");
+            $("#default-"+(checker)).css("visibility", "hidden");
+            $("#myPopup-"+(checker)).css("visibility", "hidden");
+            that.vars.oldIndex = -1;
+        }
+        var channel = channels[index];
+        check = that.vars.popUpActive;
 
-        that.vars.valueOptions = 1;
-        that.vars.increaseOnce = 1;
-        that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-        that.vars.reprint = 1;
-       // console.log("inbutton");
-        that._reloadCurrentWindow();
-        //location.reload();
-       // scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
-       
-
-//console.log(increase);
-  });
-  
-  var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
-    //  console.log()
-    // console.log(name);
-     //var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
-     //scaleFault = scaleFault*5;
-    // sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
-     
-    that.vars.valueOptions = -1;
-    that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-    that.vars.increaseOnce = 1;
-    that.vars.reprint = 1;
-    that._reloadCurrentWindow();
-   
-    // scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
+        if(check == 1 ){
+            $("#myPopup-"+(index)).css("visibility", "visible");
+            $("#increase-"+(index)).css("visibility", "visible");
+            $("#decrease-"+(index)).css("visibility", "visible");
+            $("#default-"+(index)).css("visibility", "visible");
+        }
+        that.vars.popUpActive = 2;
+        that.vars.oldIndex =index;
+        var increaser = $("#increase-"+(index)).on('click', (evt) => {
+            that.vars.valueOptions = 1;
+            that.vars.increaseOnce = 1;
+            that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
+            that.vars.reprint = 1;
+            that._reloadCurrentWindow();
+        });
     
-
-//console.log(increase);
-});
-var defaulter = $("#default-"+(index)).on('click', (evt) => {
-    //  console.log()
-    // console.log(name);
-     //var scaleFault = sessionStorage.getItem(name+"scaleFactorAmplitude");
-     //scaleFault = scaleFault*5;
-    // sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault);
-    
-    that.vars.valueOptions = 0;
-    that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-    that.vars.reprint = 1;
-    that._reloadCurrentWindow();
-   
-    // scaleFactorAmplitude = scaleFactorAmplitude*scaleFault;
-    
-
-//console.log(increase);
-});
-
-     //$(".popupbutton").css("visibility", "visible");
-
-    //document.getElementById("myPopup-"+index).classList.toggle("show");
-    //console.log(index);
-     //addClass('<button>click me</button>');
-  //  })
-    //console.log(toggler);
-   /* toggler.addEvent(function(){
-        var popup = document.getElementById("myPopup");
-        popup.classList.toggle("show");
-        console.log("printed");
-
-    });
-    */
+        var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
+            that.vars.valueOptions = -1;
+            that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
+            that.vars.increaseOnce = 1;
+            that.vars.reprint = 1;
+            that._reloadCurrentWindow();
+        });
+        var defaulter = $("#default-"+(index)).on('click', (evt) => {
+            that.vars.valueOptions = 0;
+            that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
+            that.vars.reprint = 1;
+            that._reloadCurrentWindow();
+        });
     },
 
     _formatXAxisLabel: function() {
@@ -3696,9 +3572,6 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
            
                 annotation = that._addAnnotationChangePoint(annotationId, clickXValue, channelIndices, featureType);
                 
-                
-                //that._addAnnotationChangePoint(annotationId, clickXValue, channelIndices, "");
-
                 function getAnnotationChannelIndices3(e) {
                     var y = e.clientY - container.offsetTop,
                         dragYValue = that._convertPixelsToValue(y, 'y'),
@@ -3708,8 +3581,6 @@ var defaulter = $("#default-"+(index)).on('click', (evt) => {
 
                 function getAnnotationAttributes3(e) {
                     var x = e.clientX - container.offsetLeft,
-                        //dx = x - clickX,
-                        //width = that._convertPixelsToValueLength(parseInt(dx, 10) + 1, 'x'),
                         channelIndices = getAnnotationChannelIndices3(e),
                         { height, yValue } = that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
                     // console.log(height);

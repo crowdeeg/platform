@@ -75,9 +75,13 @@ let WFDB = {
       const downsampledFile = downsampledFileName + '.dat';
       const downsampledHeaderFile = downsampledFileName + '.hea';
       const recordingId = options.recordingId;
+
+      // the following line get all the channels from the metadata of the recording and display all of them
+      // we should modify it to be only displaying the channel required in the particular montage
       const channelDisplayed = Data.findOne(recordingId).metadata.wfdbdesc.Groups[0].Signals.reduce((channels, signal) => channels + " '" + signal.Description + "'", '-s');
       console.log('channel displayed', channelDisplayed);
-      // const channelDisplayed = options.channelsDisplayed ? ' -s ' + options.channelsDisplayed.join(' ') : '';
+      // this is the original version of codes which display all channels specified in the options:
+        // const channelDisplayed = options.channelsDisplayed ? ' -s ' + options.channelsDisplayed.join(' ') : '';
 
       var signalRawOutput = null;
       if (!options.lowResolutionData) {
@@ -490,6 +494,7 @@ Meteor.methods({
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
   },
   'get.edf.metadata.and.length' (allRecordings) {
+    // if more than one recording, the length will be the max of the two recordings
     let lengthInSeconds = 0;
     let allMetadata = {};
     allRecordings.forEach((recording) => {
@@ -508,35 +513,35 @@ Meteor.methods({
   'get.edf.data' (options) {
     console.log('get.edf.data');
     options = options || {};
-    // options2 = options2 || {};
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
     let count = 0;
 
-    // let channelsDisplayed = options.channels_displayed;
+    // this is the original version of codes which display all channels specified in the options:
+      // let channelsDisplayed = options.channels_displayed;
     let channelsDisplayed = {};
     
     let channelTimeshift = options.channel_timeshift;
     let allRecordings = options.recordings;
-    // allRecordings = allRecordings.map((recording) => {
-    //   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
-    //   return recording;
-    // });
+
+    // this is the original version of codes which display all channels specified in the options:
+      // allRecordings = allRecordings.map((recording) => {
+      //   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
+      //   return recording;
+      // });
+    // the following line get all the channels from the metadata of the recording and display all of them
+    // we should modify it to be only displaying the channel required in the particular montage
     allRecordings = allRecordings.map((recording) => {
       channelsDisplayed[recording.source] = Data.findOne(recording._id).metadata.wfdbdesc.Groups[0].Signals.map(signal => "'" + signal.Description + "'");
       recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
       return recording;
     });
 
-    // let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
-    // let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
-    // let recordingName2 = options2.recording_name;
     let targetSamplingRate = options.target_sampling_rate;
     let lowResolutionData = options.low_resolution_data;
     let useHighPrecisionSampling = options.use_high_precision_sampling;
     let atLeast1 = 0;
     let dataFrame = {};
-    // let dataFrame2 = {};
     
     console.log("get.edf.data init finished");
     
@@ -553,7 +558,6 @@ Meteor.methods({
         lowResolutionData,
         useHighPrecisionSampling,
       });
-      // currDataFrame.data = { [recording._id]: currDataFrame.data };
       currDataFrame.channelInfo = currDataFrame.channelNames.map((channelName) => {
         return { name: channelName, dataId: recording._id };
       });
@@ -578,39 +582,6 @@ Meteor.methods({
       return collections;
     }, {});
 
-    // dataFrame = WFDB.rdsamp({
-    //   recordingName,
-    //   startTime,
-    //   windowLength,
-    //   channelsDisplayed: channelsDisplayedParsed.individualChannelsRequired,
-    //   targetSamplingRate,
-    //   useHighPrecisionSampling,
-    // });
-    // console.log("dataFrame1 loaded");
-
-    // let temprName = recordingName;
-    // recordingName = recordingName2;
-    // dataFrame2 = WFDB.rdsamp({
-    //   recordingName: recordingName2,
-    //   startTime,
-    //   windowLength,
-    //   channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
-    //   targetSamplingRate,
-    //   useHighPrecisionSampling,
-    // });
-    // console.log("dataFrame2 loaded ");
-
-    // Combine two channel sets
-    // dataFrame2.channelNames.forEach( channel => {
-    //   dataFrame.channelNames.push(channel);
-    // });
-      
-    // dataFrame2.data.forEach( dataSet => {
-    //   dataFrame.data.push(dataSet);
-    // })
-    // dataFrame.numSamples += dataFrame2.numSamples;
-    // // recordingName = temprName;
-    // console.log("dataFrame combined channel:", dataFrame.channelNames);
 
     if (dataFrame.numSamples === 0) {
       return {};
@@ -623,19 +594,13 @@ Meteor.methods({
       return parsedCombined;
     }, {});
 
-    // channelsDisplayedParsed.subtractions = channelsDisplayedParsed.subtractions.concat(channelsDisplayedParsed2.subtractions);
-    // channelsDisplayedParsed.individualChannelsRequired = channelsDisplayedParsed.individualChannelsRequired.concat(channelsDisplayedParsed2.individualChannelsRequired);
     console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
     let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired;
-    // let channelNames = dataFrame.channelNames;
     let allChannelInfo = dataFrame.channelInfo;
 
     channelsDisplayedParsed.subtractions.forEach((subtraction) => {
       let dataId = subtraction.dataId;
       if (indexOfChannel(subtractionOrder, subtraction.key, dataId) > -1) return;
-      // if (subtractionOrder[dataId].indexOf(subtraction.key) > -1) {
-      //   return;
-      // }
       let has = {};
       let channelIndex = {};
       let channelName = {};
@@ -723,6 +688,7 @@ Meteor.methods({
     }
   },
   'setup.edf.downsampled' (allRecordings, metadata) {
+    // currently the sampling rate (frequency) for the downsampled recording is set to 2 Hz
     let targetDownsamplingRate = '2';
     allRecordings.forEach((recording) => {
       let recordingName = recording.path;
