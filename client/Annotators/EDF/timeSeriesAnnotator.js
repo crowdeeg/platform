@@ -399,7 +399,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
 
         // destroys the current charts and reloads them
         that._reinitChart = that._reinitChart.bind(that);
-        
+    
         $(that.element).addClass(that.vars.uniqueClass);
         that._fetchOptionsFromURLParameter();
         that._createHTMLContent();
@@ -3415,7 +3415,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             that.vars.increaseOnce = 1;
             that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
             that.vars.reprint = 1;
-            that._reloadCurrentWindow();
+            //that._reloadCurrentWindow();
         });
     
         var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
@@ -4490,6 +4490,7 @@ _addAnnotationBox: function(annotationId, timeStart, channelIndices, featureType
             $(that.element).find('.channel-label[data-index="' + index + '"]').addClass('selected');
             
         }
+    
     },
 
     _unselectChannels: function() {

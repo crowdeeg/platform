@@ -46,10 +46,10 @@ const isAssignedToEDF = (userId, filePath) => {
 
 let WFDB = {
 	wfdbdesc(recordingFilePath) {
-		const isCallFromClient = !!this.connection;
+		const isCallFromClient = !!this.connection; // checks if the function is called from the client
 		if (
 			isCallFromClient &&
-			!isAssignedToEDF(Meteor.userId(), recordingFilePath)
+			!isAssignedToEDF(Meteor.userId(), recordingFilePath) // checks if the user is assigned to the EDF file
 		) {
 			throw new Meteor.Error(
 				"wfdb.wfdbdesc.command.permission.denied",
@@ -57,6 +57,7 @@ let WFDB = {
 			);
 		}
 		try {
+			// gets the name and directory of the recording
 			const recordingPathSegments = recordingFilePath.split("/");
 			const recordingFilename =
 				recordingPathSegments[recordingPathSegments.length - 1];
@@ -223,12 +224,14 @@ let WFDB = {
       }
     }
   },
-  downsamp (options) {
+  downsamp (options) { // function that downamples the data
     const isCallFromClient = !!this.connection;
-    if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
+    if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) { // if the user is not assigned to the recording, throw an error
       throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
     }
     try {
+	
+	// get the name and direction of the recording
       const recordingPathSegments = options.recordingName.split('/');
       const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
       delete recordingPathSegments[recordingPathSegments.length - 1];
@@ -311,6 +314,7 @@ let filterName = (allSignals) => {
 }
 */
 let parseComputedChannelString = (computedChannelString, recordingId) => {
+	//pares the channel string and return the data of channels
 	const parts = computedChannelString.split("=");
 	const channelName = parts[0].trim();
 	let channelKey;
@@ -555,7 +559,7 @@ let convertEntriesToTypedFloatArrays = (dict) => {
 	return dictTyped;
 };
 
-var isChannel = function (element) {
+var isChannel = function (element) { // checks if the arguement is a channel
 	if (!this || !this.name || !this.dataId) return false;
 	if (!element.name || !element.dataId)
 		throw new TypeError(`Argument is not a channel array`);
@@ -590,10 +594,10 @@ Meteor.methods({
       lengthInSeconds,
     }
   },
-  'get.edf.data' (options) {
+  'get.edf.data' (options) { // 
     console.log('get.edf.data');
     options = options || {};
-    let startTime = options.start_time || 0;
+    let startTime = options.start_time || 0; 
     let windowLength = options.window_length;
     let count = 0;
 
@@ -626,9 +630,10 @@ Meteor.methods({
     console.log("get.edf.data init finished");
     
     var currDataFrame;
-    dataFrame = allRecordings.reduce((collections, recording) => {
+    dataFrame = allRecordings.reduce((collections, recording) => { // accumulate all the data from all recordings into one dataFrame object
       let startTimeAfterAdjustment = channelTimeshift[recording._id] ? (startTime + channelTimeshift[recording._id]) : startTime;
-      currDataFrame = WFDB.rdsamp({
+
+      currDataFrame = WFDB.rdsamp({ // runs the rdsamp function with the specified parameters that we have defined above
         recordingName: recording.path,
         recordingId: recording._id,
         startTime: startTimeAfterAdjustment,
@@ -638,6 +643,7 @@ Meteor.methods({
         lowResolutionData,
         useHighPrecisionSampling,
       });
+
       currDataFrame.channelInfo = currDataFrame.channelNames.map((channelName) => {
         return { name: channelName, dataId: recording._id };
       });
@@ -767,9 +773,11 @@ Meteor.methods({
       channel_values: dataDict,
     }
   },
-  'setup.edf.downsampled' (allRecordings, metadata) {
+  'setup.edf.downsampled' (allRecordings, metadata) { // a method that does the downsampling
     // currently the sampling rate (frequency) for the downsampled recording is set to 2 Hz
     let targetDownsamplingRate = '2';
+
+	// for each recording, downsample the data
     allRecordings.forEach((recording) => {
       let recordingName = recording.path;
       let recordingMetadata = metadata[recording._id];
