@@ -54,8 +54,6 @@ Template.AnnotatorEDF.onRendered(function() {
     config = $.extend(config, this.data.preferences.annotatorConfig);
     console.log("here");
     config = $.extend(config, {
-        // recordingName: this.data.data.path,
-        // allRecordings: [this.data.data.path, this.data.data2.path],
         recordingName: this.data.dataset.reduce((combined, data) => {
             let dataPathSegments = data.path.split('/');
             if (!combined.length) return dataPathSegments[dataPathSegments.length - 1];

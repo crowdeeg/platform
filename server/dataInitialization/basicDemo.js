@@ -22,9 +22,35 @@ const rootUser = userAccounts['ADMIN'];
 const testUser = userAccounts['TEST'];
 
 const recordingPaths = [
-	{ path: "/physionet/edfx/SC4001E0-PSG.edf", source: "MUSE" },
-	{ path: "/physionet/edfx/200930_761428_ANNE.edf", source: "ANNE" },
-	{ path: "/physionet/edfx/200930_761428_PSGfiltered.edf", source: "PSG" },
+    { path: '/physionet/edfx/SC4001E0-PSG.edf', source: 'MUSE' },
+    { path: '/physionet/edfx/200930_761428_ANNE.edf', source: 'ANNE' },
+    { path: '/physionet/edfx/200930_761428_PSGfiltered.edf', source: 'PSG' },
+
+    // only include the following if you have already downloaded and placed these edf files in the directory
+
+    // { path: '/physionet/edfx/211005_34467350/211005_34467350_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211005_34467350/211005.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211005_34467350/edf_2021-10-05T21_10_31-04_00_5007-7WNR-1FDA.filtered.edf', source: 'MUSE'},
+    // { path: '/physionet/edfx/211007_7999174/211007_7999174_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211007_7999174/211007.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211007_7999174/edf_2021-10-07T22_00_55-04_00_5008-LL4V-33C2.filtered.edf', source: 'MUSE'},
+    // { path: '/physionet/edfx/211012_3071366/211012_3071366_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211012_3071366/211012.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211012_3071366/edf_2021-10-12T21_57_06-04_00_5008-LZRH-333A.filtered.edf', source: 'MUSE'},
+    // { path: '/physionet/edfx/211014_112953/211014_112953_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211014_112953/211014.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211014_112953/edf_2021-10-14T23_08_09-04_00_5007-7WNR-1FDA.filtered.edf', source: 'MUSE'},
+    // { path: '/physionet/edfx/211027_3502871/211027_3502871_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211027_3502871/211027.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211101_2699455/211101_2699455_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211101_2699455/211101.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211101_2699455/edf_2021-11-01T21_57_56-04_00_5008-LZRH-333A.filtered.edf', source: 'MUSE'},
+    // { path: '/physionet/edfx/211104_3530644/211104_3530644_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211104_3530644/211104.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211104_3530644/edf_2021-11-04T21_25_25-04_00_5007-ELYP-1F41.filtered.edf', source: 'MUSE'},
+    // { path: '/physionet/edfx/211111_5068618/211111_5068618_PSGfiltered.edf', source: 'PSG'},
+    // { path: '/physionet/edfx/211111_5068618/211111.edf', source: 'ANNE'},
+    // { path: '/physionet/edfx/211111_5068618/edf_2021-11-11T21_23_41-05_00_5007-7WNR-1FDA.filtered.edf', source: 'MUSE'},
 ];
 
 var recordingInfo = {};
@@ -442,6 +468,10 @@ Meteor.startup(() => {
             addTask(recordingFileFolder, 'MUSE + PSG', [museFilePath, psgFilePath]);
         }
     });
+
+    /** The following commented out codes are the original way basicDemo.js creating new tasks and assignments
+     *  which is outdated if having sub-folders under where we store the edf files
+     */
 
     // const taskName = 'Sleep Staging (Physionet EDFX) ';
     

@@ -152,7 +152,6 @@ Meteor.publishComposite('assignment', function(assignmentId) {
                     console.log('assignment', assignment);
                     let queryArray = assignment.dataFiles.map((dataId) => { return { _id: dataId }; });
                     return Data.find({ $or: queryArray });
-                    // return Data.find(assignment.data);
                 },
                 children: [
                     {

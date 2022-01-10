@@ -122,272 +122,177 @@ let WFDB = {
 			// gets the recording id of the file we are working on from options
       const recordingId = options.recordingId;
 
-      //looks in the Data collection in the database and finds one that matches the recordingId
-			const channelDisplayed = Data.findOne(
-				recordingId
-			).metadata.wfdbdesc.Groups[0].Signals.reduce(
-				(channels, signal) =>
-					channels + " '" + signal.Description + "'",
-				"-s"
-			);
-			console.log("channel displayed", channelDisplayed);
-			// const channelDisplayed = options.channelsDisplayed ? ' -s ' + options.channelsDisplayed.join(' ') : '';
+      // the following line get all the channels from the metadata of the recording and display all of them
+      // we should modify it to be only displaying the channel required in the particular montage
+      const channelDisplayed = Data.findOne(recordingId).metadata.wfdbdesc.Groups[0].Signals.reduce((channels, signal) => channels + " '" + signal.Description + "'", '-s');
+      console.log('channel displayed', channelDisplayed);
+      // this is the original version of codes which display all channels specified in the options:
+        // const channelDisplayed = options.channelsDisplayed ? ' -s ' + options.channelsDisplayed.join(' ') : '';
 
-			var signalRawOutput = null;
+      var signalRawOutput = null;
+      if (!options.lowResolutionData) {
+        // if the x-axis scale is less then 5 mins/page (+4 sec padded)
+        // rdsamp the original high sampling rate .edf file
+        signalRawOutput = runWFDBCommand('rdsamp -r "' + recordingFilename + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v ' + channelDisplayed, recordingDirectory);
+      } else {
+        let downsampledExists = runWFDBCommand(`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`, recordingDirectory).replace(/\r?\n/, '');
+        if (downsampledExists != 't') {
+          throw new Meteor.Error('wfdb.rdsamp.command.downsampled.file.missing', 'The downsampled file .dat or its header file .hea is missing, please reload the page and try again later.');
+        }
+        // rdsamp the downsampled .dat file with lower sampling rate
+        signalRawOutput = runWFDBCommand('rdsamp -r "' + downsampledFileName + '" -f ' + options.startTime + ' -l ' + options.windowLength + useHighPrecisionSamplingString + ' -c -H -v ' + channelDisplayed, recordingDirectory);
+      }
+      // console.time('parseRawOutput');
+      let rows = dsvFormat(',').parseRows(signalRawOutput);
+      const columnNames = rows[0].map((value) => {
+        return value.substr(1).slice(0, -1);
+      });
+      const channelNames = columnNames.slice(1);
+      // console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
+      // console.log('\nchannelNames:', channelNames);
+      rows.shift();
+      const columnUnits = rows[0].map((value) => {
+        return value.substr(1).slice(0, -1);
+      });
+      const channelUnits = columnUnits.slice(1);
+      // console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits); 
+      // console.log("\nchannelUnits", channelUnits); 
+      rows.shift();
+      const numSamplesRaw = rows.length;
+      const lastSampleIndex = numSamplesRaw - 1;
+      const outputStartTimeInSeconds = parseFloat(rows[0][0]);
+      const outputEndTimeInSeconds = parseFloat(rows[lastSampleIndex][0]);
+      const outputDurationInSeconds = outputEndTimeInSeconds - outputStartTimeInSeconds;
+      const samplingRateRaw = numSamplesRaw / outputDurationInSeconds;
+      let downSamplingFactor = 0;
+      if (options.targetSamplingRate > 0) {
+        downSamplingFactor = Math.round(samplingRateRaw / options.targetSamplingRate);
+      }
+      if (downSamplingFactor > 1) {
+        rows = rows.filter((row, r) => {
+          return (r % downSamplingFactor !== 0);
+        });
+      }
+      const numSamples = rows.length;
+      const samplingRate = Math.round(numSamples / outputDurationInSeconds);
+      const data = channelNames.map(() => {
+        return new FloatArrayType(numSamples);
+      });
+      rows.forEach((row, r) => {
+        // ignore first column (elapsed time)
+        row.shift();
+        row.forEach((value, c) => {
+          if (value === '-') {
+            value = 0.0;
+          }
+          else {
+            value = parseFloat(value);
+          }
+          data[c][r] = value;
+        })
+      });
+      let dataFrame = {
+        channelNames: channelNames,
+        data: data,
+        startTime: outputStartTimeInSeconds,
+        endTime: outputEndTimeInSeconds,
+        duration: outputDurationInSeconds,
+        numSamples: numSamples,
+        samplingRate: samplingRate,
+      };
+      // console.timeEnd('parseRawOutput');
+      // console.timeEnd('rdsamp');
+      return dataFrame; 
+    }
+    catch (e) {
+      // console.timeEnd('rdsamp');
+      if (e.message.split('\n')[1] !== undefined && e.message.split('\n')[1].trim() == '') {
+        // if output has no data
+        const channelNames = options.channelsDisplayed.map(channelName => channelName.slice(1, -1));
+        const data = channelNames.map(() => {
+          return new FloatArrayType(1);
+        });
+        return {
+          channelNames: channelNames,
+          data: data,
+          numSamples: 0,
+        };
+      }
+      else {
+        throw new Meteor.Error('wfdb.rdsamp.command.failed', e.message);
+      }
+    }
+  },
+  downsamp (options) {
+    const isCallFromClient = !!this.connection;
+    if (isCallFromClient && !isAssignedToEDF(Meteor.userId(), options.recordingName)) {
+      throw new Meteor.Error('wfdb.rdsamp.command.permission.denied', 'You are not assigned to this recording. Permission denied.');
+    }
+    try {
+      const recordingPathSegments = options.recordingName.split('/');
+      const recordingFilename = recordingPathSegments[recordingPathSegments.length - 1];
+      delete recordingPathSegments[recordingPathSegments.length - 1];
+      const recordingDirectory = recordingPathSegments.join('/');
 
-      // runs some wfdb commands
-			if (!options.lowResolutionData) {
-				// if the x-axis scale is less then 5 mins/page (+4 sec padded)
-				// rdsamp the original high sampling rate .edf file
-				signalRawOutput = runWFDBCommand(
-					'rdsamp -r "' +
-						recordingFilename +
-						'" -f ' +
-						options.startTime +
-						" -l " +
-						options.windowLength +
-						useHighPrecisionSamplingString +
-						" -c -H -v " +
-						channelDisplayed,
-					recordingDirectory
-				);
-			} else {
-				let downsampledExists = runWFDBCommand(
-					`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`,
-					recordingDirectory
-				).replace(/\r?\n/, "");
-				if (downsampledExists != "t") {
-					throw new Meteor.Error(
-						"wfdb.rdsamp.command.downsampled.file.missing",
-						"The downsampled file .dat or its header file .hea is missing, please reload the page and try again later."
-					);
-				}
-				// rdsamp the downsampled .dat file with lower sampling rate
-				signalRawOutput = runWFDBCommand(
-					'rdsamp -r "' +
-						downsampledFileName +
-						'" -f ' +
-						options.startTime +
-						" -l " +
-						options.windowLength +
-						useHighPrecisionSamplingString +
-						" -c -H -v " +
-						channelDisplayed,
-					recordingDirectory
-				);
-			}
-			// console.time('parseRawOutput');
-			let rows = dsvFormat(",").parseRows(signalRawOutput);
-			const columnNames = rows[0].map((value) => {
-				return value.substr(1).slice(0, -1);
-			});
-			const channelNames = columnNames.slice(1);
-			// console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
-			// console.log('\nchannelNames:', channelNames);
-			rows.shift();
-			const columnUnits = rows[0].map((value) => {
-				return value.substr(1).slice(0, -1);
-			});
-			const channelUnits = columnUnits.slice(1);
-			// console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits);
-			// console.log("\nchannelUnits", channelUnits);
-			rows.shift();
-			const numSamplesRaw = rows.length;
-			const lastSampleIndex = numSamplesRaw - 1;
-			const outputStartTimeInSeconds = parseFloat(rows[0][0]);
-			const outputEndTimeInSeconds = parseFloat(rows[lastSampleIndex][0]);
-			const outputDurationInSeconds =
-				outputEndTimeInSeconds - outputStartTimeInSeconds;
-			const samplingRateRaw = numSamplesRaw / outputDurationInSeconds;
-			let downSamplingFactor = 0;
-			if (options.targetSamplingRate > 0) {
-				downSamplingFactor = Math.round(
-					samplingRateRaw / options.targetSamplingRate
-				);
-			}
-			if (downSamplingFactor > 1) {
-				rows = rows.filter((row, r) => {
-					return r % downSamplingFactor !== 0;
-				});
-			}
-			const numSamples = rows.length;
-			const samplingRate = Math.round(
-				numSamples / outputDurationInSeconds
-			);
-			const data = channelNames.map(() => {
-				return new FloatArrayType(numSamples);
-			});
-			rows.forEach((row, r) => {
-				// ignore first column (elapsed time)
-				row.shift();
-				row.forEach((value, c) => {
-					if (value === "-") {
-						value = 0.0;
-					} else {
-						value = parseFloat(value);
-					}
-					data[c][r] = value;
-				});
-			});
-			let dataFrame = {
-				channelNames: channelNames,
-				data: data,
-				startTime: outputStartTimeInSeconds,
-				endTime: outputEndTimeInSeconds,
-				duration: outputDurationInSeconds,
-				numSamples: numSamples,
-				samplingRate: samplingRate,
-			};
-			// console.timeEnd('parseRawOutput');
-			// console.timeEnd('rdsamp');
-			return dataFrame;
-		} catch (e) {
-			// console.timeEnd('rdsamp');
-			if (
-				e.message.split("\n")[1] !== undefined &&
-				e.message.split("\n")[1].trim() == ""
-			) {
-				// if output has no data
-				const channelNames = options.channelsDisplayed.map(
-					(channelName) => channelName.slice(1, -1)
-				);
-				const data = channelNames.map(() => {
-					return new FloatArrayType(1);
-				});
-				return {
-					channelNames: channelNames,
-					data: data,
-					numSamples: 0,
-				};
-			} else {
-				throw new Meteor.Error("wfdb.rdsamp.command.failed", e.message);
-			}
-		}
-	},
+      let recordingFilenameWithoutDataType = recordingFilename.substring(0, recordingFilename.length - 4);
+      // having '.' inside the downsampling file name will cause error occured when executing xform function
+      recordingFilenameWithoutDataType = recordingFilenameWithoutDataType.replace('.', '_');
+      
+      const downsampledFileName = recordingFilenameWithoutDataType + '_downsampled';
+      const downsampledFile = downsampledFileName + '.dat';
+      const downsampledHeaderFile = downsampledFileName + '.hea';
+      console.log('filenames:', downsampledFileName, downsampledFile, downsampledHeaderFile);
+      
+      // setup the low resolution file if it does not exist
+      let downsampledExists = runWFDBCommand(`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`, recordingDirectory).replace(/\r?\n/, '');
+      console.log(`downsampledExists: "${downsampledExists}"`);
+      
+      if (downsampledExists != 't') {
+        // create a header file .hea (https://www.physionet.org/physiotools/wag/header-5.htm)
+        // then downsample the recording using xform (https://www.physionet.org/physiotools/wag/xform-1.htm)
+        // it will create downsampled file in mit format (.dat + .hea)
+        
+        let metadata = options.recordingMetadata;
+        let headerFile = [];
 
-  // this is the downsampling function
-	downsamp(options) {
+        // set the sampling frequency to targetDownsamplingRate
+        // and the number of samples per signal to zero to turn off the checksum verification
+        let recordLine = [downsampledFileName, metadata.Groups[0].Signals.length, options.targetDownsamplingRate, 0];
+        let recordingTimeAndDate = metadata.StartingTime.slice(1, -1);
+        recordLine.push(recordingTimeAndDate);
+        headerFile.push(recordLine.join(' '));
 
-    /*
-      options has 3 fields:
-      recordingName, - the full path of the recording
-		  recordingMetadata, - the metadata of the recording
-		  targetDownsamplingRate, - the rate of downsampling we are trying to achieve
-    */
+        metadata.Groups[0].Signals.forEach((signal) => {
+          let signalLine = [downsampledFile];
+          signalLine.push(signal.StorageFormat.match(/[0-9.]+/)[0]);
+          let adc = signal.Gain.replace(' adu', '(' + signal.Baseline + ')').match(/[\S]+/);
+          signalLine.push(adc);
+          signalLine.push(signal.ADCResolution.match(/[0-9.]+/)[0]);
+          signalLine.push(signal.ADCZero);
+          signalLine.push(signal.InitialValue);
+          signalLine.push('0'); // set the checksum to 0 as a placeholder
+          signalLine.push('0');
+          signalLine.push(signal.Description);
+          headerFile.push(signalLine.join(' '));
+        });
 
-		const isCallFromClient = !!this.connection;
-
-    // checks if the current user is authorized to access the recording
-		if (
-			isCallFromClient &&
-			!isAssignedToEDF(Meteor.userId(), options.recordingName)
-		) {
-			throw new Meteor.Error(
-				"wfdb.rdsamp.command.permission.denied",
-				"You are not assigned to this recording. Permission denied."
-			);
-		}
-
-
-		try {
-
-      // gets the directory and filename of the recording using recordingName
-			const recordingPathSegments = options.recordingName.split("/");
-			const recordingFilename =
-				recordingPathSegments[recordingPathSegments.length - 1];
-			delete recordingPathSegments[recordingPathSegments.length - 1];
-			const recordingDirectory = recordingPathSegments.join("/");
-
-			let recordingFilenameWithoutDataType = recordingFilename.substring(
-				0,
-				recordingFilename.length - 4
-			);
-
-			// having '.' inside the downsampling file name will cause error occured when executing xform function
-			recordingFilenameWithoutDataType =
-				recordingFilenameWithoutDataType.replace(".", "_");
-
-      // makes different downsampling files
-			const downsampledFileName =
-				recordingFilenameWithoutDataType + "_downsampled";
-			const downsampledFile = downsampledFileName + ".dat";
-			const downsampledHeaderFile = downsampledFileName + ".hea";
-			console.log(
-				"filenames:",
-				downsampledFileName,
-				downsampledFile,
-				downsampledHeaderFile
-			);
-
-			// setup the low resolution file if it does not exist
-			let downsampledExists = runWFDBCommand(
-				`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`,
-				recordingDirectory
-			).replace(/\r?\n/, "");
-			console.log(`downsampledExists: "${downsampledExists}"`);
-
-			if (downsampledExists != "t") {
-				// create a header file .hea (https://www.physionet.org/physiotools/wag/header-5.htm)
-				// then downsample the recording using xform (https://www.physionet.org/physiotools/wag/xform-1.htm)
-				// it will create downsampled file in mit format (.dat + .hea)
-
-				let metadata = options.recordingMetadata;
-				let headerFile = [];
-
-				// set the sampling frequency to targetDownsamplingRate
-				// and the number of samples per signal to zero to turn off the checksum verification
-				let recordLine = [
-					downsampledFileName,
-					metadata.Groups[0].Signals.length,
-					options.targetDownsamplingRate,
-					0,
-				];
-				let recordingTimeAndDate = metadata.StartingTime.slice(1, -1);
-				recordLine.push(recordingTimeAndDate);
-				headerFile.push(recordLine.join(" "));
-
-				metadata.Groups[0].Signals.forEach((signal) => {
-					let signalLine = [downsampledFile];
-					signalLine.push(signal.StorageFormat.match(/[0-9.]+/)[0]);
-					let adc = signal.Gain.replace(
-						" adu",
-						"(" + signal.Baseline + ")"
-					).match(/[\S]+/);
-					signalLine.push(adc);
-					signalLine.push(signal.ADCResolution.match(/[0-9.]+/)[0]);
-					signalLine.push(signal.ADCZero);
-					signalLine.push(signal.InitialValue);
-					signalLine.push("0"); // set the checksum to 0 as a placeholder
-					signalLine.push("0");
-					signalLine.push(signal.Description);
-					headerFile.push(signalLine.join(" "));
-				});
-
-				// write into the header file and perform xform to downsample
-				const modifiedHeader = headerFile.join("\r\n");
-				runWFDBCommand(
-					`echo "${modifiedHeader}" > ${downsampledHeaderFile}`,
-					recordingDirectory
-				);
-				runWFDBCommand(
-					`xform -i "${recordingFilename}" -H -o "${downsampledHeaderFile}"`,
-					recordingDirectory
-				);
-			}
-		} catch (e) {
-			if (
-				e.message.split("\n")[1] !== undefined &&
-				e.message.split("\n")[1].trim() == ""
-			) {
-				return {
-					numSamples: 0,
-				};
-			} else {
-				throw new Meteor.Error("wfdb.downsamp.command.failed", e.stack);
-			}
-		}
-	},
-};
+        // write into the header file and perform xform to downsample
+        const modifiedHeader = headerFile.join('\r\n');
+        runWFDBCommand(`echo "${modifiedHeader}" > ${downsampledHeaderFile}`, recordingDirectory);
+        runWFDBCommand(`xform -i "${recordingFilename}" -H -o "${downsampledHeaderFile}"`, recordingDirectory);
+      }
+    } catch (e) {
+      if (e.message.split('\n')[1] !== undefined && e.message.split('\n')[1].trim() == '') {
+        return {
+          numSamples: 0,
+        };
+      }
+      else {
+        throw new Meteor.Error('wfdb.downsamp.command.failed', e.stack);
+      }
+    }
+  }
+}
 
 let isInteger = (expression) => {
 	return expression == "" + parseInt(expression);
@@ -665,339 +570,214 @@ function indexOfChannel(channelArray, index, dataId) {
 }
 
 Meteor.methods({
-	"get.edf.metadata"(recordingName) {
-		return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
-	},
-	"get.edf.metadata.and.length"(allRecordings) {
-		let lengthInSeconds = 0;
-		let allMetadata = {};
-		allRecordings.forEach((recording) => {
-			let metadata = parseWFDBMetadata(WFDB.wfdbdesc(recording.path));
-			if (metadata.LengthInSeconds > lengthInSeconds) {
-				lengthInSeconds = metadata.LengthInSeconds;
-			}
-			allMetadata[recording._id] = metadata;
-		});
-		console.log(allMetadata, lengthInSeconds);
-		return {
-			allMetadata,
-			lengthInSeconds,
-		};
-	},
+  'get.edf.metadata' (recordingName) {
+    return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
+  },
+  'get.edf.metadata.and.length' (allRecordings) {
+    // if more than one recording, the length will be the max of the two recordings
+    let lengthInSeconds = 0;
+    let allMetadata = {};
+    allRecordings.forEach((recording) => {
+      let metadata = parseWFDBMetadata(WFDB.wfdbdesc(recording.path));
+      if (metadata.LengthInSeconds > lengthInSeconds) {
+        lengthInSeconds = metadata.LengthInSeconds;
+      }
+      allMetadata[recording._id] = metadata;
+    });
+    console.log(allMetadata, lengthInSeconds);
+    return {
+      allMetadata,
+      lengthInSeconds,
+    }
+  },
+  'get.edf.data' (options) {
+    console.log('get.edf.data');
+    options = options || {};
+    let startTime = options.start_time || 0;
+    let windowLength = options.window_length;
+    let count = 0;
 
-  // method to get edf data 
-	"get.edf.data"(options) {
-		console.log("get.edf.data");
-		options = options || {};
-		// options2 = options2 || {};
-		let startTime = options.start_time || 0;
-		let windowLength = options.window_length;
-		let count = 0;
+    // this is the original version of codes which display all channels specified in the options:
+      // let channelsDisplayed = options.channels_displayed;
+    let channelsDisplayed = {};
+    
+    let channelTimeshift = options.channel_timeshift;
+    let allRecordings = options.recordings;
 
-		// let channelsDisplayed = options.channels_displayed;
-		let channelsDisplayed = {};
+    // this is the original version of codes which display all channels specified in the options:
+      // allRecordings = allRecordings.map((recording) => {
+      //   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
+      //   return recording;
+      // });
+    // the following line get all the channels from the metadata of the recording and display all of them
+    // we should modify it to be only displaying the channel required in the particular montage
+    allRecordings = allRecordings.map((recording) => {
+      channelsDisplayed[recording.source] = Data.findOne(recording._id).metadata.wfdbdesc.Groups[0].Signals.map(signal => "'" + signal.Description + "'");
+      recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
+      return recording;
+    });
 
-		let channelTimeshift = options.channel_timeshift;
-		let allRecordings = options.recordings;
-		// allRecordings = allRecordings.map((recording) => {
-		//   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
-		//   return recording;
-		// });
-		allRecordings = allRecordings.map((recording) => {
-			channelsDisplayed[recording.source] = Data.findOne(
-				recording._id
-			).metadata.wfdbdesc.Groups[0].Signals.map(
-				(signal) => "'" + signal.Description + "'"
-			);
-			recording.channelsDisplayedParsed = parseChannelsDisplayed(
-				channelsDisplayed[recording.source],
-				recording._id
-			);
-			return recording;
-		});
+    let targetSamplingRate = options.target_sampling_rate;
+    let lowResolutionData = options.low_resolution_data;
+    let useHighPrecisionSampling = options.use_high_precision_sampling;
+    let atLeast1 = 0;
+    let dataFrame = {};
+    
+    console.log("get.edf.data init finished");
+    
+    var currDataFrame;
+    dataFrame = allRecordings.reduce((collections, recording) => {
+      let startTimeAfterAdjustment = channelTimeshift[recording._id] ? (startTime + channelTimeshift[recording._id]) : startTime;
+      currDataFrame = WFDB.rdsamp({
+        recordingName: recording.path,
+        recordingId: recording._id,
+        startTime: startTimeAfterAdjustment,
+        windowLength,
+        channelsDisplayed: recording.channelsDisplayedParsed.individualChannelsRequired.map((channel) => channel.name),
+        targetSamplingRate,
+        lowResolutionData,
+        useHighPrecisionSampling,
+      });
+      currDataFrame.channelInfo = currDataFrame.channelNames.map((channelName) => {
+        return { name: channelName, dataId: recording._id };
+      });
+      delete currDataFrame.channelNames;
+      currDataFrame.data = currDataFrame.data.map((data) => {
+        return { data: data, dataId: recording._id };
+      });
+      if (currDataFrame.numSamples === 0) {
+        currDataFrame.startTime = Number.POSITIVE_INFINITY;
+        currDataFrame.endTime =  Number.NEGATIVE_INFINITY;
+        currDataFrame.duration = Number.NEGATIVE_INFINITY;
+        currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
+      }
+      if (!Object.keys(collections).length) return currDataFrame;
+      collections.channelInfo = collections.channelInfo.concat(currDataFrame.channelInfo);
+      collections.data = collections.data.concat(currDataFrame.data);
+      collections.startTime = Math.min(collections.startTime, currDataFrame.startTime);
+      collections.endTime = Math.max(collections.endTime, currDataFrame.endTime);
+      collections.duration = Math.max(collections.duration, currDataFrame.duration);
+      collections.numSamples = Math.max(collections.numSamples, currDataFrame.numSamples);
+      collections.samplingRate = Math.min(collections.samplingRate, currDataFrame.samplingRate);
+      return collections;
+    }, {});
 
-		// let channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed);
-		// let channelsDisplayedParsed2 = parseChannelsDisplayed(channelsDisplayed2);
-		// let recordingName2 = options2.recording_name;
-		let targetSamplingRate = options.target_sampling_rate;
-		let lowResolutionData = options.low_resolution_data;
-		let useHighPrecisionSampling = options.use_high_precision_sampling;
-		let atLeast1 = 0;
-		let dataFrame = {};
-		// let dataFrame2 = {};
 
-		console.log("get.edf.data init finished");
+    if (dataFrame.numSamples === 0) {
+      return {};
+    }
+    // console.time('computeSubtractions');
+    let channelsDisplayedParsed = allRecordings.reduce((parsedCombined, recording) => {
+      if (!Object.keys(parsedCombined).length) return recording.channelsDisplayedParsed;
+      parsedCombined.subtractions = parsedCombined.subtractions.concat(recording.channelsDisplayedParsed.subtractions);
+      parsedCombined.individualChannelsRequired = parsedCombined.individualChannelsRequired.concat(recording.channelsDisplayedParsed.individualChannelsRequired);
+      return parsedCombined;
+    }, {});
 
-		var currDataFrame;
-		dataFrame = allRecordings.reduce((collections, recording) => {
-			// the returned data
-			let startTimeAfterAdjustment = channelTimeshift[recording._id]
-				? startTime + channelTimeshift[recording._id]
-				: startTime;
-			currDataFrame = WFDB.rdsamp({
-				recordingName: recording.path,
-				recordingId: recording._id,
-				startTime: startTimeAfterAdjustment,
-				windowLength,
-				channelsDisplayed:
-					recording.channelsDisplayedParsed.individualChannelsRequired.map(
-						(channel) => channel.name
-					),
-				targetSamplingRate,
-				lowResolutionData,
-				useHighPrecisionSampling,
-			});
-			// currDataFrame.data = { [recording._id]: currDataFrame.data };
-			currDataFrame.channelInfo = currDataFrame.channelNames.map(
-				(channelName) => {
-					return { name: channelName, dataId: recording._id };
-				}
-			);
-			delete currDataFrame.channelNames;
-			currDataFrame.data = currDataFrame.data.map((data) => {
-				return { data: data, dataId: recording._id };
-			});
-			if (currDataFrame.numSamples === 0) {
-				currDataFrame.startTime = Number.POSITIVE_INFINITY;
-				currDataFrame.endTime = Number.NEGATIVE_INFINITY;
-				currDataFrame.duration = Number.NEGATIVE_INFINITY;
-				currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
-			}
-			if (!Object.keys(collections).length) return currDataFrame;
-			collections.channelInfo = collections.channelInfo.concat(
-				currDataFrame.channelInfo
-			);
-			collections.data = collections.data.concat(currDataFrame.data);
-			collections.startTime = Math.min(
-				collections.startTime,
-				currDataFrame.startTime
-			);
-			collections.endTime = Math.max(
-				collections.endTime,
-				currDataFrame.endTime
-			);
-			collections.duration = Math.max(
-				collections.duration,
-				currDataFrame.duration
-			);
-			collections.numSamples = Math.max(
-				collections.numSamples,
-				currDataFrame.numSamples
-			);
-			collections.samplingRate = Math.min(
-				collections.samplingRate,
-				currDataFrame.samplingRate
-			);
-			return collections;
-		}, {});
+    console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
+    let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired;
+    let allChannelInfo = dataFrame.channelInfo;
 
-		// dataFrame = WFDB.rdsamp({
-		//   recordingName,
-		//   startTime,
-		//   windowLength,
-		//   channelsDisplayed: channelsDisplayedParsed.individualChannelsRequired,
-		//   targetSamplingRate,
-		//   useHighPrecisionSampling,
-		// });
-		// console.log("dataFrame1 loaded");
+    channelsDisplayedParsed.subtractions.forEach((subtraction) => {
+      let dataId = subtraction.dataId;
+      if (indexOfChannel(subtractionOrder, subtraction.key, dataId) > -1) return;
+      let has = {};
+      let channelIndex = {};
+      let channelName = {};
+      let channelData = {};
+      ['plus', 'minus'].forEach((operandName) => {
+        let operand = subtraction[operandName];
+        has[operandName] = operand !== undefined;
+        if (!has[operandName]) {
+          return;
+        }
+        if (operand.computed) {
+          if (indexOfChannel(subtractionOrder, operand.channelKey, dataId) < 0) {
+            let computedChannelData = computeChannelData(operand, dataFrame, subtractionOrder, dataId);
+            allChannelInfo.push({ name: operand.channelKey, dataId: dataId });
+            subtractionOrder.push({ name: operand.channelKey, dataId: dataId });
+            dataFrame.data.push({ data: computedChannelData, dataId: dataId });
+          }
+          let channelIndex = indexOfChannel(subtractionOrder, operand.channelKey, dataId);
+          channelData[operandName] = dataFrame.data[channelIndex].data;
+          channelName[operandName] = operand.channelName;
+        }
+        else {
+          let channelIndex = indexOfChannel(subtractionOrder, operand, dataId);
+          channelData[operandName] = dataFrame.data[channelIndex].data;
+          channelName[operandName] = allChannelInfo[channelIndex].name;
+        }
+      });
+      let subtractionName = '';
+      if (has.plus) {
+        subtractionName += channelName.plus;
+      }
+      if (has.minus) {
+        subtractionName += '-' + channelName.minus;
+      }
+      if (has.plus) {
+        if (has.minus) {
+          if (channelData.plus === channelData.minus) {
+            subtractionData = new FloatArrayType(dataFrame.numSamples);
+            subtractionData.fill(0);
+          }
+          else {
+            subtractionData = channelData.plus.map((value, v) => { return value - channelData.minus[v]; });
+          }
+        }
+        else {
+          subtractionData = channelData.plus;
+        }
+      }
+      else {
+        if (has.minus) {
+          subtractionData = channelData.minus.map((value, v) => { return -value; });
+        }
+        else {
+          subtractionData = new FloatArrayType(dataFrame.numSamples);
+          subtractionData.fill(0);
+        }
+      }
+      allChannelInfo.push({ name: subtractionName, dataId: dataId });
+      subtractionOrder.push({ name: subtraction.key, dataId: dataId });
+      dataFrame.data.push({ data: subtractionData, dataId: dataId });
+    });
+    // console.timeEnd('computeSubtractions');
+    let channelInfoOrdered = [];
+    let dataOrdered = [];
+    channelsDisplayedParsed.subtractions.forEach((subtraction) => {
+      const subtractionIndex = indexOfChannel(subtractionOrder, subtraction.key, subtraction.dataId);
+      const channelInfo = dataFrame.channelInfo[subtractionIndex];
+      const channelData = dataFrame.data[subtractionIndex].data;
+      channelInfoOrdered.push(channelInfo);
+      dataOrdered.push(channelData);
+    });
+    dataFrame.channelInfo = channelInfoOrdered;
+    dataFrame.data = dataOrdered;
+    // console.timeEnd('get.edf.data');
+    let dataDict = {};
+    dataFrame.channelInfo.forEach((info, c) => {
+      if (!dataDict[info.dataId]) dataDict[info.dataId] = {};
+      dataDict[info.dataId][info.name] = dataFrame.data[c];
+    });
 
-		// let temprName = recordingName;
-		// recordingName = recordingName2;
-		// dataFrame2 = WFDB.rdsamp({
-		//   recordingName: recordingName2,
-		//   startTime,
-		//   windowLength,
-		//   channelsDisplayed: channelsDisplayedParsed2.individualChannelsRequired,
-		//   targetSamplingRate,
-		//   useHighPrecisionSampling,
-		// });
-		// console.log("dataFrame2 loaded ");
-
-		// Combine two channel sets
-		// dataFrame2.channelNames.forEach( channel => {
-		//   dataFrame.channelNames.push(channel);
-		// });
-
-		// dataFrame2.data.forEach( dataSet => {
-		//   dataFrame.data.push(dataSet);
-		// })
-		// dataFrame.numSamples += dataFrame2.numSamples;
-		// // recordingName = temprName;
-		// console.log("dataFrame combined channel:", dataFrame.channelNames);
-
-		if (dataFrame.numSamples === 0) {
-			return {};
-		}
-		// console.time('computeSubtractions');
-		let channelsDisplayedParsed = allRecordings.reduce(
-			(parsedCombined, recording) => {
-				if (!Object.keys(parsedCombined).length)
-					return recording.channelsDisplayedParsed;
-				parsedCombined.subtractions =
-					parsedCombined.subtractions.concat(
-						recording.channelsDisplayedParsed.subtractions
-					);
-				parsedCombined.individualChannelsRequired =
-					parsedCombined.individualChannelsRequired.concat(
-						recording.channelsDisplayedParsed
-							.individualChannelsRequired
-					);
-				return parsedCombined;
-			},
-			{}
-		);
-
-		// channelsDisplayedParsed.subtractions = channelsDisplayedParsed.subtractions.concat(channelsDisplayedParsed2.subtractions);
-		// channelsDisplayedParsed.individualChannelsRequired = channelsDisplayedParsed.individualChannelsRequired.concat(channelsDisplayedParsed2.individualChannelsRequired);
-		console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
-		let subtractionOrder =
-			channelsDisplayedParsed.individualChannelsRequired;
-		// let channelNames = dataFrame.channelNames;
-		let allChannelInfo = dataFrame.channelInfo;
-
-		channelsDisplayedParsed.subtractions.forEach((subtraction) => {
-			let dataId = subtraction.dataId;
-			if (indexOfChannel(subtractionOrder, subtraction.key, dataId) > -1)
-				return;
-			// if (subtractionOrder[dataId].indexOf(subtraction.key) > -1) {
-			//   return;
-			// }
-			let has = {};
-			let channelIndex = {};
-			let channelName = {};
-			let channelData = {};
-			["plus", "minus"].forEach((operandName) => {
-				let operand = subtraction[operandName];
-				has[operandName] = operand !== undefined;
-				if (!has[operandName]) {
-					return;
-				}
-				if (operand.computed) {
-					if (
-						indexOfChannel(
-							subtractionOrder,
-							operand.channelKey,
-							dataId
-						) < 0
-					) {
-						let computedChannelData = computeChannelData(
-							operand,
-							dataFrame,
-							subtractionOrder,
-							dataId
-						);
-						allChannelInfo.push({
-							name: operand.channelKey,
-							dataId: dataId,
-						});
-						subtractionOrder.push({
-							name: operand.channelKey,
-							dataId: dataId,
-						});
-						dataFrame.data.push({
-							data: computedChannelData,
-							dataId: dataId,
-						});
-					}
-					let channelIndex = indexOfChannel(
-						subtractionOrder,
-						operand.channelKey,
-						dataId
-					);
-					channelData[operandName] =
-						dataFrame.data[channelIndex].data;
-					channelName[operandName] = operand.channelName;
-				} else {
-					let channelIndex = indexOfChannel(
-						subtractionOrder,
-						operand,
-						dataId
-					);
-					channelData[operandName] =
-						dataFrame.data[channelIndex].data;
-					channelName[operandName] =
-						allChannelInfo[channelIndex].name;
-				}
-			});
-			let subtractionName = "";
-			if (has.plus) {
-				subtractionName += channelName.plus;
-			}
-			if (has.minus) {
-				subtractionName += "-" + channelName.minus;
-			}
-			if (has.plus) {
-				if (has.minus) {
-					if (channelData.plus === channelData.minus) {
-						subtractionData = new FloatArrayType(
-							dataFrame.numSamples
-						);
-						subtractionData.fill(0);
-					} else {
-						subtractionData = channelData.plus.map((value, v) => {
-							return value - channelData.minus[v];
-						});
-					}
-				} else {
-					subtractionData = channelData.plus;
-				}
-			} else {
-				if (has.minus) {
-					subtractionData = channelData.minus.map((value, v) => {
-						return -value;
-					});
-				} else {
-					subtractionData = new FloatArrayType(dataFrame.numSamples);
-					subtractionData.fill(0);
-				}
-			}
-			allChannelInfo.push({ name: subtractionName, dataId: dataId });
-			subtractionOrder.push({ name: subtraction.key, dataId: dataId });
-			dataFrame.data.push({ data: subtractionData, dataId: dataId });
-		});
-		// console.timeEnd('computeSubtractions');
-		let channelInfoOrdered = [];
-		let dataOrdered = [];
-		channelsDisplayedParsed.subtractions.forEach((subtraction) => {
-			const subtractionIndex = indexOfChannel(
-				subtractionOrder,
-				subtraction.key,
-				subtraction.dataId
-			);
-			const channelInfo = dataFrame.channelInfo[subtractionIndex];
-			const channelData = dataFrame.data[subtractionIndex].data;
-			channelInfoOrdered.push(channelInfo);
-			dataOrdered.push(channelData);
-		});
-		dataFrame.channelInfo = channelInfoOrdered;
-		dataFrame.data = dataOrdered;
-		// console.timeEnd('get.edf.data');
-		let dataDict = {};
-		dataFrame.channelInfo.forEach((info, c) => {
-			if (!dataDict[info.dataId]) dataDict[info.dataId] = {};
-			dataDict[info.dataId][info.name] = dataFrame.data[c];
-		});
-
-		return {
-			channel_order: dataFrame.channelInfo,
-			sampling_rate: dataFrame.samplingRate,
-			channel_values: dataDict,
-		};
-	},
-  // downsamples the recording to targetDownsampleRate
-	"setup.edf.downsampled"(allRecordings, metadata) { 
-		let targetDownsamplingRate = "2";
-		allRecordings.forEach((recording) => {
-			let recordingName = recording.path;
-      //finds the recordings metadata given the id 
-			let recordingMetadata = metadata[recording._id]; 
-
-      //runs the downsampling function
-			WFDB.downsamp({
-				recordingName,
-				recordingMetadata,
-				targetDownsamplingRate,
-			});
-		});
-	},
+    return {
+      channel_order: dataFrame.channelInfo,
+      sampling_rate: dataFrame.samplingRate,
+      channel_values: dataDict,
+    }
+  },
+  'setup.edf.downsampled' (allRecordings, metadata) {
+    // currently the sampling rate (frequency) for the downsampled recording is set to 2 Hz
+    let targetDownsamplingRate = '2';
+    allRecordings.forEach((recording) => {
+      let recordingName = recording.path;
+      let recordingMetadata = metadata[recording._id];
+      WFDB.downsamp({
+        recordingName,
+        recordingMetadata,
+        targetDownsamplingRate
+      });
+    });
+  }
 });
