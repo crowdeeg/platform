@@ -872,7 +872,7 @@ Assignments.helpers({
   },
   arbitrationDoc() {
     if (!this.arbitration) return false;
-    return Arbitrations.findOne(this.arbitration) || false;    
+    return Arbitrations.findOne(this.arbitration) || false;
   },
   annotationDocs(filter, options) {
     filter = filter || {};

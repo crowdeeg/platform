@@ -393,7 +393,10 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         var that = this;
         console.log("_create.that:", that);
         that._initializeVariables();
+        // handles key events
         that._keyDownCallback = that._keyDownCallback.bind(that);
+
+        // destroys the current charts and reloads them
         that._reinitChart = that._reinitChart.bind(that);
         
         $(that.element).addClass(that.vars.uniqueClass);
@@ -2166,7 +2169,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._displayCrosshair(crosshairPosition);
     },
 
-    _getClosestDisagreementWindowStartTimeInSeconds: function(direction) {
+    _getClosestDisagreementWindowStartTimeInSeconds: function(direction) { 
         var that = this;
         if (!that._isArbitrating()) return false;
         annotationsWithDisagreement = that.options.context.assignment.annotationsWithDisagreementForCurrentArbitrationRound({ reactive: false });
@@ -2199,6 +2202,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that.jumpToEpochWithStartTime(startInSeconds);
     },
 
+    // handles keypress events
     _keyDownCallback: function(e) {
         var that = this;
         if ($(e.target).is('input, textarea, select')) {
@@ -2436,9 +2440,11 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
         that._switchToWindow(nextRecordings, nextWindowStart, nextWindowSizeInSeconds);
     },
 
-    _switchToWindow: function (allRecordings, start_time, window_length) {
+    _switchToWindow: function (allRecordings, start_time, window_length) { //switch to a new window
         var that = this;
         console.log("_switchToWindow.that:", that);
+
+        // can be ignored for now, something to do with the machine learning component of the app
         if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
             console.log("0");
             if (that.options.visibleRegion.start !== undefined) {
@@ -2463,16 +2469,19 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             }
         }
 
-        if (that.vars.currentWindowStart != start_time) {
+
+        if (that.vars.currentWindowStart != start_time) { //if the window has changed (i.e. the user has clicked on a new window)
             console.log("1");
-            that._setNumberOfAnnotationsInCurrentWindow(0);
+            that._setNumberOfAnnotationsInCurrentWindow(0); // reset the number of annotations in the current window
         }
 
-        that.vars.currentWindowStart = start_time;
-        that.vars.currentWindowRecording = that.options.recordingName;
+
+        that.vars.currentWindowStart = start_time; // update the current window start
+        that.vars.currentWindowRecording = that.options.recordingName; // update the current window recording
         that._updateJumpToClosestDisagreementWindowButtonsEnabledStatus();
 
-        if (that._isVisibleRegionDefined()) {
+        // 
+        if (that._isVisibleRegionDefined()) { 
             console.log("2");
             var progress = that._getProgressInPercent();
             $(that.element).find('.progress-bar').css('width', progress + '%');
@@ -2527,7 +2536,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
             console.log("6, windowStartTime:", windowStartTime);
             var options = {
                 recordings: allRecordings,
-                channels_displayed: that._getChannelsDisplayed(),
+                channels_displayed: that._getChannelsDisplayed(), //defines which channels we want to display
                 start_time: windowStartTime,
                 channel_timeshift: that.vars.channelTimeshift,
                 window_length: window_length,
@@ -2600,17 +2609,21 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _reloadCurrentWindow: function() {
         console.log("_reloadCurrentWindow");
         var that = this;
+        // reloads the current window by "switching" to it using the current window start time, the current x axis scale and the current recordings
         that._switchToWindow(that.options.allRecordings, that.vars.currentWindowStart, that.vars.xAxisScaleInSeconds);
     },
 
-    _reinitChart: function() {
+    _reinitChart: function() { //function that reinitializes the charts
         var that = this;
         if (that.vars.chart) {
-            that.vars.chart.destroy();
+            that.vars.chart.destroy(); //destroys the chart
         }
+
+        // deletes all annotations currently loaded and cached
         that.vars.chart = undefined;
         that.vars.annotationsLoaded = false;
         that.vars.annotationsCache = {};
+
         console.log("_reinitChart");
         that._reloadCurrentWindow();
     },
@@ -2741,7 +2754,7 @@ $.widget('crowdeeg.TimeSeriesAnnotator', {
     _transformData: function(input, numSecondsPaddedBefore, numSecondsDataOfInterest, numSecondsPaddedAfter) {
        // console.log("inside here");
         var that = this;
-        var channels = [];
+        var channels = []; 
         var options = that.vars.valueOptions;
         if(options == null){
             options = 0;
