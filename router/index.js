@@ -58,7 +58,7 @@ Router.route('/assignment/:_id', {
 
         let dataset = assignment.dataDocs().fetch();
 
-        console.log("Data set:", dataset);
+        //console.log("Data set:", dataset);
         const task = Tasks.findOne(assignment.task);
         const annotations = Annotations.find({ assignment: assignmentId }).fetch();
         var preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false });

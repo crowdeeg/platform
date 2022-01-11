@@ -654,3 +654,38 @@
   z-index: 7;
 }
 
+.channel_name {
+    font-size: 1.5rem;
+    font-weight: thin;
+    color: #000000;
+    display: inline;
+    line-height: 2rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+
+.amplitude_adjustment_container{
+  float: left;
+  margin-left: 1rem;
+}
+
+.amplitude_adjustment_panel{
+  float: right;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.amplitude_adjustment_button{
+  float: right;
+  margin-left: 0.2rem;
+  margin-right: 0.2rem;
+}
+
+
+
+

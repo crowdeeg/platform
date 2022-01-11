@@ -2025,20 +2025,20 @@ Arbitrations.helpers({
     let message;
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2102,20 +2102,20 @@ Arbitrations.helpers({
     let message;
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2295,20 +2295,20 @@ Arbitrations.helpers({
     options = options || {};
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }

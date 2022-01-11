@@ -40,7 +40,7 @@ Meteor.publishComposite('assignments', {
     children: [
         {
             find(assignment) {
-                console.log('assignments', assignment);
+                //console.log('assignments', assignment);
                 let queryArray = assignment.dataFiles.map((dataId) => { return { _id: dataId }; });
                 return Data.find({ $or: queryArray });
             },
@@ -149,7 +149,7 @@ Meteor.publishComposite('assignment', function(assignmentId) {
             },
             {
                 find(assignment) {
-                    console.log('assignment', assignment);
+                    //console.log('assignment', assignment);
                     let queryArray = assignment.dataFiles.map((dataId) => { return { _id: dataId }; });
                     return Data.find({ $or: queryArray });
                 },

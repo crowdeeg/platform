@@ -82,7 +82,7 @@ Meteor.startup(() => {
                     Roles.addUsersToRoles(user._id, user.roles[group], group);
                 }
             }
-            console.log('Created user account "' + user.username + '", "' + user.email + '" (' + user._id + ')');
+            //console.log('Created user account "' + user.username + '", "' + user.email + '" (' + user._id + ')');
         }
     }
 
@@ -108,15 +108,15 @@ Meteor.startup(() => {
         let patientId;
         if (patient) {
             patientId = patient._id;
-            console.log('Patient #' + patientNumber + ' (' + patientId + ') already exists. Re-using patient ...');                
+            //console.log('Patient #' + patientNumber + ' (' + patientId + ') already exists. Re-using patient ...');                
         }
         else {
             patientId = Patients.insert({
                 id: patientNumber,
             });
-            console.log('Created Patient #' + patientNumber + ' (' + patientId + ')');
+            //console.log('Created Patient #' + patientNumber + ' (' + patientId + ')');
         }
-        console.log(recordingFilename, patientNumber);
+        //console.log(recordingFilename, patientNumber);
         const metadataEDF = Meteor.call('get.edf.metadata', recordingPath.path);
         const metadata = {
             wfdbdesc: metadataEDF,
@@ -129,8 +129,8 @@ Meteor.startup(() => {
             path: recordingPath.path,
             metadata: metadata,
         });
-        console.log('Created Data "' + recordingPath.path + '" (' + dataId + ')');
-        console.log(metadata.wfdbdesc.Groups[0]);
+        //console.log('Created Data "' + recordingPath.path + '" (' + dataId + ')');
+        //console.log(metadata.wfdbdesc.Groups[0]);
         let dataInfo = { id: dataId, source: recordingPath.source, path: recordingPath.path };
         addData(dataInfo, recordingFileFolder);
     });
@@ -412,7 +412,7 @@ Meteor.startup(() => {
                 }
             });
             task = Tasks.findOne(taskId);
-            console.log('Created Task "' + taskName + '" (' + taskId + ')');
+            //console.log('Created Task "' + taskName + '" (' + taskId + ')');
         }
 
         let dataIds = [];
@@ -444,7 +444,7 @@ Meteor.startup(() => {
                 status: 'Pending',
                 channelsDelayed: '',
             });
-            console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
+            //console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
         }
     };
 
@@ -452,7 +452,7 @@ Meteor.startup(() => {
         let museFilePath, psgFilePath, anneFilePath;
         recordingInfo[recordingFileFolder].forEach((recordingFile) => {
             if (recordingFile.source === 'MUSE') {
-                console.log(recordingFile.path);
+                //console.log(recordingFile.path);
                 museFilePath = recordingFile.path;
             } else if (recordingFile.source === 'PSG') {
                 psgFilePath = recordingFile.path;
@@ -756,7 +756,7 @@ Meteor.startup(() => {
     //         }
     //     });
     //     task = Tasks.findOne(taskId);
-    //     console.log('Created Task "' + taskName + '" (' + taskId + ')');
+    //     //console.log('Created Task "' + taskName + '" (' + taskId + ')');
     // }
 
     // if(recordingPaths.length > 1) {
@@ -789,7 +789,7 @@ Meteor.startup(() => {
     //             status: 'Pending',
     //             channelsDelayed: '',
     //         });
-    //         console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
+    //         //console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
     //     }
     // }
     // else
@@ -817,7 +817,7 @@ Meteor.startup(() => {
     //             status: 'Pending',
     //             channelsDelayed: '',
     //         });
-    //         console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + data.name + '" (' + assignmentId + ')');
+    //         //console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + data.name + '" (' + assignmentId + ')');
     //     }
     // })}
 });

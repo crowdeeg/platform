@@ -47,35 +47,40 @@ Template.AnnotatorEDF.onCreated(function() {
 });
 
 Template.AnnotatorEDF.onRendered(function() {
-    const annotatorContainer = $(this.find('.annotator-container'));
-    const template = this;
-    console.log("Template:", this);
-    let config = $.extend({}, this.data.task.annotatorConfig);
-    config = $.extend(config, this.data.preferences.annotatorConfig);
-    console.log("here");
-    config = $.extend(config, {
-        recordingName: this.data.dataset.reduce((combined, data) => {
-            let dataPathSegments = data.path.split('/');
-            if (!combined.length) return dataPathSegments[dataPathSegments.length - 1];
-            return combined + ' + ' + dataPathSegments[dataPathSegments.length - 1];
-        }, ''),
-        allRecordings: this.data.dataset.map((data) => {
-            return { _id: data._id, path: data.path, source: data.source };
-        }),
-        context: this.data,
-        setVisibilityStatusForInfoPanel: (isVisible) => {
-            setVisibilityStatusForFloatingPanel(isVisible, template, '.info-panel-container');
-        },
-        toggleInfoPanel: () => {
-            toggleFloatingPanel(undefined, template, '.info-panel-container');
-        },
-    });
-    console.log("Template2:", this);
-    console.log("dataset:", this.data.dataset);
-    console.log("config", config);
-    annotatorContainer.TimeSeriesAnnotator(config);
-
-    
+	const annotatorContainer = $(this.find(".annotator-container"));
+	const template = this;
+	//console.log("Template:", this);
+	let config = $.extend({}, this.data.task.annotatorConfig);
+	config = $.extend(config, this.data.preferences.annotatorConfig);
+	//console.log("here");
+	config = $.extend(config, {
+		recordingName: this.data.dataset.reduce((combined, data) => {
+			let dataPathSegments = data.path.split("/");
+			if (!combined.length)
+				return dataPathSegments[dataPathSegments.length - 1];
+			return (
+				combined + " + " + dataPathSegments[dataPathSegments.length - 1]
+			);
+		}, ""),
+		allRecordings: this.data.dataset.map((data) => {
+			return { _id: data._id, path: data.path, source: data.source };
+		}),
+		context: this.data,
+		setVisibilityStatusForInfoPanel: (isVisible) => {
+			setVisibilityStatusForFloatingPanel(
+				isVisible,
+				template,
+				".info-panel-container"
+			);
+		},
+		toggleInfoPanel: () => {
+			toggleFloatingPanel(undefined, template, ".info-panel-container");
+		},
+	});
+	//console.log("Template2:", this);
+	//console.log("dataset:", this.data.dataset);
+	//console.log("config", config);
+	annotatorContainer.TimeSeriesAnnotator(config);
 });
 
 Template.AnnotatorEDF.onDestroyed(function() {
