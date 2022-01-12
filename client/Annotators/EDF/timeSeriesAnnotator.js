@@ -738,58 +738,58 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	_adaptContent: function () {
 		var that = this;
 		if (!that.options.showChannelGainAdjustmentButtons) {
-			$(that.element).find(".adjustment_buttons").hide();
+			$(".adjustment_buttons").hide();
 		}
 		if (!that.options.showArtifactButtons) {
-			$(that.element).find(".artifact_panel").hide();
+			$(".artifact_panel").hide();
 		}
 		if (!that.options.showSleepStageButtons) {
-			$(that.element).find(".sleep_stage_panel").hide();
+			$(".sleep_stage_panel").hide();
 		}
 		if (!that.options.showNavigationButtons) {
-			$(that.element).find(".navigation_panel").hide();
+			$(".navigation_panel").hide();
 		}
 		if (!that.options.showBackToLastActiveWindowButton) {
-			$(that.element).find(".backToLastActiveWindow").hide();
+			$(".backToLastActiveWindow").hide();
 		}
 		if (!that.options.showBookmarkCurrentPageButton) {
-			$(that.element).find(".bookmarkCurrentPage").hide();
+			$(".bookmarkCurrentPage").hide();
 		}
 		if (!that._isArbitrating()) {
-			$(that.element).find(".jumpToLastDisagreementWindow").hide();
-			$(that.element).find(".jumpToNextDisagreementWindow").hide();
+			$(".jumpToLastDisagreementWindow").hide();
+			$(".jumpToNextDisagreementWindow").hide();
 		}
 		if (!that.options.showFastBackwardButton) {
-			$(that.element).find(".fastBackward").hide();
+			$(".fastBackward").hide();
 		}
 		if (!that.options.showBackwardButton) {
-			$(that.element).find(".backward").hide();
+			$(".backward").hide();
 		}
 		if (!that.options.showForwardButton) {
-			$(that.element).find(".forward").hide();
+			$(".forward").hide();
 		}
 		if (!that.options.showFastForwardButton) {
-			$(that.element).find(".fastForward").hide();
+			$(".fastForward").hide();
 		}
 		if (!that.options.showShortcuts) {
-			$(that.element).find(".keyboardShortcuts").hide();
+			$(".keyboardShortcuts").hide();
 		}
 		if (!that.options.showAnnotationTime) {
-			$(that.element).find(".annotationTime").hide();
+			$(".annotationTime").hide();
 		}
 		if (!that.options.showLogoutButton) {
-			$(that.element).find(".logout").hide();
+			$(".logout").hide();
 		}
 		if (!that.options.showInputPanelContainer) {
 			$(that.element)
 				.parents(".annotator-edf")
 				.find(".input-panel-container")
 				.hide();
-			$(that.element).find(".mark-assignment-as-completed").show();
+			$(".mark-assignment-as-completed").show();
 			that._updateMarkAssignmentAsCompletedButtonState();
 		}
 		if (!that._isHITModeEnabled()) {
-			$(that.element).find(".progress").hide();
+			$(".progress").hide();
 		}
 		$(that.element).css({
 			marginTop: that.options.marginTop,
@@ -994,15 +994,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				$(that.element)
 					.find(".submit-annotations")
 					.prop("disabled", true);
-				$(that.element).find(".next-window").prop("disabled", false);
+				$(".next-window").prop("disabled", false);
 			});
 
 		$(that.element)
 			.find(".next-window")
 			.click(function () {
-				$(that.element).find(".no-features").prop("disabled", false);
-				$(that.element).find(".submit-features").prop("disabled", true);
-				$(that.element).find(".next-window").prop("disabled", true);
+				$(".no-features").prop("disabled", false);
+				$(".submit-features").prop("disabled", true);
+				$(".next-window").prop("disabled", true);
 				if (
 					that._isCurrentWindowLastTrainingWindow() &&
 					!that._isTrainingOnly()
@@ -1231,7 +1231,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			);
 
 		if (!that.options.features.cheatSheetsEnabled) {
-			$(that.element).find(".open-cheat-sheet").remove();
+			$(".open-cheat-sheet").remove();
 		} else {
 			$(that.element)
 				.find(".open-cheat-sheet")
@@ -1518,8 +1518,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		) {
 			that._setFastForwardEnabledStatus(false);
 			that._setFastBackwardEnabledStatus(false);
-			$(that.element).find(".fastForward").hide();
-			$(that.element).find(".fastBackward").hide();
+			$(".fastForward").hide();
+			$(".fastBackward").hide();
 		}
 	},
 
@@ -1541,7 +1541,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				preferences.lastAnnotationTime
 			);
 		}
-		var timerContainer = $(that.element).find(".annotation-time-container");
+		var timerContainer = $(".annotation-time-container");
 		var timeContainer = $("<span>").addClass("time form-control");
 		timerContainer.append(timeContainer);
 		that.vars.annotationTimeContainer = timeContainer;
@@ -1919,7 +1919,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					feature_name +
 					"</button>"
 			).data("annotation-type", feature_key);
-			$(that.element).find(".feature_panel").append(featureButton);
+			$(".feature_panel").append(featureButton);
 			$(
 				'<style type="text/css">.feature.' +
 					feature_key +
@@ -2346,23 +2346,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		switch (mode) {
 			case "crosshair":
-				$(that.element).find(".timesync").prop("disabled", false);
+				$(".timesync").prop("disabled", false);
 				that._toggleNoTimelockScroll(false);
 				that._displayCrosshair(that.vars.crosshairPosition);
 				break;
 			case "notimelock":
-				$(that.element).find(".timesync").prop("disabled", true);
+				$(".timesync").prop("disabled", true);
 				that._destroyCrosshair();
 				that._toggleNoTimelockScroll(true);
 				break;
 			case "offset":
-				$(that.element).find(".timesync").prop("disabled", false);
+				$(".timesync").prop("disabled", false);
 				that._toggleNoTimelockScroll(false);
 				that._destroyCrosshair();
 				break;
 			case "undefined":
 			default:
-				$(that.element).find(".timesync").prop("disabled", true);
+				$(".timesync").prop("disabled", true);
 				that._toggleNoTimelockScroll(false);
 				that._destroyCrosshair();
 				break;
@@ -2818,7 +2818,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var status = !!status;
 
 		that.vars.forwardEnabled = status;
-		$(that.element).find(".forward").prop("disabled", !status);
+		$(".forward").prop("disabled", !status);
 	},
 
 	_setFastForwardEnabledStatus: function (status) {
@@ -2826,7 +2826,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var status = !!status;
 
 		that.vars.fastForwardEnabled = status;
-		$(that.element).find(".fastForward").prop("disabled", !status);
+		$(".fastForward").prop("disabled", !status);
 	},
 
 	_setBackwardEnabledStatus: function (status) {
@@ -2834,7 +2834,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var status = !!status;
 
 		that.vars.backwardEnabled = status;
-		$(that.element).find(".backward").prop("disabled", !status);
+		$(".backward").prop("disabled", !status);
 	},
 
 	_setFastBackwardEnabledStatus: function (status) {
@@ -2842,7 +2842,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var status = !!status;
 
 		that.vars.fastBackwardEnabled = status;
-		$(that.element).find(".fastBackward").prop("disabled", !status);
+		$(".fastBackward").prop("disabled", !status);
 	},
 
 	_selectFeatureClass: function (featureClassButton) {
@@ -3901,7 +3901,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var channels = data.channels;
 
 		that.vars.graphID = "time-series-graph-" + that._getUUID();
-		var graph = $(that.element).find(".graph");
+		var graph = $(".graph");
 		graph.children().remove();
 		graph.append(
 			'<div id="' + that.vars.graphID + '" style="margin: 0 auto"></div>'
@@ -3977,6 +3977,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							that._setupYAxisLinesAndLabels();
 						},
 					},
+					zoomType: 'xy',
 					resetZoomButton: {
 						position: {
 							align: "left",
@@ -3984,7 +3985,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							x: -87.5,
 							y: 25,
 						},
-						relativeTo: "spacingBox",
+						relativeTo: "plotBox",
 					},
 				},
 				credits: {
@@ -4307,7 +4308,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 	_unblockGraphInteraction: function () {
 		var that = this;
-		$(that.element).find("> .blocker").remove();
+		$("> .blocker").remove();
 	},
 
 	_setupAnnotationInteraction: function () {
@@ -5390,7 +5391,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 	_isDisagreementCase: function () {
 		var that = this;
-		return $(that.element).find(".votes-info.has-disagreement").length > 0;
+		return $(".votes-info.has-disagreement").length > 0;
 	},
 
 	_saveSleepStageAnnotation: function (type) {
@@ -6692,7 +6693,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		//  //console.log(annotationId);
 		if (!annotationId) {
 			// //console.log("nZ");
-			var graph = $(that.element).find(".graph");
+			var graph = $(".graph");
 			var annotationDocument = {
 				assignment: that.options.context.assignment._id,
 				user: Meteor.userId(),
@@ -6824,7 +6825,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		that.vars.numberOfAnnotationsInCurrentWindow = Math.max(0, value);
 		var zeroAnnotations = that.vars.numberOfAnnotationsInCurrentWindow == 0;
-		$(that.element).find(".no-features").prop("disabled", !zeroAnnotations);
+		$(".no-features").prop("disabled", !zeroAnnotations);
 		$(that.element)
 			.find(".submit-features")
 			.prop("disabled", zeroAnnotations);
@@ -6836,7 +6837,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			that._lastWindowReachedForTheFirstTime();
 		}
 		that.vars.lastWindowHasBeenReachedBefore = true;
-		$(that.element).find(".next-window").hide();
+		$(".next-window").hide();
 	},
 
 	_lastWindowReachedForTheFirstTime: function () {
@@ -6871,7 +6872,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			}
 
 			function showCompletionButton() {
-				$(that.element).find(".graph_footer .middle").children().hide();
+				$(".graph_footer .middle").children().hide();
 				var taskCompletionCodeButton = $("<button>")
 					.addClass("btn btn-success")
 					.html(textCompletionButton)
@@ -6897,7 +6898,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			}
 
 			function completeProgressBar() {
-				$(that.element).find(".progress-bar").css("width", "100%");
+				$(".progress-bar").css("width", "100%");
 			}
 		}
 	},
