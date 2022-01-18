@@ -460,6 +460,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		// initializing variables for future usage by the functions
 		var that = this;
 		that.vars = {
+			recordScalingFactors: true,
+			scalingFactors: {},
 			uniqueClass: that._getUUID(),
 			activeFeatureType: 0,
 			chart: null,
@@ -672,6 +674,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                                 <button id="increase" type="button" class="btn btn-default amplitude_adjustment_button" disabled>+</button> \
                                 <button id="decrease" type="button" class="btn btn-default amplitude_adjustment_button" disabled>-</button> \
                                 <button id="default" type="button" class="btn btn-default amplitude_adjustment_button" disabled>RESET ALL</button> \
+								<form id="scaleform" class="form-horizontal">\
+									<input type="text" class="form-control" id="scaleinput" placeholder="Enter a custom scale" disabled>\
+									<input type="submit" style="display: none" />\
+								</form>\
                             </div>\
                          </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
@@ -1348,10 +1354,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	_getMontages: function () {
 		// get the name of all montages, which is defined in annotatorConfig under task collection
 		var that = this;
-		if (that.options.channelsDisplayed instanceof Array) { 
+		if (that.options.channelsDisplayed instanceof Array) {
 			return;
 		}
-		return Object.keys(that.options.channelsDisplayed); 
+		return Object.keys(that.options.channelsDisplayed);
 	},
 
 	_getChannelsDisplayed: function (montage) {
@@ -3102,6 +3108,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						that._populateGraph(that.vars.currentWindowData);
 					});
 				}
+
 				that._displayCrosshair(that.vars.crosshairPosition);
 				if (!that.options.experiment.running) {
 					if (that._isInNoTimelockMode()) {
@@ -3371,12 +3378,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (options == null) {
 			options = 0;
 		}
+
 		var channelAudioRepresentations = {};
 		var channelNumSamples = {};
 		var samplingRate = input.sampling_rate;
+
+		// for each dataId in the channelvalues array
 		for (var dataId in input.channel_values) {
+			//console.log(dataId);
+			//console.log(
+			// 	"==============================================================================================="
+			// );
 			for (var name in input.channel_values[dataId]) {
 				var values = input.channel_values[dataId][name];
+				// console.log("Channel Name:" + name);
+				// console.log(values);
 				////console.log(that.vars.audioContextSampleRate);
 				var offlineCtx = new OfflineAudioContext(
 					1,
@@ -3390,39 +3406,52 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				);
 				var scaleFactorFrequency = offlineCtx.sampleRate / samplingRate;
 
-				var scaleFactorAmplitude = values
-					.map(Math.abs)
-					.reduce((a, b) => Math.max(a, b));
+				//gets the max value in the values array
+				var scaleFactorAmplitude = Math.max(...values.map(Math.abs));
+
 				var maxIn = scaleFactorAmplitude;
-				////console.log(maxIn);
-				var thisCounting = values.reduce((a, b) => a + 1);
+
+				var valuesLength = values.length;
+
 				var y95 = 0;
 				var y05 = 0;
-				scaleFactorAmplitude = values
-					.map(Math.abs)
-					.reduce((a, b) => Math.max(a, b)); //that._findMeanPercentile(0.95,0.005,values, thisCounting);
-				////console.log(name);
-				var avg = values.reduce((a, b) => a + b) / thisCounting;
+				// scaleFactorAmplitude = values
+				// 	.map(Math.abs)
+				// 	.reduce((a, b) => Math.max(a, b)); //that._findMeanPercentile(0.95,0.005,values, valuesLength);
+				// ////console.log(name);
+
+				// is the average of the values
+				var avg = values.reduce((a, b) => a + b) / valuesLength;
 				avg = Math.abs(avg);
 				////console.log(avg);
+
+				// adds up the difference of the values from the average
 				var changeVal = values.reduce((a, b) => a + Math.abs(avg - b));
+
 				////console.log(changeVal);
 
 				// //console.log(name);
 				//   //console.log(scaleFactorAmplitude) ;
-				var valuesScaled = values;
 
+				// scaleValueChange = Math.pow(scaleFactorAmplitude, 2);
 				var scaleValueChange = maxIn * scaleFactorAmplitude;
 
 				if (scaleFactorAmplitude != 0) {
 					//  //console.log(name);
-					valuesScaled = values.map((v) => v / scaleFactorAmplitude); //(500*(v-scaleFactorAmplitude))/(y95-y05));
+					// gets every value and divides it by the scaleFactorAmplitude, the max value in the values array
+					// console.log(name);
+					// console.log(scaleFactorAmplitude);
 
+					valuesScaled = values.map((v) => v / scaleFactorAmplitude);
 					// //console.log(valuesScaled);
 				}
+
+				//console.log(valuesScaled);
 				audioBuffer.copyToChannel(valuesScaled, 0, 0);
+
 				var scaleFault = 0;
 				if (options == 0) {
+					// if the amplitude is not scaled (default amplitude)
 					switch (name) {
 						case "F4-A1":
 							scaleFault = 1;
@@ -3533,6 +3562,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						scaleFactorAmplitude
 					);
 				} else if (options == 1) {
+					//if the amplitude has to be scaled
 					//requiredName = "Thor"//sessionStorage.getItem("requiredName");
 					let channelOnChange = that.vars.channelAmplitudeOnChange;
 					// //console.log(requiredName);
@@ -3775,6 +3805,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	_populateGraph: function (data) {
 		/* plot all of the points to the chart */
 		var that = this;
+
 		// if the chart object does not yet exist, because the user is loading the page for the first time
 		// or refreshing the page, then it's necessary to initialize the plot area
 		if (!that.vars.chart) {
@@ -3785,15 +3816,42 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			console.timeEnd("_initGraph");
 			// if the plot area has already been initialized, simply update the data displayed using AJAX calls
 		}
+
+		// updates the data that will be displayed in the chart
+		// by storing the new data in this.vars.chart.series
 		that._updateChannelDataInSeries(that.vars.chart.series, data);
+
+		// sets the min and max values for the chart
 		that.vars.chart.xAxis[0].setExtremes(
 			that.vars.currentWindowStart,
 			that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
 			false,
 			false
 		);
+
+		//TODO: scaling factor persisting
+
+		that.vars.recordScalingFactors = false;
+		console.log(that._objectIsEmpty(that.vars.scalingFactors));
+
+		// checks if the object is empty
+		if (!that._objectIsEmpty(that.vars.scalingFactors)) {
+			for (const index in that.vars.scalingFactors) {
+				console.log(that.vars.chart.series[index].yData);
+				console.log(that.vars.scalingFactors);
+				console.log(index);
+				that._customAmplitude(
+					index,
+					100 * (that.vars.scalingFactors[index] - 1)
+				);
+				console.log("scaling after page change");
+				console.log(that.vars.chart.series[index].yData);
+			}
+		}
+		that.vars.recordScalingFactors = true;
+
 		that.vars.chart.redraw(); // efficiently redraw the entire window in one go
-		var chart = that.vars.chart;
+
 		// use the chart start/end so that data and annotations can never
 		// get out of synch
 		that._refreshAnnotations();
@@ -3802,39 +3860,69 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
 	},
 
+	//checks if an object is empty
+	_objectIsEmpty: function (obj) {
+		return JSON.stringify(obj) === "{}";
+	},
+
 	_updateChannelDataInSeries: function (series, data) {
 		var that = this;
-		var channels = data.channels;
+		var channels = data.channels; // gets the channels from the data object
+
+		//gets the xValues for the graph using from the data object i.e the time values
 		var xValues = Array.from(
-			data.channels[0].values.map(function (value, v) {
-				return that.vars.currentWindowStart + v / data.sampling_rate;
+			data.channels[0].values.map(function (value, index) {
+				return (
+					that.vars.currentWindowStart + index / data.sampling_rate
+				);
 			})
 		);
+
+		// gets the recording end in seconds snapped to the nearest second
 		var recordingEndInSecondsSnapped =
 			that._getRecordingEndInSecondsSnapped();
+
 		return channels.map(function (channel, c) {
+			// for each channel, we get the channel name (channel)
+			// and the channel index (c)
+
+			// using them, we get the flipfactor and gain
 			var flipFactor = that._getFlipFactorForChannel(channel);
 			var gain = that._getGainForChannelIndex(c);
+
 			if (gain === undefined) {
 				gain = 1.0;
 			}
+
 			var flipFactorAndGain = flipFactor * gain;
+
+			// gets some additional information needed to graph using channel and c
 			var offsetPreScale = that._getOffsetForChannelPreScale(channel);
 			var offsetPostScale = that._getOffsetForChannelIndexPostScale(c);
+
+			// gets the values
 			samplesScaledAndOffset = channel.values.map(function (value, v) {
 				return (
 					(value + offsetPreScale) * flipFactorAndGain +
 					offsetPostScale
 				);
 			});
+
+			// creates an array that stores all the data
 			var seriesData = xValues.map(function (x, i) {
 				return [x, samplesScaledAndOffset[i]];
 			});
+
+			// adds the offset needed to the start of the graph
 			seriesData.unshift([
 				-that.vars.xAxisScaleInSeconds,
 				offsetPostScale,
 			]);
+
+			// adds the offset needed to the end of the graphID
 			seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
+
+			// stores in the series that we input into the funciton, at index c
 			series[c].setData(seriesData, false, false, false);
 		});
 	},
@@ -3977,7 +4065,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							that._setupYAxisLinesAndLabels();
 						},
 					},
-					zoomType: 'xy',
+					zoomType: "xy",
 					resetZoomButton: {
 						position: {
 							align: "left",
@@ -5563,7 +5651,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				var index = $(this).data("index");
 
 				that._selectChannel(index);
-				console.log(that.vars.selectedChannelIndex);
+				// console.log(that.vars.selectedChannelIndex);
 				// that._changeAmplitude(index, that.vars.allChannels);
 			});
 	},
@@ -5583,6 +5671,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			// checks if a channel is selected
 			// renders the amplitude adjustment menu given the channel index
 			that._renderAmplitudeAdjustmentMenu(that.vars.selectedChannelIndex);
+			const channelName =
+				this.vars.currentWindowData.channels[index].name;
+			console.log(channelName);
+			console.log(that.vars.chart.series[that.vars.selectedChannelIndex]);
 		}
 	},
 
@@ -5595,10 +5687,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			let amplitudeAdjustmentContainer = $(
 				".amplitude_adjustment_container"
 			);
-			let amplitudeAdjustmentButtons = $(".amplitude_adjustment_button");
-			let increaseButton = $("#increase");
-			let decreaseButton = $("#decrease");
-			let defaultButton = $("#default");
+			const amplitudeAdjustmentButtons = $(
+				".amplitude_adjustment_button"
+			);
+			const increaseButton = $("#increase");
+			const decreaseButton = $("#decrease");
+			const defaultButton = $("#default");
+			const scaleform = $("#scaleform");
+			const scaleinput = $("#scaleinput");
 			// gets the selected channel's name
 			const channelName =
 				this.vars.currentWindowData.channels[index].name;
@@ -5607,6 +5703,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			//activate the buttons
 			$(amplitudeAdjustmentButtons).prop("disabled", false);
 			$(amplitudeAdjustmentButtons).addClass(".active");
+			$(scaleinput).prop("disabled", false);
 
 			// sets the increase button's onclick function
 			$(increaseButton)
@@ -5632,7 +5729,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					console.log("defaulting amplitude");
 				});
 
-			// TODO: speed up, this is slow, perhaps something to do with how the graph scales + add custom scaling
+			// sets the scaleform's onsubmit function
+			$(scaleform)
+				.off()
+				.on("submit", function (event) {
+					event.preventDefault();
+					const scaleValue = $(scaleinput).val();
+					that._customAmplitude(index, scaleValue);
+					//gets a custom scale value
+				});
 		}
 	},
 
@@ -5660,61 +5765,103 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
         that.vars.reprint = 1;
         that._reloadCurrentWindow();
-       
-        
-    });
-
-    */
+    }); */
 
 	_increaseAmplitude: function (index) {
-		var that = this;
-		if (that._isChannelSelected() === true) {
-			// checks if a channel is selected
-			channel = that.vars.allChannels[index];
-		}
+		// preset decrease amplitude function that decreases amplitude by 100%
 
-		// dont really know what this does, 95% sure will have to change it later
-		that.vars.valueOptions = 1;
-		that.vars.increaseOnce = 1;
-		that.vars.channelAmplitudeOnChange = {
-			name: channel.name,
-			dataId: channel.dataId,
-		};
-		that.vars.reprint = 1;
-		that._reloadCurrentWindow();
+		var that = this;
+		that._customAmplitude(index, 100);
+
+		//dont really know what this does, 95% sure will have to change it later
+		// that.vars.valueOptions = 1; // transfromData -> requestData -> switchToWindow
+		// that.vars.increaseOnce = 1; // transfromData -> requestData -> switchToWindow
+		// that.vars.channelAmplitudeOnChange = {
+		// 	name: channel.name,
+		// 	dataId: channel.dataId,
+		// }; // transfromData -> requestData -> switchToWindow
+		// that.vars.reprint = 1; //indicates that we have to reload the data because we cache it
+		// console.log(that.vars.chart.series[that.vars.selectedChannelIndex]);
+		// that._reloadCurrentWindow();
 	},
 
 	_decreaseAmplitude: function (index) {
+		// preset decrease amplitude function that decreases amplitude by 50%
+
+		var that = this;
+		that._customAmplitude(index, -50);
+
+		// var that = this;
+		// if (that._isChannelSelected() === true) {
+		// 	// checks if a channel is selected
+		// 	channel = that.vars.allChannels[index];
+
+		// 	// dont really know what this does, 95% sure will have to change it later
+		// 	that.vars.valueOptions = -1;
+		// 	that.vars.channelAmplitudeOnChange = {
+		// 		name: channel.name,
+		// 		dataId: channel.dataId,
+		// 	};
+		// 	that.vars.increaseOnce = 1;
+		// 	that.vars.reprint = 1;
+		// 	that._reloadCurrentWindow();
+		// }
+	},
+
+	_customAmplitude: function (index, scaleFactor) {
+		//converts scaleFactor to a decimal from percentage
+		scaleFactor = scaleFactor / 100;
+
 		var that = this;
 		if (that._isChannelSelected() === true) {
 			// checks if a channel is selected
 			channel = that.vars.allChannels[index];
-
-			// dont really know what this does, 95% sure will have to change it later
-			that.vars.valueOptions = -1;
-			that.vars.channelAmplitudeOnChange = {
-				name: channel.name,
-				dataId: channel.dataId,
-			};
-			that.vars.increaseOnce = 1;
-			that.vars.reprint = 1;
-			that._reloadCurrentWindow();
 		}
+
+		//gets the zeroPosition of each channel (where they would = 0 if the channel was centred at y = 0)
+		const zeroPosition =
+			(that.vars.currentWindowData.channels.length - 1 - index) *
+			that.options.graph.channelSpacing;
+
+		// takes each point in the ydata of the graph and scales it by the scaleFactor
+		that.vars.chart.series[index].yData.forEach((point, idx) => {
+			if (point > zeroPosition) {
+				that.vars.chart.series[index].yData[idx] =
+					zeroPosition + (point - zeroPosition) * (1 + scaleFactor);
+			} else if (point < zeroPosition) {
+				that.vars.chart.series[index].yData[idx] =
+					zeroPosition + (point - zeroPosition) * (1 + scaleFactor);
+			}
+		});
+
+		//TODO keeps track of the scaling operations so that if we switch windows
+		// the scaling persists
+		if (that.vars.recordScalingFactors) {
+			if (that.vars.scalingFactors.hasOwnProperty(index)) {
+				that.vars.scalingFactors[index] *= 1 + scaleFactor;
+			} else {
+				that.vars.scalingFactors[index] = 1 + scaleFactor;
+			}
+		}
+		console.log(that.vars.scalingFactors);
+
+		that.vars.chart.redraw();
 	},
 
 	_defaultAmplitude: function (index) {
 		var that = this;
 		if (that._isChannelSelected() === true) {
-			// checks if a channel is selected
-			channel = that.vars.allChannels[index];
+			// // checks if a channel is selected
+			// channel = that.vars.allChannels[index];
 
-			// dont really know what this does, 95% sure will have to change it later
-			that.vars.valueOptions = 0;
-			that.vars.channelAmplitudeOnChange = {
-				name: channel.name,
-				dataId: channel.dataId,
-			};
-			that.vars.reprint = 1;
+			// // dont really know what this does, 95% sure will have to change it later
+			// that.vars.valueOptions = 0;
+			// that.vars.channelAmplitudeOnChange = {
+			// 	name: channel.name,
+			// 	dataId: channel.dataId,
+			// };
+			// that.vars.reprint = 1;
+			that.vars.scalingFactors = {};
 			that._reloadCurrentWindow();
 		}
 	},

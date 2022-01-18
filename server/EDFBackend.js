@@ -23,7 +23,7 @@ const runWFDBCommand = (command, runInDirectory = "") => {
 	if (EDFDir) {
 		WFDBCommand = 'WFDB="' + EDFDir + '" ' + WFDBCommand;
 	}
-	console.log("WFDBCommand:", WFDBCommand);
+	//console.log("WFDBCommand:", WFDBCommand);
 	const output = runCommand(WFDBCommand, {
 		maxBuffer: 2048 * 500 * 10,
 		cwd: EDFDir,
@@ -691,6 +691,8 @@ Meteor.methods({
 		// the following line get all the channels from the metadata of the recording and display all of them
 		// we should modify it to be only displaying the channel required in the particular montage
 		// TODO: this should only display the channels required in the montage not all of them, should speed it up
+
+		// I think we get the channels using wfdb desc
 		allRecordings = allRecordings.map((recording) => {
 			channelsDisplayed[recording.source] = Data.findOne(
 				recording._id
