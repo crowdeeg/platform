@@ -675,9 +675,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                                 <button id="decrease" type="button" class="btn btn-default amplitude_adjustment_button" disabled>-</button> \
                                 <button id="default" type="button" class="btn btn-default amplitude_adjustment_button" disabled>RESET ALL</button> \
 								<form id="scaleform" class="form-horizontal">\
-									<input type="text" class="form-control" id="scaleinput" placeholder="Enter a custom scale" disabled>\
+									<input type="text" class="form-control" id="scaleinput" placeholder="Custom scale (%)" disabled>\
 									<input type="submit" style="display: none" />\
 								</form>\
+								<button id="scaletoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE TO SCREEN</button> \
+								<button id="scalealltoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE  ALL TO SCREEN</button> \
                             </div>\
                          </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
@@ -3829,23 +3831,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			false
 		);
 
-		//TODO: scaling factor persisting
-
 		that.vars.recordScalingFactors = false;
 		console.log(that._objectIsEmpty(that.vars.scalingFactors));
 
 		// checks if the object is empty
 		if (!that._objectIsEmpty(that.vars.scalingFactors)) {
 			for (const index in that.vars.scalingFactors) {
-				console.log(that.vars.chart.series[index].yData);
-				console.log(that.vars.scalingFactors);
-				console.log(index);
 				that._customAmplitude(
 					index,
 					100 * (that.vars.scalingFactors[index] - 1)
 				);
-				console.log("scaling after page change");
-				console.log(that.vars.chart.series[index].yData);
+				// console.log("scaling after page change");
+				// console.log(that.vars.chart.series[index].yData);
 			}
 		}
 		that.vars.recordScalingFactors = true;
@@ -4065,7 +4062,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							that._setupYAxisLinesAndLabels();
 						},
 					},
-					zoomType: "xy",
+					//TODO: change how chart zooms, does not work well with annotations
+					//zoomType: "xy",
+					
 					resetZoomButton: {
 						position: {
 							align: "left",
@@ -4099,10 +4098,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						stickyTracking: true,
 						events: {
 							mouseOver: function (e) {
-								//that._selectChannel(e.target.index);
+							//	that._selectChannel(e.target.index);
 							},
 							mouseOut: function (e) {
-								//that._unselectChannels();
+							//	that._unselectChannels();
 							},
 						},
 						point: {
@@ -5683,10 +5682,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		// checks if a channel is selected
 		if (that._isChannelSelected !== undefined) {
-			// gets the relevant elements from the dom
-			let amplitudeAdjustmentContainer = $(
-				".amplitude_adjustment_container"
-			);
+			// gets the relevant elements from the DOM
+
 			const amplitudeAdjustmentButtons = $(
 				".amplitude_adjustment_button"
 			);
@@ -5695,11 +5692,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			const defaultButton = $("#default");
 			const scaleform = $("#scaleform");
 			const scaleinput = $("#scaleinput");
+			const scaleToScreen = $("#scaletoscreen");
+			const scaleAllToScreen = $("#scalealltoscreen");
 			// gets the selected channel's name
 			const channelName =
 				this.vars.currentWindowData.channels[index].name;
+
 			// render the channel name on screen inside amplitude adjustment container
 			$(".channel_name").text("Channel Selected: " + channelName);
+
 			//activate the buttons
 			$(amplitudeAdjustmentButtons).prop("disabled", false);
 			$(amplitudeAdjustmentButtons).addClass(".active");
@@ -5711,6 +5712,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				.on("click", function () {
 					that._increaseAmplitude(index);
 					console.log("increasing amplitude");
+					that.vars.chart.redraw();
 				});
 
 			// sets the decrease button's onclick function
@@ -5719,6 +5721,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				.on("click", function () {
 					that._decreaseAmplitude(index);
 					console.log("decreasing amplitude");
+					that.vars.chart.redraw(); //redraws the chart with the scaled data
 				});
 
 			// sets the default button's onclick function
@@ -5727,6 +5730,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				.on("click", function () {
 					that._defaultAmplitude(index);
 					console.log("defaulting amplitude");
+					that.vars.chart.redraw(); //redraws the chart with the scaled data
 				});
 
 			// sets the scaleform's onsubmit function
@@ -5737,42 +5741,34 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					const scaleValue = $(scaleinput).val();
 					that._customAmplitude(index, scaleValue);
 					//gets a custom scale value
+					that.vars.chart.redraw();
 				});
+
+			// sets the scale to screen button's onclick function
+			$(scaleToScreen)
+				.off()
+				.on("click", function () {
+					that._scaleToScreen(index);
+					that.vars.chart.redraw(); //redraws the chart with the scaled data
+				});
+
+			$(scaleAllToScreen)
+				.off()
+				.on("click", function () {
+					that._scaleAllToScreen();
+					that.vars.chart.redraw(); //redraws the chart with the scaled data
+				});
+			
 		}
 	},
 
-	/*
-    var increaser = $("#increase-"+(index)).on('click', (evt) => {
-        that.vars.valueOptions = 1;
-        that.vars.increaseOnce = 1;
-        that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-        that.vars.reprint = 1;
-        that._switchToWindow(that.options.allRecordings, that.vars.currentWindowStart, that.vars.xAxisScaleInSeconds);
-      
-
-    });
-
-    var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
-        that.vars.valueOptions = -1;
-        that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-        that.vars.increaseOnce = 1;
-        that.vars.reprint = 1;
-        that._reloadCurrentWindow();
-
-    });
-    var defaulter = $("#default-"+(index)).on('click', (evt) => {
-        that.vars.valueOptions = 0;
-        that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-        that.vars.reprint = 1;
-        that._reloadCurrentWindow();
-    }); */
-
 	_increaseAmplitude: function (index) {
-		// preset decrease amplitude function that decreases amplitude by 100%
+		// preset decrease amplitude function that increases amplitude by 100%
 
 		var that = this;
 		that._customAmplitude(index, 100);
 
+		// OLD CODE:
 		//dont really know what this does, 95% sure will have to change it later
 		// that.vars.valueOptions = 1; // transfromData -> requestData -> switchToWindow
 		// that.vars.increaseOnce = 1; // transfromData -> requestData -> switchToWindow
@@ -5791,6 +5787,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		that._customAmplitude(index, -50);
 
+		// OLD CODE:
 		// var that = this;
 		// if (that._isChannelSelected() === true) {
 		// 	// checks if a channel is selected
@@ -5819,38 +5816,183 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		}
 
 		//gets the zeroPosition of each channel (where they would = 0 if the channel was centred at y = 0)
-		const zeroPosition =
-			(that.vars.currentWindowData.channels.length - 1 - index) *
-			that.options.graph.channelSpacing;
+		const zeroPosition = that._getOffsetForChannelIndexPostScale(index);
 
 		// takes each point in the ydata of the graph and scales it by the scaleFactor
 		that.vars.chart.series[index].yData.forEach((point, idx) => {
-			if (point > zeroPosition) {
+			if (point !== zeroPosition) {
 				that.vars.chart.series[index].yData[idx] =
-					zeroPosition + (point - zeroPosition) * (1 + scaleFactor);
-			} else if (point < zeroPosition) {
-				that.vars.chart.series[index].yData[idx] =
+					// some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
+					// to get an accurate percentage scaling
 					zeroPosition + (point - zeroPosition) * (1 + scaleFactor);
 			}
 		});
 
-		//TODO keeps track of the scaling operations so that if we switch windows
-		// the scaling persists
+		// code allowing the scaling to persist when you switch windows
 		if (that.vars.recordScalingFactors) {
+			// checks if the recordScalingFactors object has the current index in it
 			if (that.vars.scalingFactors.hasOwnProperty(index)) {
+				// if it does, we multiply the percentage in order to be able to scale upcoming screens with the same percentage
 				that.vars.scalingFactors[index] *= 1 + scaleFactor;
 			} else {
+				// if not we just add a new key value pair to the object
 				that.vars.scalingFactors[index] = 1 + scaleFactor;
 			}
 		}
 		console.log(that.vars.scalingFactors);
-
-		that.vars.chart.redraw();
 	},
 
-	_defaultAmplitude: function (index) {
+	_scaleAllToScreen: function () {
+		// scales all channels to the screen
+		var that = this;
+
+		that._defaultAmplitude
+		that.vars.allChannels.forEach((channel, idx) => {
+			that._scaleToScreen(idx);
+		});
+	},
+
+	//TODO: add scaling to screen
+	_scaleToScreen: function (index) {
+		var that = this;
+
+		// for each channel, we get the max/min values of the yData and check if it is above/below zeroPosition +/- 200,
+		const zeroPosition = that._getOffsetForChannelIndexPostScale(index);
+
+		const maxChannelData = that._getMaxChannelData(index) - zeroPosition;
+		const minChannelData = that._getMinChannelData(index) - zeroPosition;
+
+		const lowerBound = -200;
+		const upperBound = 200;
+
+		const percentageDifferenceUpper = that._getPercentDifference((maxChannelData), upperBound)
+		const percentageDifferenceLower = that._getPercentDifference((minChannelData), lowerBound);
+
+		// the absolute difference between the lowerBound and the min value
+		const absoluteLowerDifference = Math.abs(
+			Math.abs(lowerBound) - Math.abs(minChannelData)
+		);
+
+		// the absolute difference between the upperBound and the max value
+		const absoluteUpperDifference = Math.abs(
+			Math.abs(upperBound) - Math.abs(maxChannelData)
+		);
+
+		// console.log("====BEFORE=====")
+		// console.log("Channel: " + index);
+		// console.log("min: " + minChannelData);
+		// console.log("max : " + maxChannelData);
+		// console.log("maxChannelData -zeroPosition: " + (maxChannelData -zeroPosition));
+		// console.log("minChannelData -zeroPosition: " + (minChannelData - zeroPosition));
+		// console.log("zeroPosition: " + zeroPosition);
+		// console.log("lowerBound: " + lowerBound);
+		// console.log("upperBound: " + upperBound);
+		// console.log("absoluteLowerDifference: " + absoluteLowerDifference);
+		// console.log("absoluteUpperDifference: " + absoluteUpperDifference);
+		// console.log("percentageDifferenceUpper: " + percentageDifferenceUpper);
+		// console.log("percentageDifferenceLower: " + percentageDifferenceLower);
+
+		if (lowerBound > minChannelData || upperBound < maxChannelData) {
+			//checks if the data is not within the bounds, we scale the data down to "fit the screen"
+
+			if (lowerBound > minChannelData && upperBound < maxChannelData) {
+				// if both are out of bounds
+				// check which absolute difference is the greater
+				// value to get the percentage difference
+
+				if (absoluteLowerDifference > absoluteUpperDifference) {
+					// if the lowerdifference is greater, we scale the data by the percentage difference
+
+					that._customAmplitude(index, percentageDifferenceLower);
+					console.log('1')
+				} else {
+					// if the upperdifference is greater, we scale the data by the percentage difference
+			
+					that._customAmplitude(index, percentageDifferenceUpper);
+					console.log('2')
+				}
+			} else if (lowerBound > minChannelData && upperBound > maxChannelData) {
+				// if the min data is not within the lower bound
+				// we scale the data by the percentage difference
+				
+				that._customAmplitude(index, percentageDifferenceLower);
+				console.log('3')
+			} else if (lowerBound < minChannelData && upperBound < maxChannelData) {
+				// if the max data is not within the upper bound
+				// we scale the data by the percentage difference
+				
+				that._customAmplitude(index, percentageDifferenceUpper);
+				console.log('4')
+			}
+			
+		} else if (lowerBound < minChannelData || upperBound > maxChannelData) {
+			// checks if data is within bounds, but is not scaled enough to "fit the screen"
+			//TODO: add code to scale the data up to "fit the screen"
+
+			console.log("here");
+			if (lowerBound < minChannelData && upperBound > maxChannelData) {
+				// if both are too small
+				// check which absolute difference is the lesser
+				// value to get the percentage difference
+
+				if (absoluteLowerDifference > absoluteUpperDifference) {
+					that._customAmplitude(index, percentageDifferenceUpper);
+					console.log("5");
+				} else {
+					that._customAmplitude(index, percentageDifferenceLower);
+					console.log("6");
+				}
+			} else if (
+				lowerBound < minChannelData &&
+				upperBound < maxChannelData
+			) {
+				// if the min data is not within the lower bound
+				// we scale the data by the percentage difference
+
+				that._customAmplitude(index, percentageDifferenceLower);
+				console.log("7");
+			} else if (
+				lowerBound > minChannelData &&
+				upperBound > maxChannelData
+			) {
+				// if the max data is not within the upper bound
+				// we scale the data by the percentage difference
+
+				that._customAmplitude(index, percentageDifferenceUpper);
+				console.log("8");
+			}
+		}
+	},
+
+	_getPercentDifference: function (initialValue, finalValue) {
+		// gets the percentage difference between two values
+		return (
+			((finalValue - initialValue) / initialValue) *
+			100
+		);
+	},
+
+	_getMaxChannelData: function (index) {
+		//gets the largest data point in the channel
+		var that = this;
+		return Math.max(...that.vars.chart.series[index].yData);
+	},
+
+	_getMinChannelData: function (index) {
+		//gets the smallest data point in the channel
+		var that = this;
+		return Math.min(...that.vars.chart.series[index].yData);
+	},
+
+	_defaultAmplitude: function () {
+		// resets the amplitude to the default one by clearing all scalingFactors that were set when we scaled previously
+		// (if we used any scaling features before we store it in the scalingFactors variable)
 		var that = this;
 		if (that._isChannelSelected() === true) {
+			that.vars.scalingFactors = {}; // clears the scalingFactors object
+			that._reloadCurrentWindow(); // reloads the current window
+
+			// OLD CODE:
 			// // checks if a channel is selected
 			// channel = that.vars.allChannels[index];
 
@@ -5860,9 +6002,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			// 	name: channel.name,
 			// 	dataId: channel.dataId,
 			// };
-			// that.vars.reprint = 1;
-			that.vars.scalingFactors = {};
-			that._reloadCurrentWindow();
 		}
 	},
 
