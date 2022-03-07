@@ -460,6 +460,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		// initializing variables for future usage by the functions
 		var that = this;
 		that.vars = {
+			annotationClicks: {
+				clickOne: null,
+				clickTwo: null
+			},
 			recordScalingFactors: true,
 			scalingFactors: {},
 			uniqueClass: that._getUUID(),
@@ -1809,8 +1813,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				value: "box",
 			},
 			{
-				name: "Change Point Annotation",
+				name: "Change Point Annotation (Channel)",
 				value: "cpoint",
+			},
+			{
+				name: "Change Point Annotation (All)",
+				value: "cpointall",
 			}
 		);
 
@@ -3832,7 +3840,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		);
 
 		that.vars.recordScalingFactors = false;
-		console.log(that._objectIsEmpty(that.vars.scalingFactors));
 
 		// checks if the object is empty
 		if (!that._objectIsEmpty(that.vars.scalingFactors)) {
@@ -4064,7 +4071,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					},
 					//TODO: change how chart zooms, does not work well with annotations
 					//zoomType: "xy",
-					
+
 					resetZoomButton: {
 						position: {
 							align: "left",
@@ -4098,10 +4105,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						stickyTracking: true,
 						events: {
 							mouseOver: function (e) {
-							//	that._selectChannel(e.target.index);
+								//	that._selectChannel(e.target.index);
 							},
 							mouseOut: function (e) {
-							//	that._unselectChannels();
+								//	that._unselectChannels();
 							},
 						},
 						point: {
@@ -4398,11 +4405,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		$("> .blocker").remove();
 	},
 
+	//TODO: figure out how annotations work
 	_setupAnnotationInteraction: function () {
 		var that = this;
 		if (!that.vars.setupOn) {
 			that.vars.setupOn = true;
 		} else {
+			// checks if the file is configured to be read only
 			if (that.options.isReadOnly) return;
 			//   //console.log(that.options.features.order);
 			if (
@@ -4412,30 +4421,46 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				return;
 			var chart = that.vars.chart;
 			//    //console.log(chart);
+
+			// the container that the chart is in
 			var container = chart.container;
 
+
+			// drag function for box annotations.
 			function drag(e) {
 				var annotation,
+					//gets the  xy position of the mouse when you click
 					clickX = e.pageX - container.offsetLeft,
 					clickY = e.pageY - container.offsetTop;
 				if (
 					!chart.isInsidePlot(
+						// if the moust is not inside the plot when you click, gets the leftmost position of the chart
 						clickX - chart.plotLeft,
 						clickY - chart.plotTop
 					)
 				) {
 					return;
 				}
+
+				//links the mousemove event with the step function defined later on
 				Highcharts.addEvent(document, "mousemove", step);
+
+				//links the mouseup event with the step function defined later on
 				Highcharts.addEvent(document, "mouseup", drop);
 				var annotationId = undefined;
+
+				//gets the value of the mouse when you click on the graph
 				var clickXValue = that._convertPixelsToValue(clickX, "x");
 				var clickYValue = that._convertPixelsToValue(clickY, "y");
 				//  //console.log(clickXValue);
+
+				//gets the index of the channel that is being hovered over at the moment
 				var channelIndexStart = that._getChannelIndexFromY(clickYValue);
 				var channelIndices = [channelIndexStart];
 				var featureType = that.vars.activeFeatureType;
 
+
+				// adds an annotation box
 				annotation = that._addAnnotationBox(
 					annotationId,
 					clickXValue,
@@ -4443,6 +4468,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					featureType
 				);
 
+				// checks which channels that the annotation is over
 				function getAnnotationChannelIndices(e) {
 					var y = e.clientY - container.offsetTop,
 						dragYValue = that._convertPixelsToValue(y, "y"),
@@ -4453,6 +4479,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					return channelIndices;
 				}
 
+				// gets relevant annotation information about the annotation
 				function getAnnotationAttributes(e) {
 					var x = e.clientX - container.offsetLeft,
 						dx = x - clickX,
@@ -4482,6 +4509,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					};
 				}
 
+				// updates the annotation box with relevant channel indicies that it's selecting
 				function step(e) {
 					annotation.update(getAnnotationAttributes(e));
 					annotation.metadata.channelIndices =
@@ -4518,110 +4546,62 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				}
 			}
 
-			function drag3(e) {
-				var annotation,
-					clickX = e.pageX - container.offsetLeft,
-					clickY = e.pageY - container.offsetTop;
-				if (
-					!chart.isInsidePlot(
-						clickX - chart.plotLeft,
-						clickY - chart.plotTop
-					)
-				) {
-					return;
-				}
-				Highcharts.addEvent(document, "mousemove", step3);
-				Highcharts.addEvent(document, "mouseup", drop3);
+			function click(e){
+				if (that.vars.annotationClicks.clickOne === null) {
+					clickXOne = e.pageX - container.offsetLeft,
+					clickYOne = e.pageY - container.offsetTop;
 
-				var annotationId = undefined;
-				var clickXValue = that._convertPixelsToValue(clickX, "x");
-				that.vars.currentAnnotationTime = clickXValue;
-				var clickYValue = that._convertPixelsToValue(clickY, "y");
-				////console.log(clickXValue);
-				var channelIndexStart = that._getChannelIndexFromY(clickYValue);
-				var channelIndices = [channelIndexStart];
-				var featureType = that.vars.activeFeatureType;
-
-				annotation = that._addAnnotationChangePoint(
-					annotationId,
-					clickXValue,
-					channelIndices,
-					featureType
-				);
-
-				function getAnnotationChannelIndices3(e) {
-					var y = e.clientY - container.offsetTop,
-						dragYValue = that._convertPixelsToValue(y, "y"),
-						channelIndices = that._getChannelsAnnotated(
-							0,
-							that.vars.currentWindowData.channels.length *
-								that.options.graph.channelSpacing -
-								1
-						);
-					return channelIndices;
-				}
-
-				function getAnnotationAttributes3(e) {
-					var x = e.clientX - container.offsetLeft,
-						channelIndices = getAnnotationChannelIndices3(e),
-						{ height, yValue } =
-							that._getAnnotationBoxHeightAndYValueForChannelIndices(
-								channelIndices
-							);
-					// //console.log(height);
-					var xValue = that._convertPixelsToValue(clickX, "x");
-
-					return {
-						xValue: xValue,
-						yValue: yValue,
-						shape: {
-							params: {
-								width: 0.01,
-								height: 8000,
-							},
-						},
+					that.vars.annotationClicks.clickOne = {
+						clickX: clickXOne,
+						clickY: clickYOne
 					};
-				}
 
-				function step3(e) {
-					annotation.update(getAnnotationAttributes3(e));
-					annotation.metadata.channelIndices =
-						getAnnotationChannelIndices3(e);
-				}
+					console.log(that.vars.annotationClicks.clickOne);
+				} else if (that.vars.annotationClicks.clickTwo === null) {
 
-				function drop3(e) {
-					// //console.log("drop2");
-					Highcharts.removeEvent(document, "mousemove", step3);
-					Highcharts.removeEvent(document, "mouseup", drop3);
-					var x = e.clientX - container.offsetLeft;
+					clickXTwo = e.pageX - container.offsetLeft,
+					clickYTwo = e.pageY - container.offsetTop;
 
-					if (x == clickX) {
-						if (annotation && annotation.destroy) {
-							annotation.destroy();
-							$("html").off(
-								"mousedown",
-								annotation.outsideClickHandler
-							);
-						}
-						that.vars.chart.selectedAnnotation = null;
-
-						return;
-					}
-					if (annotation) {
-						annotation.update(getAnnotationAttributes3(e));
-					}
-					annotation.outsideClickHandler = function () {
-						////console.log("doing this");
-						annotation.destroy();
-						$("html").off(
-							"mousedown",
-							annotation.outsideClickHandler
-						);
-
-						that.vars.chart.selectedAnnotation = null;
+					that.vars.annotationClicks.clickTwo = {
+						clickX: clickXTwo,
+						clickY: clickYTwo
 					};
+
+					console.log(that.vars.annotationClicks.clickTwo);
+
+					var annotation = that._addAnnotationChangePoint()
+
+					that.vars.annotationClicks.clickOne = null;
+					that.vars.annotationClicks.clickTwo = null;
 				}
 			}
+ 
+			function clickAll(e) {
+				if (that.vars.annotationClicks.clickOne === null) {
+					(clickXOne = e.pageX - container.offsetLeft),
+
+					that.vars.annotationClicks.clickOne = {
+						clickX: clickXOne,
+					};
+
+					console.log(that.vars.annotationClicks.clickOne);
+				} else if (that.vars.annotationClicks.clickTwo === null) {
+					(clickXTwo = e.pageX - container.offsetLeft),
+
+					that.vars.annotationClicks.clickTwo = {
+						clickX: clickXTwo,
+					};
+
+
+					var annotation = that._addAnnotationChangePointAll();
+
+					that.vars.annotationClicks.clickOne = null;
+					that.vars.annotationClicks.clickTwo = null;
+					
+				}
+			}
+ 
+			
 			if (that.options.features.annotationType == "box") {
 				Highcharts.removeEvent(container, "mousedown");
 				Highcharts.addEvent(container, "mousedown", drag);
@@ -4630,9 +4610,584 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				Highcharts.removeEvent(container, "mousedown", drag3);
 			} else if (that.options.features.annotationType == "cpoint") {
 				Highcharts.removeEvent(container, "mousedown");
-				Highcharts.addEvent(container, "mousedown", drag3);
+				Highcharts.addEvent(container, "mousedown", click);
+			} else if (that.options.features.annotationType == "cpointall"){
+				Highcharts.removeEvent(container, "mousedown");
+				Highcharts.addEvent(container, "mousedown", clickAll);
 			}
 		}
+	},
+
+	_addAnnotationType: function (annotation){
+		var that = this;
+		// get the channels by name
+		console.log(annotation.metadata)
+		const channelIndices = annotation.metadata.channelIndices;
+		let channelLabels = [];
+
+
+
+		channelIndices.forEach((index) => {
+			console.log(annotation)
+			const channelName = that.vars.allChannels[index].name;
+
+			const currentLabel = that._getAnnotationLabel(channelName);
+
+			if (currentLabel && currentLabel.length !== 0) {
+				currentLabel.forEach((label) => {
+					if(!channelLabels.includes(label)){
+						channelLabels.push(label);
+					}
+				});
+			}
+			// console.log(channelName);
+			// channelLabels = [...channelLabels, that._getAnnotationLabel(channelName)];
+		})
+
+		console.log(channelLabels);
+		return channelLabels;
+	},
+
+	_getAnnotationLabel: function (channelName) {
+		var that = this
+		const currentMontage = that._getCurrentMontage()
+
+		if(that.options.features.annotationType === "box"){
+			switch(currentMontage){
+				case "PSG":
+
+					switch(channelName){
+					case"F4-A1":
+					case"C4-A1":
+					case"O2-A1":
+						return["Aro"];
+
+					case"LOC-A2":
+					case"ROC-A1":
+					case"Chin1-Chin2":
+					case"ECG":
+						return[];
+
+					case"Leg/L":
+					case"Leg/R":
+						return ["LM"];
+
+					case"Snore":
+					case"Airflow":
+					case"NasalPressure":
+					case"Thor":
+					case"Abdo":
+						return ["H1", "H2", "OA", "CA", "MA"];
+
+					case"SpO2":
+						return ["desat"];
+					}
+					break;
+
+				case "watchpath":
+					switch(channelName){
+						case "VIEW_PAT":
+						case "DERIVED_PAT_AMP":
+						case "DERIVED_HR":
+							return ["Aro"];
+
+						case "SAO2_WRIST":
+							return ["desat"];
+
+						case "ACTIGRAPH":
+						case "WRIST_STAGES":
+							return[];
+					}
+					break;
+
+				case "ANNE":
+					switch(channelName){
+						case "ECG":
+							return ["Arrhythmia"];
+
+						case "AcclPtch":
+						case "AcclRoll":
+						case "RespEffort":
+						case "PAT(ms)":
+						case "PAT_resp":
+						case "Snore":
+							return["Obs", "Cen", "Mix"];
+
+						case "SpO2(%)":
+							return ["desat"];
+
+						case "Pleth":
+						case "PAT_trend":
+						case "HR(bpm)":
+							return ["Aro"];
+
+						case "ChestTemp":
+						case "LimbTemp":
+							return[];
+					}
+					break;
+
+				case "MUSE":
+					switch(channelName){
+						case "eeg-ch1 - eeg-ch2":
+						case "eeg-ch4 - eeg-ch2":
+						case "eeg-ch1":
+						case "eeg-ch4":
+						case "eeg-ch1-eeg-ch4":
+						case "eeg-ch4-eeg-ch3":
+						case "eeg-ch2":
+						case "eeg-ch3":
+						case "acc-ch1":
+						case "acc-ch2":
+						case "acc-ch3":
+						case "ppg-ch2":
+							return [];
+					}
+
+					break;
+
+				case "Apnealink":
+					switch(channelName){
+						case "Flow":
+						case "Effort":
+						case "Snoring":
+							return ["Hyp", "Obs", "Cen", "Mix"];
+						case "Saturation":
+							return ["Desat"];
+						case "Pulse":
+							return ["Aro"];
+					}
+					break;
+
+				case "GENEActiv":
+					switch(channelName){
+						case "Temp":
+						case "light":
+						case "ENMO":
+						case "z-angle":
+							return ["Sleep Period" ,"Wake Period"];
+					}
+					break;
+
+				case "AX3":
+					switch(channelName){
+						case "Temp":
+						case "ENMO":
+						case "z-angle":
+							return ["Sleep Period" ,"Wake Period"];
+					}
+					break;
+
+				case "ANNE + PSG":
+				case "PSG + ANNE":
+					switch(channelName){
+						case "ECG":
+						case "AcclPtch":
+						case "AcclRoll":
+						case "RespEffort":
+						case "Snore":
+						case "ECG":
+						case "Thor":
+						case "Abdo":
+						case "Snore":
+						case "Chin1-Chin2":
+							return [];
+					}
+					break;
+
+				case "MUSE + PSG":
+				case "PSG + MUSE":
+					switch(channelName){
+						case "eeg-ch1 - eeg-ch2":
+						case "eeg-ch4 - eeg-ch2":
+						case "eeg-ch1":
+						case "eeg-ch4":
+						case "eeg-ch1-eeg-ch4":
+						case "eeg-ch4-eeg-ch3":
+						case "acc-ch1":
+						case "acc-ch2":
+						case "acc-ch3":
+						case "F4-A1":
+						case "C4-A1":
+						case "O2-A1":
+						case "LOC-A2":
+						case "ROC-A1":
+						case "Chin1-Chin2":
+							return[];
+
+					}
+					break;
+
+				case "GENEActiv + PSG":
+				case "PSG + GENEActiv":
+					switch(channelName){
+						case "light":
+						case "ENMO":
+						case "z-angle":
+						case "Chin1-Chin2":
+						case "Leg/L":
+						case "Leg/R":
+							return [];
+
+					}
+					break;
+
+				case "GENEActiv + Actical":
+				case "Actical + GENEActiv":
+					switch(channelName){
+						case "ENMO":
+						case "z-angle":
+						case "Counts":
+							return [];
+					}
+			}
+
+		}else if(that.options.features.annotationType === "cpoint"){
+			console.log("here")
+			console.log(currentMontage)
+			switch(currentMontage){
+				case "PSG":
+
+					switch(channelName){
+					case"F4-A1":
+					case"C4-A1":
+					case"O2-A1":
+					case"LOC-A2":
+					case"ROC-A1":
+					case"Chin1-Chin2":
+					case"ECG":
+					case"Leg/L":
+					case"Leg/R":
+					case"Snore":
+					case"Airflow":
+					case"NasalPressure":
+					case"Thor":
+					case"Abdo":
+					case"SpO2":
+						return ["ok", "artif"];
+					}
+					break;
+
+				case "watchpath":
+					switch(channelName){
+						case "VIEW_PAT":
+						case "DERIVED_PAT_AMP":
+						case "DERIVED_HR":
+						case "SAO2_WRIST":
+						case "ACTIGRAPH":
+							return ["ok", "artif"];
+						case "WRIST_STAGES":
+							return[];
+					}
+					break;
+
+				case "ANNE":
+					switch(channelName){
+						case "ECG":
+						case "AcclPtch":
+						case "AcclRoll":
+						case "RespEffort":
+						case "PAT(ms)":
+						case "PAT_resp":
+						case "Snore":
+						case "SpO2(%)":
+						case "Pleth":
+						case "PAT_trend":
+						case "HR(bpm)":
+						case "ChestTemp":
+						case "LimbTemp":
+							return["ok", "artif"];
+					}
+					break;
+
+				case "MUSE":
+					switch(channelName){
+						case "eeg-ch1 - eeg-ch2":
+						case "eeg-ch4 - eeg-ch2":
+						case "eeg-ch1":
+						case "eeg-ch4":
+						case "eeg-ch1-eeg-ch4":
+						case "eeg-ch4-eeg-ch3":
+						case "eeg-ch2":
+						case "eeg-ch3":
+						case "acc-ch1":
+						case "acc-ch2":
+						case "acc-ch3":
+						case "ppg-ch2":
+							return["ok", "artif"];
+
+					}
+
+					break;
+
+				case "Apnealink":
+					switch(channelName){
+						case "Flow":
+						case "Effort":
+						case "Snoring":
+						case "Saturation":
+						case "Pulse":
+							return ["ok", "artif"];
+					}
+					break;
+
+				case "GENEActiv":
+					switch(channelName){
+						case "Temp":
+						case "light":
+						case "ENMO":
+						case "z-angle":
+							return [];
+					}
+					break;
+
+				case "AX3":
+					switch(channelName){
+						case "Temp":
+						case "ENMO":
+						case "z-angle":
+							return [];
+					}
+					break;
+
+				case "ANNE + PSG":
+				case "PSG + ANNE":
+					switch(channelName){
+						case "ECG":
+						case "AcclPtch":
+						case "AcclRoll":
+						case "RespEffort":
+						case "Snore":
+						case "ECG":
+						case "Thor":
+						case "Abdo":
+						case "Snore":
+						case "Chin1-Chin2":
+							return [];
+					}
+					break;
+
+				case "MUSE + PSG":
+				case "PSG + MUSE":
+					switch(channelName){
+						case "eeg-ch1 - eeg-ch2":
+						case "eeg-ch4 - eeg-ch2":
+						case "eeg-ch1":
+						case "eeg-ch4":
+						case "eeg-ch1-eeg-ch4":
+						case "eeg-ch4-eeg-ch3":
+						case "acc-ch1":
+						case "acc-ch2":
+						case "acc-ch3":
+						case "F4-A1":
+						case "C4-A1":
+						case "O2-A1":
+						case "LOC-A2":
+						case "ROC-A1":
+						case "Chin1-Chin2":
+							return[];
+
+					}
+					break;
+
+				case "GENEActiv + PSG":
+				case "PSG + GENEActiv":
+					switch(channelName){
+						case "light":
+						case "ENMO":
+						case "z-angle":
+						case "Chin1-Chin2":
+						case "Leg/L":
+						case "Leg/R":
+							return [];
+
+					}
+					break;
+
+				case "GENEActiv + Actical":
+				case "Actical + GENEActiv":
+					switch(channelName){
+						case "ENMO":
+						case "z-angle":
+						case "Counts":
+							return [];
+					}
+			}
+		}else if(that.options.features.annotationType === "cpointall"){
+				switch(currentMontage){
+				case "PSG":
+
+					switch(channelName){
+					case"F4-A1":
+					case"C4-A1":
+					case"O2-A1":
+					case"LOC-A2":
+					case"ROC-A1":
+					case"Chin1-Chin2":
+					case"ECG":
+					case"Leg/L":
+					case"Leg/R":
+					case"Snore":
+					case"Airflow":
+					case"NasalPressure":
+					case"Thor":
+					case"Abdo":
+					case"SpO2":
+						return ["W", "N1", "N2", "N3", "artif"];
+					}
+					break;
+
+				case "watchpath":
+					switch(channelName){
+						case "VIEW_PAT":
+						case "DERIVED_PAT_AMP":
+						case "DERIVED_HR":
+						case "SAO2_WRIST":
+						case "ACTIGRAPH":
+						case "WRIST_STAGES":
+							return["Sleep", "Wake", "Artif"];
+					}
+					break;
+
+				case "ANNE":
+					switch(channelName){
+						case "ECG":
+						case "AcclPtch":
+						case "AcclRoll":
+						case "RespEffort":
+						case "PAT(ms)":
+						case "PAT_resp":
+						case "Snore":
+						case "SpO2(%)":
+						case "Pleth":
+						case "PAT_trend":
+						case "HR(bpm)":
+						case "ChestTemp":
+						case "LimbTemp":
+							return ["Sleep", "Wake", "Artif"];
+					}
+					break;
+
+				case "MUSE":
+					switch(channelName){
+						case "eeg-ch1 - eeg-ch2":
+						case "eeg-ch4 - eeg-ch2":
+						case "eeg-ch1":
+						case "eeg-ch4":
+						case "eeg-ch1-eeg-ch4":
+						case "eeg-ch4-eeg-ch3":
+						case "eeg-ch2":
+						case "eeg-ch3":
+						case "acc-ch1":
+						case "acc-ch2":
+						case "acc-ch3":
+						case "ppg-ch2":
+							return ["W", "N1", "N2", "N3", "artif"];
+
+					}
+
+					break;
+
+				case "Apnealink":
+					switch(channelName){
+						case "Flow":
+						case "Effort":
+						case "Snoring":
+						case "Saturation":
+						case "Pulse":
+							return [];
+					}
+					break;
+
+				case "GENEActiv":
+					switch(channelName){
+						case "Temp":
+						case "light":
+						case "ENMO":
+						case "z-angle":
+							return ["Wear", "Nonwear"];
+					}
+					break;
+
+				case "AX3":
+					switch(channelName){
+						case "Temp":
+						case "ENMO":
+						case "z-angle":
+							return ["Wear", "Nonwear"];
+					}
+					break;
+
+				case "ANNE + PSG":
+				case "PSG + ANNE":
+					switch(channelName){
+						case "ECG":
+						case "AcclPtch":
+						case "AcclRoll":
+						case "RespEffort":
+						case "Snore":
+						case "ECG":
+						case "Thor":
+						case "Abdo":
+						case "Snore":
+						case "Chin1-Chin2":
+							return [];
+					}
+					break;
+
+				case "MUSE + PSG":
+				case "PSG + MUSE":
+					switch(channelName){
+						case "eeg-ch1 - eeg-ch2":
+						case "eeg-ch4 - eeg-ch2":
+						case "eeg-ch1":
+						case "eeg-ch4":
+						case "eeg-ch1-eeg-ch4":
+						case "eeg-ch4-eeg-ch3":
+						case "acc-ch1":
+						case "acc-ch2":
+						case "acc-ch3":
+						case "F4-A1":
+						case "C4-A1":
+						case "O2-A1":
+						case "LOC-A2":
+						case "ROC-A1":
+						case "Chin1-Chin2":
+							return[];
+
+					}
+					break;
+
+				case "GENEActiv + PSG":
+				case "PSG + GENEActiv":
+					switch(channelName){
+						case "light":
+						case "ENMO":
+						case "z-angle":
+						case "Chin1-Chin2":
+						case "Leg/L":
+						case "Leg/R":
+							return [];
+
+					}
+					break;
+
+				case "GENEActiv + Actical":
+				case "Actical + GENEActiv":
+					switch(channelName){
+						case "ENMO":
+						case "z-angle":
+						case "Counts":
+							return [];
+					}
+			}
+		}
+	},
+
+	_getCurrentMontage: function () {
+		var that = this;
+
+		return that.vars.currentMontage;
 	},
 
 	_getAnnotationBoxHeightAndYValueForChannelIndices: function (
@@ -4643,12 +5198,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (!Array.isArray(channelIndices)) {
 			channelIndices = [channelIndices];
 		}
+
+		//gets the minimum and maximum channel indicies
 		var channelIndexMin = Math.min(...channelIndices);
 		var channelIndexMax = Math.max(...channelIndices);
+
+
 		var height =
 			(Math.abs(channelIndexMax - channelIndexMin) + 1) *
 			that.options.graph.channelSpacing;
 		var yValue = that._getBorderTopForChannelIndex(channelIndexMin);
+
 		return {
 			height,
 			yValue,
@@ -4668,269 +5228,92 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	},
 
 	_addAnnotationChangePoint: function (
-		annotationId,
-		timeStart,
-		channelIndices,
-		featureType,
-		timeEnd,
-		confidence,
-		comment,
-		annotationData
+		// annotationId,
+		// timeStart,
+		// channelIndices,
+		// featureType,
+		// timeEnd,
+		// confidence,
+		// comment,
+		// annotationData
 	) {
-		/*var that = this;
-        var annotations = that.vars.chart.annotations.allItems;
-        if (!Array.isArray(channelIndices)) {
-            channelIndices = [channelIndices];
-        }
-        if (annotations.some(a => 
-                a.metadata.id == annotationId
-                && (
-                    a.metadata.channelIndices == channelIndices
-                    || channelIndices.length == 1 && a.metadata.channelIndices.indexOf(channelIndices[0]) > -1
-                )
-            )
-        ) {
-            return;
-        }
-        var annotationData = annotationData !== undefined ? annotationData : {};
-        var { height, yValue } = that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
-        var shapeParams = {
-            height: height,
-        }
-        shapeParams.width = 10;
-        shapeParams.fill = 'blue';
-        //shapeParams.stroke = that._getFeatureColor(featureType, annotationData.is_answer);
-        shapeParams.strokeWidth = 0;
-        that.vars.chart.addAnnotation({
-            xValue: timeStart,
-            yValue: yValue,
-           // allowDragX: preliminary,
-            allowDragY: false,
-            anchorX: 'left',
-            anchorY: 'top',
-            shape: {
-                type: 'rect',
-                units: 'values',
-                params: shapeParams,
-            },
-            events: {
-                mouseup: function(event) {
-                    $(this.group.element).find('rect[shape-rendering="crispEdges"]').last().remove();
-                },
-                dblclick: function(event) {
-                    if (that.options.isReadOnly) return;
-                    if (annotationData.is_answer) return;
-                    event.preventDefault();
-                    var xMinFixed = that._getAnnotationXMinFixed(this);
-                    var xMaxFixed = that._getAnnotationXMaxFixed(this);
-                    var annotationId = annotation.metadata.id;
-                    var channelIndices = annotation.metadata.channelIndices;
-                    var channelsDisplayed = that._getChannelsDisplayed();
-                    if (annotation.metadata.originalData) {
-                        channelIndices = annotation.metadata.originalData.channels;
-                        channelsDisplayed = annotation.metadata.originalData.channels_displayed;
-                    }
-                    that._deleteAnnotation(annotationId, that.vars.currentWindowRecording, xMinFixed, xMaxFixed, channelIndices, channelsDisplayed);
-                    annotations.slice().reverse().filter(a => a.metadata.id == annotationId).forEach(a => {
-                        a.destroy();
-                        that.vars.chart.selectedAnnotation = null;
-                    });
-                }
-            }
-        });
-        var annotation = annotations[annotations.length - 1];
-       // var classString = $(annotation.group.element).attr('class');
-       // classString += ' saved';
-        //$(annotation.group.element).attr('class', classString);
-        //$(annotation.group.element).on('mousedown', function(event) {
-       //     event.stopPropagation();
-      //  });
-        annotation.metadata = {
-            id: annotationId,
-            //featureType: featureType,
-            channelIndices: channelIndices,
-            comment: ''
-        }
-        //if (!preliminary) {
-           // annotation.metadata.confidence = confidence;
-            annotation.metadata.comment = "Comment";
-            annotation.metadata.originalData = annotationData;
-       // }
-       /*
-        if (!that.options.isReadOnly && !annotationData.is_answer) {
-            that._addConfidenceLevelButtonsToAnnotationBox(annotation);
-            if (!preliminary) {
-                that._addCommentFormToAnnotationBox(annotation);
-            }
-        }
-        //
-       //console.log(annotation.metadata);
-        return annotation;
 
-*/
-
-		////console.log("anotater");
 		var that = this;
-		var annotations = that.vars.chart.annotations.allItems;
 
-		//console.log(annotations);
-		if (!Array.isArray(channelIndices)) {
-			channelIndices = [channelIndices];
-		}
-		if (
-			annotations.some(
-				(a) =>
-					a.metadata.id == annotationId &&
-					(a.metadata.channelIndices == channelIndices ||
-						(channelIndices.length == 1 &&
-							a.metadata.channelIndices.indexOf(
-								channelIndices[0]
-							) > -1))
-			)
-		) {
-			return;
-		}
-		//console.log("returncrossedhere");
-		var timeEnd = timeEnd !== undefined ? timeEnd : false;
-		var annotationData = annotationData !== undefined ? annotationData : {};
-		var preliminary = timeEnd === false;
-		var { height, yValue } =
-			that._getAnnotationBoxHeightAndYValueForChannelIndices(
-				channelIndices
-			);
-		var shapeParams = {
-			height: height,
-		};
-		if (preliminary) {
-			////console.log("BOM");
-			shapeParams.width = 0;
-			shapeParams.fill = "blue";
-			shapeParams.stroke = "blue"; //that._getFeatureColor(featureType, annotationData.is_answer);
-			shapeParams.strokeWidth = 100;
-		} else {
-			shapeParams.width = 200;
-			shapeParams.fill = "blue";
-			// shapeParams.fill = that._getFeatureColor(featureType, annotationData.is_answer, confidence);
-			shapeParams.stroke = "blue";
-			shapeParams.strokeWidth = 0;
-		}
-		that.vars.chart.addAnnotation({
-			xValue: timeStart,
-			yValue: yValue,
-			allowDragX: preliminary,
-			allowDragY: false,
-			anchorX: "left",
-			anchorY: "top",
-			title: that.vars.currType,
-			shape: {
-				type: "rect",
-				units: "values",
-				parms: shapeParams,
-			},
-			labelOptions: {
-				shape: "connector",
-				align: "right",
-				justify: false,
-				crop: true,
-				style: {
-					fontSize: "0.8em",
-					textOutline: "1px white",
-				},
-				params: shapeParams,
-				label: {
-					text: "label",
-					width: 22,
-					xAxis: 0,
-					yAxis: 0,
-					x: timeStart,
-					y: yValue,
-				},
-			},
+		const clickXOne = that.vars.annotationClicks.clickOne.clickX;
+		const clickYOne = that.vars.annotationClicks.clickOne.clickY;
+		
+		const clickXTwo = that.vars.annotationClicks.clickTwo.clickX;
+		const clickYTwo = that.vars.annotationClicks.clickTwo.clickY;
 
-			events: {
-				mouseup: function (event) {
-					$(this.group.element)
-						.find('rect[shape-rendering="crispEdges"]')
-						.last()
-						.remove();
-				},
-				dblclick: function (event) {
-					if (that.options.isReadOnly) return;
-					if (annotationData.is_answer) return;
-					event.preventDefault();
-					var xMinFixed = that._getAnnotationXMinFixed(this);
-					var xMaxFixed = that._getAnnotationXMaxFixed(this);
-					var annotationId = annotation.metadata.id;
-					var channelIndices = annotation.metadata.channelIndices;
-					var channelsDisplayed = that._getChannelsDisplayed();
-					if (annotation.metadata.originalData) {
-						channelIndices =
-							annotation.metadata.originalData.channels;
-						channelsDisplayed =
-							annotation.metadata.originalData.channels_displayed;
-					}
-					that._deleteAnnotation(
-						annotationId,
-						that.vars.currentWindowRecording,
-						xMinFixed,
-						xMaxFixed,
-						channelIndices,
-						channelsDisplayed
-					);
-					annotations
-						.slice()
-						.reverse()
-						.filter((a) => a.metadata.id == annotationId)
-						.forEach((a) => {
-							a.destroy();
-							that.vars.chart.selectedAnnotation = null;
-						});
-				},
-			},
-		});
-		var annotation = annotations[annotations.length - 1];
-		if (!preliminary) {
-			// //console.log("inside this");
-			var classString = $(annotation.group.element).attr("class");
-			classString += " saved";
-			$(annotation.group.element).attr("class", classString);
-		}
-		$(annotation.group.element).on("mousedown", function (event) {
-			event.stopPropagation();
-		});
-		////console.log(featureType);
-		annotation.metadata = {
-			id: annotationId,
-			featureType: featureType,
-			channelIndices: channelIndices,
-			comment: "",
-		};
+		const clickXOneValue = that._convertPixelsToValue(clickXOne, "x");
+		const clickYOneValue = that._convertPixelsToValue(clickYOne, "y");
 
-		////console.log(annotation);
-		if (!preliminary) {
-			//annotation.metadata.confidence = confidence;
-			annotation.metadata.comment = comment;
-			annotation.metadata.originalData = annotationData;
-		}
+		const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
+		const clickYTwoValue = that._convertPixelsToValue(clickYTwo, "y");
 
-		if (!that.options.isReadOnly && !annotationData.is_answer) {
-			// that._addConfidenceLevelButtonsToAnnotationBox(annotation);
+		console.log(clickXOneValue, clickYOneValue, clickXTwoValue, clickYTwoValue);
 
-			if (!preliminary) {
-				that._addCommentFormToAnnotationBox(annotation);
-			}
-			that._saveFeatureAnnotation(annotation);
+		const channelIndex = that._getChannelIndexFromY(clickYOneValue);
+		console.log(that.vars.allChannels[channelIndex].name);
+		const featureType = that.vars.activeFeatureType;
 
-			$("html").off("mousedown", annotation.outsideClickHandler);
-			var classString = $(annotation.group.element).attr("class");
-			classString += " saved";
-			$(annotation.group.element).attr("class", classString);
-		}
+		console.log("channel selected: " + channelIndex)
+		console.log("feature type: " + featureType)
 
-		////console.log("postTimeOut")
-		////console.log(annotation);
+		const annotationId = undefined;
+
+		var annotation = that._addAnnotationBox(
+			annotationId,
+			clickXOneValue,
+			[channelIndex],
+			featureType,
+			clickXTwoValue,
+		);
+
+		that._addCommentFormToAnnotationBox(annotation);
+
 		return annotation;
 	},
+
+	_addAnnotationChangePointAll: function (
+	
+	) {
+
+		var that = this;
+
+		const clickXOne = that.vars.annotationClicks.clickOne.clickX;
+		const clickXTwo = that.vars.annotationClicks.clickTwo.clickX;
+
+		const clickXOneValue = that._convertPixelsToValue(clickXOne, "x");
+		const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
+
+		console.log(clickXOneValue, clickXTwoValue, );
+
+		const channelIndicies = [];
+
+		for(let i = 0; i < that.vars.allChannels.length; i++){
+			channelIndicies.push(i);
+		}
+
+		const featureType = that.vars.activeFeatureType;
+	
+		const annotationId = undefined;
+
+		var annotation = that._addAnnotationBox(
+			annotationId,
+			clickXOneValue,
+			channelIndicies,
+			featureType,
+			clickXTwoValue,
+		);
+
+		that._addCommentFormToAnnotationBox(annotation);
+
+		return annotation;
+	},
+
+	//TODO: some bug here
 	_addAnnotationBox: function (
 		annotationId,
 		timeStart,
@@ -4941,15 +5324,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		comment,
 		annotationData
 	) {
+
 		var that = this;
 		// //console.log("anotater");
+		// gets all the annotations
 		var annotations = that.vars.chart.annotations.allItems;
 		////console.log(annotations);
+
+		// makes the channelIndicies an array
 		if (!Array.isArray(channelIndices)) {
 			channelIndices = [channelIndices];
 		}
 		if (
 			annotations.some(
+				// checks if the annotation already exists
 				(a) =>
 					a.metadata.id == annotationId &&
 					(a.metadata.channelIndices == channelIndices ||
@@ -4961,23 +5349,37 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		) {
 			return;
 		}
+
+		// sets timeEnd to the end time if it is defined 
 		var timeEnd = timeEnd !== undefined ? timeEnd : false;
+
+		// gets the annotation data if the annotationData is defined 
 		var annotationData = annotationData !== undefined ? annotationData : {};
+
+		// checks if there is a timeEnd value
 		var preliminary = timeEnd === false;
+
+		//gets the height and yvalues
 		var { height, yValue } =
 			that._getAnnotationBoxHeightAndYValueForChannelIndices(
 				channelIndices
 			);
+
 		var shapeParams = {
-			height: height,
+			height: height, //thje height of the annotation box
 		};
+
+		// if there is a timeEnd value
 		if (preliminary) {
+		
 			shapeParams.width = 0;
 			shapeParams.fill = "transparent";
+
 			shapeParams.stroke = that._getFeatureColor(
 				featureType,
 				annotationData.is_answer
 			);
+
 			shapeParams.strokeWidth = 10;
 		} else {
 			shapeParams.width = timeEnd - timeStart;
@@ -4990,6 +5392,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			shapeParams.strokeWidth = 0;
 		}
 
+		//adds the annotation box to the chart
 		that.vars.chart.addAnnotation({
 			xValue: timeStart,
 			yValue: yValue,
@@ -5010,7 +5413,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						.last()
 						.remove();
 				},
-				dblclick: function (event) {
+				dblclick: function (event) { // deletes the annotation on db click
 					if (that.options.isReadOnly) return;
 					if (annotationData.is_answer) return;
 					event.preventDefault();
@@ -5045,6 +5448,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			},
 		});
 
+		// gets the last annotaion
 		var annotation = annotations[annotations.length - 1];
 		if (!preliminary) {
 			var classString = $(annotation.group.element).attr("class");
@@ -5182,6 +5586,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		annotationElement.append(htmlContext);
 	},
 
+	// sets up the GUI for the comment form for the annotations 
 	_addStageButtonsToAnnotationBox: function (annotation) {
 		var that = this;
 		var annotations = that.vars.chart.annotations.allItems;
@@ -5288,13 +5693,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		htmlContext.append(body);
 		annotationElement.append(htmlContext);
 	},
+
+	//TODO: adds a comment form
 	_addCommentFormToAnnotationBox: function (annotation) {
 		if (annotation.metadata.commentFormAdded) {
 			return;
 		}
+
 		var that = this;
 		var annotations = that.vars.chart.annotations.allItems;
+	
+		console.log(annotations)
 		var annotationElement = $(annotation.group.element);
+	
 		// To learn more about the foreignObject tag, see:
 		// https://developer.mozilla.org/en/docs/Web/SVG/Element/foreignObject
 		var htmlContext = $(
@@ -5304,9 +5715,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			)
 		);
 		htmlContext
+		
 			.attr({
 				width: 250,
-				height: 25,
+				height: 50,
 				x: 0,
 				y: 20,
 				zIndex: 2,
@@ -5324,11 +5736,62 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			.addClass("toolbar comment")
 			.attr("xmlns", "http://www.w3.org/1999/xhtml");
 		var form = $("<form>");
+
+		//add styling to the form
+		form.css({
+			width: "75%",
+			height: "75%",
+		})
+
 		var toggleButton = $(
 			'<button type="submit" class="btn btn-primary fa fa-comment"></button>'
 		);
+
+
+	
+		//gets all the relevant labels based on annotation type
+		const channelLabels = that._addAnnotationType(annotation);
+
+
+		//create a select element using Jquery
+		var annotationLabelSelector = $('<select class="form-control">');
+		//add the options to the select element
+
+		channelLabels.forEach((label) => {
+			annotationLabelSelector.append(
+				$('<option value="' + label + '">' + label + '</option>')
+			);
+		});
+
+		//add margin top and bottom
+		annotationLabelSelector.css({
+			width: "100%",
+			height: "100%",
+			marginTop: "0.2rem",
+			marginBottom: "0.2rem",
+		});
+		
+		//TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one 
+
+
 		form.append(toggleButton);
+		//add selector to form
+		form.append(annotationLabelSelector);
+
 		var comment = annotation.metadata.comment;
+
+		if (comment === undefined){
+			comment = " ";
+		}
+
+		//TODO: add annotation label handling
+		var label = annotation.metadata.label;
+
+		//make the selector show the current label if it exists
+		if (label) {
+			annotationLabelSelector.val(label);
+		}
+
 		var input = $(
 			'<input type="text" placeholder="Your comment..." value="' +
 				comment +
@@ -5348,14 +5811,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				toggleButton.removeClass("fa-floppy-o").addClass("fa-comment");
 				input.hide();
 				var comment = input.val();
+				var label = annotationLabelSelector.val();
 				toggleButton.focus();
 				annotations
 					.filter((a) => a.metadata.id == annotation.metadata.id)
 					.forEach((a) => {
 						a.metadata.comment = comment;
+						a.metadata.label = label;
 						$(a.group.element)
 							.find(".toolbar.comment input")
 							.val(comment);
+
+						//gets the label from the form selector
+						$(a.group.element)
+							.find('.form-control')
+							.val(label);
 					});
 				that._saveFeatureAnnotation(annotation);
 			}
@@ -5378,6 +5848,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var comment = annotation.metadata.comment;
 		var rationale = undefined;
 		var metadata = {};
+		//TODO: add label handling
+		var label = annotation.metadata.label;
+
 		if (that._isHITModeEnabled()) {
 			metadata = {
 				visibleRegion: that.options.visibleRegion,
@@ -5399,6 +5872,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			confidence,
 			comment,
 			metadata,
+			label,
 			rationale,
 			function (savedAnnotation, error) {
 				if (savedAnnotation) {
@@ -5672,8 +6146,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			that._renderAmplitudeAdjustmentMenu(that.vars.selectedChannelIndex);
 			const channelName =
 				this.vars.currentWindowData.channels[index].name;
-			console.log(channelName);
-			console.log(that.vars.chart.series[that.vars.selectedChannelIndex]);
 		}
 	},
 
@@ -5758,7 +6230,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					that._scaleAllToScreen();
 					that.vars.chart.redraw(); //redraws the chart with the scaled data
 				});
-			
 		}
 	},
 
@@ -5839,20 +6310,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				that.vars.scalingFactors[index] = 1 + scaleFactor;
 			}
 		}
-		console.log(that.vars.scalingFactors);
 	},
 
 	_scaleAllToScreen: function () {
 		// scales all channels to the screen
 		var that = this;
 
-		that._defaultAmplitude
+		that._defaultAmplitude;
 		that.vars.allChannels.forEach((channel, idx) => {
 			that._scaleToScreen(idx);
 		});
 	},
 
-	//TODO: add scaling to screen
+
 	_scaleToScreen: function (index) {
 		var that = this;
 
@@ -5865,8 +6335,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		const lowerBound = -200;
 		const upperBound = 200;
 
-		const percentageDifferenceUpper = that._getPercentDifference((maxChannelData), upperBound)
-		const percentageDifferenceLower = that._getPercentDifference((minChannelData), lowerBound);
+		const percentageDifferenceUpper = that._getPercentDifference(
+			maxChannelData,
+			upperBound
+		);
+		const percentageDifferenceLower = that._getPercentDifference(
+			minChannelData,
+			lowerBound
+		);
 
 		// the absolute difference between the lowerBound and the min value
 		const absoluteLowerDifference = Math.abs(
@@ -5904,31 +6380,35 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					// if the lowerdifference is greater, we scale the data by the percentage difference
 
 					that._customAmplitude(index, percentageDifferenceLower);
-					console.log('1')
+					console.log("1");
 				} else {
 					// if the upperdifference is greater, we scale the data by the percentage difference
-			
+
 					that._customAmplitude(index, percentageDifferenceUpper);
-					console.log('2')
+					console.log("2");
 				}
-			} else if (lowerBound > minChannelData && upperBound > maxChannelData) {
+			} else if (
+				lowerBound > minChannelData &&
+				upperBound > maxChannelData
+			) {
 				// if the min data is not within the lower bound
 				// we scale the data by the percentage difference
-				
+
 				that._customAmplitude(index, percentageDifferenceLower);
-				console.log('3')
-			} else if (lowerBound < minChannelData && upperBound < maxChannelData) {
+				console.log("3");
+			} else if (
+				lowerBound < minChannelData &&
+				upperBound < maxChannelData
+			) {
 				// if the max data is not within the upper bound
 				// we scale the data by the percentage difference
-				
+
 				that._customAmplitude(index, percentageDifferenceUpper);
-				console.log('4')
+				console.log("4");
 			}
-			
 		} else if (lowerBound < minChannelData || upperBound > maxChannelData) {
 			// checks if data is within bounds, but is not scaled enough to "fit the screen"
-			//TODO: add code to scale the data up to "fit the screen"
-
+			
 			console.log("here");
 			if (lowerBound < minChannelData && upperBound > maxChannelData) {
 				// if both are too small
@@ -5966,10 +6446,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 	_getPercentDifference: function (initialValue, finalValue) {
 		// gets the percentage difference between two values
-		return (
-			((finalValue - initialValue) / initialValue) *
-			100
-		);
+		return ((finalValue - initialValue) / initialValue) * 100;
 	},
 
 	_getMaxChannelData: function (index) {
@@ -6963,6 +7440,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		confidence,
 		comment,
 		metadata,
+		label,
 		rationale,
 		callback
 	) {
@@ -6974,10 +7452,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (channels && !channels.length) {
 			channels = [channels];
 		}
-		//    //console.log(metadata);
+		console.log(metadata);
 		const context = that.options.context;
-		//  //console.log(annotationId);
-		if (!annotationId) {
+		console.log(annotationId);
+		if (!annotationId || !Annotations.findOne(annotationId)) {
 			// //console.log("nZ");
 			var graph = $(".graph");
 			var annotationDocument = {
@@ -7029,6 +7507,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			that._updateMarkAssignmentAsCompletedButtonState();
 			updateCache(annotationDocument);
 		} else {
+			console.log("here");
+
+			console.log("annotationId: " + annotationId);
+			console.log("recording_name: " + recording_name);
+			console.log("type: " + type);
+			console.log("start: " + start);
+			console.log("end: " + end);
+			console.log("channels: " + channels);
+			console.log("confidence: " + confidence);
+			console.log("comment: " + comment);
+			console.log("metadata: " + metadata);
+			console.log("label: " + label);
+			console.log("rationale: " + rationale);
+
 			const annotationModifier = {
 				"value.label": type,
 				"value.confidence": confidence,
@@ -7036,6 +7528,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				rationale: rationale,
 			};
 			that._addArbitrationInformationToObject(annotationModifier);
+			//TODO: BUG HERE - if the with regards to id
 			Annotations.update(
 				annotationId,
 				{ $set: annotationModifier },
@@ -7049,7 +7542,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						return;
 					}
 					var annotationDocument = Annotations.findOne(annotationId);
-					//  //console.log(annotationDocument);
+					console.log(annotationDocument);
 					annotationDocument.id = annotationDocument._id;
 					updateCache(annotationDocument);
 				}
