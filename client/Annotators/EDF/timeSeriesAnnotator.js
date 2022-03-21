@@ -462,7 +462,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		that.vars = {
 			annotationClicks: {
 				clickOne: null,
-				clickTwo: null
+				clickTwo: null,
 			},
 			recordScalingFactors: true,
 			scalingFactors: {},
@@ -4412,7 +4412,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			that.vars.setupOn = true;
 		} else {
 			// checks if the file is configured to be read only
-			if (that.options.isReadOnly) return;
+			if (that.options.isReadOnly) {
+				console.log("files is read only");
+				return;
+			}
 			//   //console.log(that.options.features.order);
 			if (
 				!that.options.features.order ||
@@ -4425,9 +4428,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			// the container that the chart is in
 			var container = chart.container;
 
-
 			// drag function for box annotations.
 			function drag(e) {
+				console.log("drag");
 				var annotation,
 					//gets the  xy position of the mouse when you click
 					clickX = e.pageX - container.offsetLeft,
@@ -4458,7 +4461,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				var channelIndexStart = that._getChannelIndexFromY(clickYValue);
 				var channelIndices = [channelIndexStart];
 				var featureType = that.vars.activeFeatureType;
-
 
 				// adds an annotation box
 				annotation = that._addAnnotationBox(
@@ -4546,62 +4548,56 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				}
 			}
 
-			function click(e){
-				if (that.vars.annotationClicks.clickOne === null) {
-					clickXOne = e.pageX - container.offsetLeft,
-					clickYOne = e.pageY - container.offsetTop;
-
-					that.vars.annotationClicks.clickOne = {
-						clickX: clickXOne,
-						clickY: clickYOne
-					};
-
-					console.log(that.vars.annotationClicks.clickOne);
-				} else if (that.vars.annotationClicks.clickTwo === null) {
-
-					clickXTwo = e.pageX - container.offsetLeft,
-					clickYTwo = e.pageY - container.offsetTop;
-
-					that.vars.annotationClicks.clickTwo = {
-						clickX: clickXTwo,
-						clickY: clickYTwo
-					};
-
-					console.log(that.vars.annotationClicks.clickTwo);
-
-					var annotation = that._addAnnotationChangePoint()
-
-					that.vars.annotationClicks.clickOne = null;
-					that.vars.annotationClicks.clickTwo = null;
-				}
-			}
- 
-			function clickAll(e) {
+			function click(e) {
 				if (that.vars.annotationClicks.clickOne === null) {
 					(clickXOne = e.pageX - container.offsetLeft),
+						(clickYOne = e.pageY - container.offsetTop);
 
 					that.vars.annotationClicks.clickOne = {
 						clickX: clickXOne,
+						clickY: clickYOne,
 					};
 
 					console.log(that.vars.annotationClicks.clickOne);
 				} else if (that.vars.annotationClicks.clickTwo === null) {
 					(clickXTwo = e.pageX - container.offsetLeft),
+						(clickYTwo = e.pageY - container.offsetTop);
 
 					that.vars.annotationClicks.clickTwo = {
 						clickX: clickXTwo,
+						clickY: clickYTwo,
 					};
 
+					console.log(that.vars.annotationClicks.clickTwo);
+
+					var annotation = that._addAnnotationChangePoint();
+
+					that.vars.annotationClicks.clickOne = null;
+					that.vars.annotationClicks.clickTwo = null;
+				}
+			}
+
+			function clickAll(e) {
+				if (that.vars.annotationClicks.clickOne === null) {
+					(clickXOne = e.pageX - container.offsetLeft),
+						(that.vars.annotationClicks.clickOne = {
+							clickX: clickXOne,
+						});
+
+					console.log(that.vars.annotationClicks.clickOne);
+				} else if (that.vars.annotationClicks.clickTwo === null) {
+					(clickXTwo = e.pageX - container.offsetLeft),
+						(that.vars.annotationClicks.clickTwo = {
+							clickX: clickXTwo,
+						});
 
 					var annotation = that._addAnnotationChangePointAll();
 
 					that.vars.annotationClicks.clickOne = null;
 					that.vars.annotationClicks.clickTwo = null;
-					
 				}
 			}
- 
-			
+
 			if (that.options.features.annotationType == "box") {
 				Highcharts.removeEvent(container, "mousedown");
 				Highcharts.addEvent(container, "mousedown", drag);
@@ -4611,81 +4607,78 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			} else if (that.options.features.annotationType == "cpoint") {
 				Highcharts.removeEvent(container, "mousedown");
 				Highcharts.addEvent(container, "mousedown", click);
-			} else if (that.options.features.annotationType == "cpointall"){
+			} else if (that.options.features.annotationType == "cpointall") {
 				Highcharts.removeEvent(container, "mousedown");
 				Highcharts.addEvent(container, "mousedown", clickAll);
 			}
 		}
 	},
 
-	_addAnnotationType: function (annotation){
+	_addAnnotationType: function (annotation) {
 		var that = this;
 		// get the channels by name
-		console.log(annotation.metadata)
+		console.log(annotation.metadata);
 		const channelIndices = annotation.metadata.channelIndices;
 		let channelLabels = [];
 
-
-
 		channelIndices.forEach((index) => {
-			console.log(annotation)
+			console.log(annotation);
 			const channelName = that.vars.allChannels[index].name;
 
 			const currentLabel = that._getAnnotationLabel(channelName);
 
 			if (currentLabel && currentLabel.length !== 0) {
 				currentLabel.forEach((label) => {
-					if(!channelLabels.includes(label)){
+					if (!channelLabels.includes(label)) {
 						channelLabels.push(label);
 					}
 				});
 			}
 			// console.log(channelName);
 			// channelLabels = [...channelLabels, that._getAnnotationLabel(channelName)];
-		})
+		});
 
 		console.log(channelLabels);
 		return channelLabels;
 	},
 
 	_getAnnotationLabel: function (channelName) {
-		var that = this
-		const currentMontage = that._getCurrentMontage()
+		var that = this;
+		const currentMontage = that._getCurrentMontage();
 
-		if(that.options.features.annotationType === "box"){
-			switch(currentMontage){
+		if (that.options.features.annotationType === "box") {
+			switch (currentMontage) {
 				case "PSG":
+					switch (channelName) {
+						case "F4-A1":
+						case "C4-A1":
+						case "O2-A1":
+							return ["Aro"];
 
-					switch(channelName){
-					case"F4-A1":
-					case"C4-A1":
-					case"O2-A1":
-						return["Aro"];
+						case "LOC-A2":
+						case "ROC-A1":
+						case "Chin1-Chin2":
+						case "ECG":
+							return [];
 
-					case"LOC-A2":
-					case"ROC-A1":
-					case"Chin1-Chin2":
-					case"ECG":
-						return[];
+						case "Leg/L":
+						case "Leg/R":
+							return ["LM"];
 
-					case"Leg/L":
-					case"Leg/R":
-						return ["LM"];
+						case "Snore":
+						case "Airflow":
+						case "NasalPressure":
+						case "Thor":
+						case "Abdo":
+							return ["H1", "H2", "OA", "CA", "MA"];
 
-					case"Snore":
-					case"Airflow":
-					case"NasalPressure":
-					case"Thor":
-					case"Abdo":
-						return ["H1", "H2", "OA", "CA", "MA"];
-
-					case"SpO2":
-						return ["desat"];
+						case "SpO2":
+							return ["desat"];
 					}
 					break;
 
 				case "watchpath":
-					switch(channelName){
+					switch (channelName) {
 						case "VIEW_PAT":
 						case "DERIVED_PAT_AMP":
 						case "DERIVED_HR":
@@ -4696,12 +4689,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 						case "ACTIGRAPH":
 						case "WRIST_STAGES":
-							return[];
+							return [];
 					}
 					break;
 
 				case "ANNE":
-					switch(channelName){
+					switch (channelName) {
 						case "ECG":
 							return ["Arrhythmia"];
 
@@ -4711,7 +4704,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "PAT(ms)":
 						case "PAT_resp":
 						case "Snore":
-							return["Obs", "Cen", "Mix"];
+							return ["Obs", "Cen", "Mix"];
 
 						case "SpO2(%)":
 							return ["desat"];
@@ -4723,12 +4716,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 						case "ChestTemp":
 						case "LimbTemp":
-							return[];
+							return [];
 					}
 					break;
 
 				case "MUSE":
-					switch(channelName){
+					switch (channelName) {
 						case "eeg-ch1 - eeg-ch2":
 						case "eeg-ch4 - eeg-ch2":
 						case "eeg-ch1":
@@ -4747,7 +4740,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "Apnealink":
-					switch(channelName){
+					switch (channelName) {
 						case "Flow":
 						case "Effort":
 						case "Snoring":
@@ -4760,27 +4753,27 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "Temp":
 						case "light":
 						case "ENMO":
 						case "z-angle":
-							return ["Sleep Period" ,"Wake Period"];
+							return ["Sleep Period", "Wake Period"];
 					}
 					break;
 
 				case "AX3":
-					switch(channelName){
+					switch (channelName) {
 						case "Temp":
 						case "ENMO":
 						case "z-angle":
-							return ["Sleep Period" ,"Wake Period"];
+							return ["Sleep Period", "Wake Period"];
 					}
 					break;
 
 				case "ANNE + PSG":
 				case "PSG + ANNE":
-					switch(channelName){
+					switch (channelName) {
 						case "ECG":
 						case "AcclPtch":
 						case "AcclRoll":
@@ -4797,7 +4790,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 				case "MUSE + PSG":
 				case "PSG + MUSE":
-					switch(channelName){
+					switch (channelName) {
 						case "eeg-ch1 - eeg-ch2":
 						case "eeg-ch4 - eeg-ch2":
 						case "eeg-ch1":
@@ -4813,14 +4806,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "LOC-A2":
 						case "ROC-A1":
 						case "Chin1-Chin2":
-							return[];
-
+							return [];
 					}
 					break;
 
 				case "GENEActiv + PSG":
 				case "PSG + GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "light":
 						case "ENMO":
 						case "z-angle":
@@ -4828,48 +4820,45 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "Leg/L":
 						case "Leg/R":
 							return [];
-
 					}
 					break;
 
 				case "GENEActiv + Actical":
 				case "Actical + GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "ENMO":
 						case "z-angle":
 						case "Counts":
 							return [];
 					}
 			}
-
-		}else if(that.options.features.annotationType === "cpoint"){
-			console.log("here")
-			console.log(currentMontage)
-			switch(currentMontage){
+		} else if (that.options.features.annotationType === "cpoint") {
+			console.log("here");
+			console.log(currentMontage);
+			switch (currentMontage) {
 				case "PSG":
-
-					switch(channelName){
-					case"F4-A1":
-					case"C4-A1":
-					case"O2-A1":
-					case"LOC-A2":
-					case"ROC-A1":
-					case"Chin1-Chin2":
-					case"ECG":
-					case"Leg/L":
-					case"Leg/R":
-					case"Snore":
-					case"Airflow":
-					case"NasalPressure":
-					case"Thor":
-					case"Abdo":
-					case"SpO2":
-						return ["ok", "artif"];
+					switch (channelName) {
+						case "F4-A1":
+						case "C4-A1":
+						case "O2-A1":
+						case "LOC-A2":
+						case "ROC-A1":
+						case "Chin1-Chin2":
+						case "ECG":
+						case "Leg/L":
+						case "Leg/R":
+						case "Snore":
+						case "Airflow":
+						case "NasalPressure":
+						case "Thor":
+						case "Abdo":
+						case "SpO2":
+							return ["ok", "artif"];
 					}
 					break;
 
 				case "watchpath":
-					switch(channelName){
+					switch (channelName) {
 						case "VIEW_PAT":
 						case "DERIVED_PAT_AMP":
 						case "DERIVED_HR":
@@ -4877,12 +4866,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "ACTIGRAPH":
 							return ["ok", "artif"];
 						case "WRIST_STAGES":
-							return[];
+							return [];
 					}
 					break;
 
 				case "ANNE":
-					switch(channelName){
+					switch (channelName) {
 						case "ECG":
 						case "AcclPtch":
 						case "AcclRoll":
@@ -4896,12 +4885,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "HR(bpm)":
 						case "ChestTemp":
 						case "LimbTemp":
-							return["ok", "artif"];
+							return ["ok", "artif"];
 					}
 					break;
 
 				case "MUSE":
-					switch(channelName){
+					switch (channelName) {
 						case "eeg-ch1 - eeg-ch2":
 						case "eeg-ch4 - eeg-ch2":
 						case "eeg-ch1":
@@ -4914,14 +4903,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "acc-ch2":
 						case "acc-ch3":
 						case "ppg-ch2":
-							return["ok", "artif"];
-
+							return ["ok", "artif"];
 					}
 
 					break;
 
 				case "Apnealink":
-					switch(channelName){
+					switch (channelName) {
 						case "Flow":
 						case "Effort":
 						case "Snoring":
@@ -4932,7 +4920,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "Temp":
 						case "light":
 						case "ENMO":
@@ -4942,7 +4930,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "AX3":
-					switch(channelName){
+					switch (channelName) {
 						case "Temp":
 						case "ENMO":
 						case "z-angle":
@@ -4952,7 +4940,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 				case "ANNE + PSG":
 				case "PSG + ANNE":
-					switch(channelName){
+					switch (channelName) {
 						case "ECG":
 						case "AcclPtch":
 						case "AcclRoll":
@@ -4969,7 +4957,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 				case "MUSE + PSG":
 				case "PSG + MUSE":
-					switch(channelName){
+					switch (channelName) {
 						case "eeg-ch1 - eeg-ch2":
 						case "eeg-ch4 - eeg-ch2":
 						case "eeg-ch1":
@@ -4985,14 +4973,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "LOC-A2":
 						case "ROC-A1":
 						case "Chin1-Chin2":
-							return[];
-
+							return [];
 					}
 					break;
 
 				case "GENEActiv + PSG":
 				case "PSG + GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "light":
 						case "ENMO":
 						case "z-angle":
@@ -5000,57 +4987,55 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "Leg/L":
 						case "Leg/R":
 							return [];
-
 					}
 					break;
 
 				case "GENEActiv + Actical":
 				case "Actical + GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "ENMO":
 						case "z-angle":
 						case "Counts":
 							return [];
 					}
 			}
-		}else if(that.options.features.annotationType === "cpointall"){
-				switch(currentMontage){
+		} else if (that.options.features.annotationType === "cpointall") {
+			switch (currentMontage) {
 				case "PSG":
-
-					switch(channelName){
-					case"F4-A1":
-					case"C4-A1":
-					case"O2-A1":
-					case"LOC-A2":
-					case"ROC-A1":
-					case"Chin1-Chin2":
-					case"ECG":
-					case"Leg/L":
-					case"Leg/R":
-					case"Snore":
-					case"Airflow":
-					case"NasalPressure":
-					case"Thor":
-					case"Abdo":
-					case"SpO2":
-						return ["W", "N1", "N2", "N3", "artif"];
+					switch (channelName) {
+						case "F4-A1":
+						case "C4-A1":
+						case "O2-A1":
+						case "LOC-A2":
+						case "ROC-A1":
+						case "Chin1-Chin2":
+						case "ECG":
+						case "Leg/L":
+						case "Leg/R":
+						case "Snore":
+						case "Airflow":
+						case "NasalPressure":
+						case "Thor":
+						case "Abdo":
+						case "SpO2":
+							return ["W", "N1", "N2", "N3", "artif"];
 					}
 					break;
 
 				case "watchpath":
-					switch(channelName){
+					switch (channelName) {
 						case "VIEW_PAT":
 						case "DERIVED_PAT_AMP":
 						case "DERIVED_HR":
 						case "SAO2_WRIST":
 						case "ACTIGRAPH":
 						case "WRIST_STAGES":
-							return["Sleep", "Wake", "Artif"];
+							return ["Sleep", "Wake", "Artif"];
 					}
 					break;
 
 				case "ANNE":
-					switch(channelName){
+					switch (channelName) {
 						case "ECG":
 						case "AcclPtch":
 						case "AcclRoll":
@@ -5069,7 +5054,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "MUSE":
-					switch(channelName){
+					switch (channelName) {
 						case "eeg-ch1 - eeg-ch2":
 						case "eeg-ch4 - eeg-ch2":
 						case "eeg-ch1":
@@ -5083,13 +5068,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "acc-ch3":
 						case "ppg-ch2":
 							return ["W", "N1", "N2", "N3", "artif"];
-
 					}
 
 					break;
 
 				case "Apnealink":
-					switch(channelName){
+					switch (channelName) {
 						case "Flow":
 						case "Effort":
 						case "Snoring":
@@ -5100,7 +5084,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "Temp":
 						case "light":
 						case "ENMO":
@@ -5110,7 +5094,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					break;
 
 				case "AX3":
-					switch(channelName){
+					switch (channelName) {
 						case "Temp":
 						case "ENMO":
 						case "z-angle":
@@ -5120,7 +5104,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 				case "ANNE + PSG":
 				case "PSG + ANNE":
-					switch(channelName){
+					switch (channelName) {
 						case "ECG":
 						case "AcclPtch":
 						case "AcclRoll":
@@ -5137,7 +5121,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 				case "MUSE + PSG":
 				case "PSG + MUSE":
-					switch(channelName){
+					switch (channelName) {
 						case "eeg-ch1 - eeg-ch2":
 						case "eeg-ch4 - eeg-ch2":
 						case "eeg-ch1":
@@ -5153,14 +5137,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "LOC-A2":
 						case "ROC-A1":
 						case "Chin1-Chin2":
-							return[];
-
+							return [];
 					}
 					break;
 
 				case "GENEActiv + PSG":
 				case "PSG + GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "light":
 						case "ENMO":
 						case "z-angle":
@@ -5168,13 +5151,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "Leg/L":
 						case "Leg/R":
 							return [];
-
 					}
 					break;
 
 				case "GENEActiv + Actical":
 				case "Actical + GENEActiv":
-					switch(channelName){
+					switch (channelName) {
 						case "ENMO":
 						case "z-angle":
 						case "Counts":
@@ -5203,7 +5185,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var channelIndexMin = Math.min(...channelIndices);
 		var channelIndexMax = Math.max(...channelIndices);
 
-
 		var height =
 			(Math.abs(channelIndexMax - channelIndexMin) + 1) *
 			that.options.graph.channelSpacing;
@@ -5227,22 +5208,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		}
 	},
 
-	_addAnnotationChangePoint: function (
-		// annotationId,
-		// timeStart,
-		// channelIndices,
-		// featureType,
-		// timeEnd,
-		// confidence,
-		// comment,
-		// annotationData
-	) {
-
+	_addAnnotationChangePoint: function () // annotationId,
+	// timeStart,
+	// channelIndices,
+	// featureType,
+	// timeEnd,
+	// confidence,
+	// comment,
+	// annotationData
+	{
 		var that = this;
 
 		const clickXOne = that.vars.annotationClicks.clickOne.clickX;
 		const clickYOne = that.vars.annotationClicks.clickOne.clickY;
-		
+
 		const clickXTwo = that.vars.annotationClicks.clickTwo.clickX;
 		const clickYTwo = that.vars.annotationClicks.clickTwo.clickY;
 
@@ -5252,14 +5231,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
 		const clickYTwoValue = that._convertPixelsToValue(clickYTwo, "y");
 
-		console.log(clickXOneValue, clickYOneValue, clickXTwoValue, clickYTwoValue);
+		console.log(
+			clickXOneValue,
+			clickYOneValue,
+			clickXTwoValue,
+			clickYTwoValue
+		);
 
 		const channelIndex = that._getChannelIndexFromY(clickYOneValue);
 		console.log(that.vars.allChannels[channelIndex].name);
 		const featureType = that.vars.activeFeatureType;
 
-		console.log("channel selected: " + channelIndex)
-		console.log("feature type: " + featureType)
+		console.log("channel selected: " + channelIndex);
+		console.log("feature type: " + featureType);
 
 		const annotationId = undefined;
 
@@ -5268,7 +5252,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			clickXOneValue,
 			[channelIndex],
 			featureType,
-			clickXTwoValue,
+			clickXTwoValue
 		);
 
 		that._addCommentFormToAnnotationBox(annotation);
@@ -5276,10 +5260,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		return annotation;
 	},
 
-	_addAnnotationChangePointAll: function (
-	
-	) {
-
+	_addAnnotationChangePointAll: function () {
 		var that = this;
 
 		const clickXOne = that.vars.annotationClicks.clickOne.clickX;
@@ -5288,16 +5269,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		const clickXOneValue = that._convertPixelsToValue(clickXOne, "x");
 		const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
 
-		console.log(clickXOneValue, clickXTwoValue, );
+		console.log(clickXOneValue, clickXTwoValue);
 
 		const channelIndicies = [];
 
-		for(let i = 0; i < that.vars.allChannels.length; i++){
+		for (let i = 0; i < that.vars.allChannels.length; i++) {
 			channelIndicies.push(i);
 		}
 
 		const featureType = that.vars.activeFeatureType;
-	
+
 		const annotationId = undefined;
 
 		var annotation = that._addAnnotationBox(
@@ -5305,7 +5286,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			clickXOneValue,
 			channelIndicies,
 			featureType,
-			clickXTwoValue,
+			clickXTwoValue
 		);
 
 		that._addCommentFormToAnnotationBox(annotation);
@@ -5324,7 +5305,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		comment,
 		annotationData
 	) {
-
 		var that = this;
 		// //console.log("anotater");
 		// gets all the annotations
@@ -5350,10 +5330,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			return;
 		}
 
-		// sets timeEnd to the end time if it is defined 
+		// sets timeEnd to the end time if it is defined
 		var timeEnd = timeEnd !== undefined ? timeEnd : false;
 
-		// gets the annotation data if the annotationData is defined 
+		// gets the annotation data if the annotationData is defined
 		var annotationData = annotationData !== undefined ? annotationData : {};
 
 		// checks if there is a timeEnd value
@@ -5371,7 +5351,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		// if there is a timeEnd value
 		if (preliminary) {
-		
 			shapeParams.width = 0;
 			shapeParams.fill = "transparent";
 
@@ -5413,7 +5392,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						.last()
 						.remove();
 				},
-				dblclick: function (event) { // deletes the annotation on db click
+				dblclick: function (event) {
+					// deletes the annotation on db click
 					if (that.options.isReadOnly) return;
 					if (annotationData.is_answer) return;
 					event.preventDefault();
@@ -5586,7 +5566,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		annotationElement.append(htmlContext);
 	},
 
-	// sets up the GUI for the comment form for the annotations 
+	// sets up the GUI for the comment form for the annotations
 	_addStageButtonsToAnnotationBox: function (annotation) {
 		var that = this;
 		var annotations = that.vars.chart.annotations.allItems;
@@ -5702,10 +5682,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		var that = this;
 		var annotations = that.vars.chart.annotations.allItems;
-	
-		console.log(annotations)
+
+		console.log(annotations);
 		var annotationElement = $(annotation.group.element);
-	
+
 		// To learn more about the foreignObject tag, see:
 		// https://developer.mozilla.org/en/docs/Web/SVG/Element/foreignObject
 		var htmlContext = $(
@@ -5715,7 +5695,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			)
 		);
 		htmlContext
-		
+
 			.attr({
 				width: 250,
 				height: 50,
@@ -5741,17 +5721,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		form.css({
 			width: "75%",
 			height: "75%",
-		})
+		});
 
 		var toggleButton = $(
 			'<button type="submit" class="btn btn-primary fa fa-comment"></button>'
 		);
 
-
-	
 		//gets all the relevant labels based on annotation type
 		const channelLabels = that._addAnnotationType(annotation);
-
 
 		//create a select element using Jquery
 		var annotationLabelSelector = $('<select class="form-control">');
@@ -5759,7 +5736,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		channelLabels.forEach((label) => {
 			annotationLabelSelector.append(
-				$('<option value="' + label + '">' + label + '</option>')
+				$('<option value="' + label + '">' + label + "</option>")
 			);
 		});
 
@@ -5770,9 +5747,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			marginTop: "0.2rem",
 			marginBottom: "0.2rem",
 		});
-		
-		//TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one 
 
+		//TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
 
 		form.append(toggleButton);
 		//add selector to form
@@ -5780,7 +5756,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		var comment = annotation.metadata.comment;
 
-		if (comment === undefined){
+		if (comment === undefined) {
 			comment = " ";
 		}
 
@@ -5823,9 +5799,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							.val(comment);
 
 						//gets the label from the form selector
-						$(a.group.element)
-							.find('.form-control')
-							.val(label);
+						$(a.group.element).find(".form-control").val(label);
 					});
 				that._saveFeatureAnnotation(annotation);
 			}
@@ -6322,7 +6296,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		});
 	},
 
-
 	_scaleToScreen: function (index) {
 		var that = this;
 
@@ -6408,8 +6381,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			}
 		} else if (lowerBound < minChannelData || upperBound > maxChannelData) {
 			// checks if data is within bounds, but is not scaled enough to "fit the screen"
-			
-			console.log("here");
+
 			if (lowerBound < minChannelData && upperBound > maxChannelData) {
 				// if both are too small
 				// check which absolute difference is the lesser

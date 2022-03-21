@@ -184,14 +184,14 @@ let WFDB = {
 			});
 			const channelNames = columnNames.slice(1);
 			// //console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
-			// //console.log('\nchannelNames:', channelNames);
+			console.log('\n\n\n\n\n\n\n\nchannelNames:' + channelNames + '\n\n\n\n\n\n\n\n');
 			rows.shift();
 			const columnUnits = rows[0].map((value) => {
 				return value.substr(1).slice(0, -1);
 			});
 			const channelUnits = columnUnits.slice(1);
 			// //console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits);
-			// //console.log("\nchannelUnits", channelUnits);
+			console.log("\nchannelUnits", channelUnits);
 			rows.shift();
 			const numSamplesRaw = rows.length;
 			const lastSampleIndex = numSamplesRaw - 1;

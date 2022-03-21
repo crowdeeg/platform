@@ -29,9 +29,18 @@ const rootUser = userAccounts["ADMIN"];
 const testUser = userAccounts["TEST"];
 
 const recordingPaths = [
-	{ path: "/physionet/edfx/SC4001E0-PSG.edf", source: "MUSE" },
+	{ path: "/physionet/edfx/SC4001E0-PSG.edf", source: "PSG" },
 	{ path: "/physionet/edfx/200930_761428_ANNE.edf", source: "ANNE" },
 	{ path: "/physionet/edfx/200930_761428_PSGfiltered.edf", source: "PSG" },
+	{ path: "/physionet/edfx/03_001_Axivity.edf", source: "GENEActiv" },
+	{
+		path: "/physionet/edfx/170814_3104359_PSGfiltered.edf",
+		source: "PSG",
+	},
+
+	// {
+	// 	path: "/physionet/edfx/001D_left wrist_038090_2017-08-15 17-20-38.bin",
+	// 	source: "GENEActiv"},
 
 	// only include the following if you have already downloaded and placed these edf files in the directory
 
@@ -140,7 +149,9 @@ Meteor.startup(() => {
 			path: recordingPath.path,
 			metadata: metadata,
 		});
-		//console.log('Created Data "' + recordingPath.path + '" (' + dataId + ')');
+		console.log(
+			'Created Data "' + recordingPath.path + '" (' + dataId + ")"
+		);
 		//console.log(metadata.wfdbdesc.Groups[0]);
 		let dataInfo = {
 			id: dataId,
@@ -277,6 +288,9 @@ Meteor.startup(() => {
 								"'ppg-ch2'",
 							],
 						},
+						GENEActiv: {
+							GENEActiv: ["Temp", "light", "ENMO", "z - angle"],
+						},
 					},
 					channelGains: {
 						"MUSE + PSG": [
@@ -303,6 +317,7 @@ Meteor.startup(() => {
 						],
 						PSG: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 						ANNE: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+						GENEActiv: [1, 1, 1, 1],
 					},
 					staticFrequencyFiltersByDataModality: {
 						"'F4-A1'": { highpass: 0.3, lowpass: 35 },
@@ -316,8 +331,8 @@ Meteor.startup(() => {
 						"'Snore'": { highpass: 10, lowpass: 100 },
 						"'Airflow'": { highpass: 0.01, lowpass: 15 },
 						"Nasal Pressure": { highpass: 0.01, lowpass: 15 },
-						Thor: { highpass: 0.01, lowpass: 15 },
-						Abdo: { highpass: 0.01, lowpass: 15 },
+						"'Thor'": { highpass: 0.01, lowpass: 15 },
+						"'Abdo'": { highpass: 0.01, lowpass: 15 },
 
 						"'EEG'": { highpass: 0.3, lowpass: 35 },
 						"'EOG'": { highpass: 0.3, lowpass: 35 },
@@ -331,7 +346,17 @@ Meteor.startup(() => {
 
 						"'Chin 2'": { highpass: 10, lowpass: 100 },
 
-						//'SpO2',
+						"'eeg-ch1 - eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch4 - eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch1'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch4'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch1-eeg-ch4'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch4-eeg-ch3'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch3'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+						"'eeg-ch3'": { highpass: 0.3, lowpass: 35 },
+						"'ppg-ch2'": { highpass: 0.1, lowpass: 5 },
 					},
 					frequencyFilters: [
 						{
@@ -421,7 +446,7 @@ Meteor.startup(() => {
 	};
 
 	Object.keys(recordingInfo).forEach((recordingFileFolder) => {
-		let museFilePath, psgFilePath, anneFilePath;
+		let museFilePath, psgFilePath, anneFilePath, geneFilePath;
 		recordingInfo[recordingFileFolder].forEach((recordingFile) => {
 			if (recordingFile.source === "MUSE") {
 				//console.log(recordingFile.path);
@@ -430,8 +455,11 @@ Meteor.startup(() => {
 				psgFilePath = recordingFile.path;
 			} else if (recordingFile.source === "ANNE") {
 				anneFilePath = recordingFile.path;
+			} else if (recordingFile.source === "GENEActiv") {
+				geneFilePath = recordingFile.path;
 			}
 		});
+
 		// testing for multi-file alignment features
 		if (psgFilePath && anneFilePath) {
 			addTask(recordingFileFolder, "PSG + ANNE", [
@@ -445,9 +473,32 @@ Meteor.startup(() => {
 				psgFilePath,
 			]);
 		}
+		if (geneFilePath && psgFilePath) {
+			addTask(recordingFileFolder, "GENEActiv + PSG", [
+				geneFilePath,
+				psgFilePath,
+			]);
+		}
+
+		// testing for single-file alignment features
+		if (geneFilePath) {
+			addTask(recordingFileFolder, "GENEActiv", [geneFilePath]);
+		}
+
+		if (museFilePath) {
+			addTask(recordingFileFolder, "MUSE", [museFilePath]);
+		}
+
+		if (psgFilePath) {
+			addTask(recordingFileFolder, "PSG", [psgFilePath]);
+		}
+
+		if (anneFilePath) {
+			addTask(recordingFileFolder, "ANNE", [anneFilePath]);
+		}
 	});
 
-	/** The following commented out codes are the original way basicDemo.js creating new tasks and assignments
+	/** The following commented out codes are the original way basicDemo.js creating new    and assignments
 	 *  which is outdated if having sub-folders under where we store the edf files
 	 */
 
