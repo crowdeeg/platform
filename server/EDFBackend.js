@@ -17,7 +17,8 @@ const runCommand = Meteor.wrapAsync(exec);
 
 // runs a wfdb command in runInDirectory
 const runWFDBCommand = (command, runInDirectory = "") => {
-	console.time("runWFDBCommand");
+	//TODO: check this
+	// console.time("runWFDBCommand");
 	let WFDBCommand = command;
 	const EDFDir = process.env.EDF_DIR + runInDirectory; // locates the EDF directory using the environment variables and runInDirectory
 	if (EDFDir) {
@@ -28,7 +29,7 @@ const runWFDBCommand = (command, runInDirectory = "") => {
 		maxBuffer: 2048 * 500 * 10,
 		cwd: EDFDir,
 	});
-	console.timeEnd("runWFDBCommand");
+	// console.timeEnd("runWFDBCommand");
 	return output;
 };
 
@@ -177,21 +178,32 @@ let WFDB = {
 					recordingDirectory
 				);
 			}
+
 			// console.time('parseRawOutput');
 			let rows = dsvFormat(",").parseRows(signalRawOutput);
 			const columnNames = rows[0].map((value) => {
 				return value.substr(1).slice(0, -1);
 			});
-			const channelNames = columnNames.slice(1);
+			console.log("\n\n\n\n\n\n\n\n\n\n\n\n" + columnNames);
+			let channelNames = columnNames.slice(1);
+			const index = channelNames.indexOf("EDF Annotations");
+			// console.log(index);
+			// if (index > -1) {
+			// 	channelNames.splice(index, 1);
+			// }
 			// //console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
-			console.log('\n\n\n\n\n\n\n\nchannelNames:' + channelNames + '\n\n\n\n\n\n\n\n');
+			console.log(
+				"\n\n\n\n\n\n\n\nchannelNames:" +
+					channelNames +
+					"\n\n\n\n\n\n\n\n"
+			);
 			rows.shift();
 			const columnUnits = rows[0].map((value) => {
 				return value.substr(1).slice(0, -1);
 			});
 			const channelUnits = columnUnits.slice(1);
 			// //console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits);
-			console.log("\nchannelUnits", channelUnits);
+			// console.log("\nchannelUnits", channelUnits);
 			rows.shift();
 			const numSamplesRaw = rows.length;
 			const lastSampleIndex = numSamplesRaw - 1;
@@ -801,7 +813,7 @@ Meteor.methods({
 			{}
 		);
 
-		//console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
+		// console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
 		let subtractionOrder =
 			channelsDisplayedParsed.individualChannelsRequired;
 		let allChannelInfo = dataFrame.channelInfo;

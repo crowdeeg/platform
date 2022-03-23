@@ -3392,6 +3392,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var channelAudioRepresentations = {};
 		var channelNumSamples = {};
 		var samplingRate = input.sampling_rate;
+		console.log(input)
 
 		// for each dataId in the channelvalues array
 		for (var dataId in input.channel_values) {
@@ -3446,17 +3447,33 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// scaleValueChange = Math.pow(scaleFactorAmplitude, 2);
 				var scaleValueChange = maxIn * scaleFactorAmplitude;
 
+				const hasNegativeValues = values.some(v => v <= 0);
+				const hasPositiveValues = values.some(v => v >= 0);
+
+				if(!(hasNegativeValues && hasPositiveValues)){
+					if(hasPositiveValues){
+						values = values.map(v => v - avg);
+					}else{
+						values = values.map(v => v + avg);
+					}
+				}
+
+			
+				console.log(name + "  :  " + values)
+
+
 				if (scaleFactorAmplitude != 0) {
 					//  //console.log(name);
 					// gets every value and divides it by the scaleFactorAmplitude, the max value in the values array
 					// console.log(name);
-					// console.log(scaleFactorAmplitude);
+					// console.log(scaleFactorAmplitude);	
 
+				
 					valuesScaled = values.map((v) => v / scaleFactorAmplitude);
 					// //console.log(valuesScaled);
 				}
 
-				//console.log(valuesScaled);
+				// console.log(valuesScaled);
 				audioBuffer.copyToChannel(valuesScaled, 0, 0);
 
 				var scaleFault = 0;
@@ -3540,6 +3557,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							break;
 						case "Limb Temp(A C)":
 							scaleFault = 10;
+							break;
+						case "Temp":
+							scaleFault = 100;
+							break;
+						case "light":
+							scaleFault = 100;
+							break;
+						case "ENMO":
+							scaleFault = 100;
+							break;
+						case "z-angle":
+							scaleFault = 100;
 							break;
 					}
 					scaleFactorAmplitude = scaleFactorAmplitude * scaleFault;
@@ -6264,6 +6293,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		const zeroPosition = that._getOffsetForChannelIndexPostScale(index);
 
 		// takes each point in the ydata of the graph and scales it by the scaleFactor
+
+		console.log(that.vars.chart.series[index].yData)
 		that.vars.chart.series[index].yData.forEach((point, idx) => {
 			if (point !== zeroPosition) {
 				that.vars.chart.series[index].yData[idx] =

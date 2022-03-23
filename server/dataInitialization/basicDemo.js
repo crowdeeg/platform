@@ -32,11 +32,12 @@ const recordingPaths = [
 	{ path: "/physionet/edfx/SC4001E0-PSG.edf", source: "PSG" },
 	{ path: "/physionet/edfx/200930_761428_ANNE.edf", source: "ANNE" },
 	{ path: "/physionet/edfx/200930_761428_PSGfiltered.edf", source: "PSG" },
-	{ path: "/physionet/edfx/03_001_Axivity.edf", source: "GENEActiv" },
+	{ path: "/physionet/edfx/03_001_AxivityNEW.edf", source: "GENEActiv" },
 	{
 		path: "/physionet/edfx/170814_3104359_PSGfiltered.edf",
 		source: "PSG",
 	},
+	{ path: "/physionet/edfx/03_001_Acc.edf", source: "GENEActiv" },
 
 	// {
 	// 	path: "/physionet/edfx/001D_left wrist_038090_2017-08-15 17-20-38.bin",
@@ -289,7 +290,7 @@ Meteor.startup(() => {
 							],
 						},
 						GENEActiv: {
-							GENEActiv: ["Temp", "light", "ENMO", "z - angle"],
+							GENEActiv: ["'Temp'", "'light'", "'ENMO'", "'z - angle'"],
 						},
 					},
 					channelGains: {
@@ -357,6 +358,10 @@ Meteor.startup(() => {
 						"'eeg-ch2'": { highpass: 0.3, lowpass: 35 },
 						"'eeg-ch3'": { highpass: 0.3, lowpass: 35 },
 						"'ppg-ch2'": { highpass: 0.1, lowpass: 5 },
+						"'Temp'": { highpass: 10, lowpass: 100 },
+						"'light'": { highpass: 10, lowpass: 100 },
+						"'ENMO'": { highpass: 10, lowpass: 100 },
+						"'z - angle'": { highpass: 10, lowpass: 100 },
 					},
 					frequencyFilters: [
 						{
