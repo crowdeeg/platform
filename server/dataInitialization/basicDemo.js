@@ -32,7 +32,7 @@ const recordingPaths = [
 	{ path: "/physionet/edfx/SC4001E0-PSG.edf", source: "PSG" },
 	{ path: "/physionet/edfx/200930_761428_ANNE.edf", source: "ANNE" },
 	{ path: "/physionet/edfx/200930_761428_PSGfiltered.edf", source: "PSG" },
-	{ path: "/physionet/edfx/03_001_AxivityNEW.edf", source: "GENEActiv" },
+	// { path: "/physionet/edfx/03_001_AxivityNEW.edf", source: "GENEActiv" },
 	{
 		path: "/physionet/edfx/170814_3104359_PSGfiltered.edf",
 		source: "PSG",
@@ -234,6 +234,11 @@ Meteor.startup(() => {
 								// "'Limb Temp(A C)'",
 							],
 						},
+						"GENEActiv + PSG": {
+							GENEActiv: ["'light'", "'ENMO'", "'z-angle'"],
+							PSG: ["'Chin1-Chin2'", "'Leg/L'", "'Leg/R'"],
+						},
+
 						PSG: {
 							PSG: [
 								"'F4-A1'",
@@ -290,7 +295,12 @@ Meteor.startup(() => {
 							],
 						},
 						GENEActiv: {
-							GENEActiv: ["'Temp'", "'light'", "'ENMO'", "'z - angle'"],
+							GENEActiv: [
+								"'Temp'",
+								"'light'",
+								"'ENMO'",
+								"'z - angle'",
+							],
 						},
 					},
 					channelGains: {
@@ -301,6 +311,7 @@ Meteor.startup(() => {
 							1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 							1,
 						],
+						"GENEActiv + PSG": [1, 1, 1, 1, 1, 1],
 						"Show all Signals": [
 							0,
 							//1,

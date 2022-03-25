@@ -3392,8 +3392,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var channelAudioRepresentations = {};
 		var channelNumSamples = {};
 		var samplingRate = input.sampling_rate;
-		console.log(input)
-
 		// for each dataId in the channelvalues array
 		for (var dataId in input.channel_values) {
 			//console.log(dataId);
@@ -3447,28 +3445,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// scaleValueChange = Math.pow(scaleFactorAmplitude, 2);
 				var scaleValueChange = maxIn * scaleFactorAmplitude;
 
-				const hasNegativeValues = values.some(v => v <= 0);
-				const hasPositiveValues = values.some(v => v >= 0);
+				const hasNegativeValues = values.some((v) => v <= 0);
+				const hasPositiveValues = values.some((v) => v >= 0);
 
-				if(!(hasNegativeValues && hasPositiveValues)){
-					if(hasPositiveValues){
-						values = values.map(v => v - avg);
-					}else{
-						values = values.map(v => v + avg);
+				if (!(hasNegativeValues && hasPositiveValues)) {
+					if (hasPositiveValues) {
+						values = values.map((v) => v - avg);
+					} else {
+						values = values.map((v) => v + avg);
 					}
 				}
-
-			
-				console.log(name + "  :  " + values)
-
 
 				if (scaleFactorAmplitude != 0) {
 					//  //console.log(name);
 					// gets every value and divides it by the scaleFactorAmplitude, the max value in the values array
 					// console.log(name);
-					// console.log(scaleFactorAmplitude);	
+					// console.log(scaleFactorAmplitude);
 
-				
 					valuesScaled = values.map((v) => v / scaleFactorAmplitude);
 					// //console.log(valuesScaled);
 				}
@@ -3497,7 +3490,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							scaleFault = 1;
 							break;
 						case "Chin 1-Chin 2":
-							scaleFault = 1000;
+							scaleFault = 500;
 							break;
 
 						case "ECG":
@@ -4434,7 +4427,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		$("> .blocker").remove();
 	},
 
-	//TODO: figure out how annotations work
 	_setupAnnotationInteraction: function () {
 		var that = this;
 		if (!that.vars.setupOn) {
@@ -4651,7 +4643,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		let channelLabels = [];
 
 		channelIndices.forEach((index) => {
-			console.log(annotation);
 			const channelName = that.vars.allChannels[index].name;
 
 			const currentLabel = that._getAnnotationLabel(channelName);
@@ -5482,7 +5473,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (!that.options.isReadOnly && !annotationData.is_answer) {
 			that._addConfidenceLevelButtonsToAnnotationBox(annotation);
 			if (!preliminary) {
-				that._addCommentFormToAnnotationBox(annotation);
+				size = shapeParams
+				that._addCommentFormToAnnotationBox(annotation, size);
 			}
 		}
 		return annotation;
@@ -5712,7 +5704,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		var annotations = that.vars.chart.annotations.allItems;
 
-		console.log(annotations);
+		console.log(annotation);
 		var annotationElement = $(annotation.group.element);
 
 		// To learn more about the foreignObject tag, see:
@@ -5723,13 +5715,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				"foreignObject"
 			)
 		);
-		htmlContext
 
+		annotationElement.append(htmlContext);
+
+
+		htmlContext
 			.attr({
-				width: 250,
-				height: 50,
-				x: 0,
-				y: 20,
+				width: `${annotation.group.element.getBBox().width}`,
+				height: `${annotation.group.element.getBBox().height}`,
+				// x: 0,
+				// y: 20,
 				zIndex: 2,
 			})
 			.mousedown(function (event) {
@@ -5739,17 +5734,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				event.stopPropagation();
 			})
 			.dblclick(function (event) {
-				event.stopPropagation();
+				event.preventDefault();
+				that._deleteAnnotation(annotation.id)
 			});
-		var body = $("<body>")
-			.addClass("toolbar comment")
-			.attr("xmlns", "http://www.w3.org/1999/xhtml");
-		var form = $("<form>");
 
-		//add styling to the form
+		var body = $("<body>")
+			.addClass("comment toolbar")
+			// .attr("xmlns", "http://www.w3.org/1999/xhtml");
+			// .attr({
+			// 	"width": "100%",
+			// 	"height": "100%"
+			// })
+		var form = $("<form>");
 		form.css({
-			width: "75%",
-			height: "75%",
+			position: "absolute",
+			top: "0",
+			left: "0",
+			display: "flex",
+			width: "100%",
+			height: "100%",
 		});
 
 		var toggleButton = $(
@@ -5760,7 +5763,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		const channelLabels = that._addAnnotationType(annotation);
 
 		//create a select element using Jquery
-		var annotationLabelSelector = $('<select class="form-control">');
+		var annotationLabelSelector = $('<select class="form-control">')
+			.hide()
+			.keydown(function (event) {
+				event.stopPropagation();
+			});
 		//add the options to the select element
 
 		channelLabels.forEach((label) => {
@@ -5769,12 +5776,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			);
 		});
 
-		//add margin top and bottom
+		// //add margin top and bottom
 		annotationLabelSelector.css({
-			width: "100%",
-			height: "100%",
-			marginTop: "0.2rem",
-			marginBottom: "0.2rem",
+			width: "40%",
+			height: "20%",
 		});
 
 		//TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
@@ -5803,6 +5808,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				'">'
 		)
 			.hide()
+			.css({
+			width: "50%",
+			height: "20%",
+			})
 			.keydown(function (event) {
 				event.stopPropagation();
 			});
@@ -5812,9 +5821,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			if (collapsed) {
 				toggleButton.removeClass("fa-comment").addClass("fa-floppy-o");
 				input.show().focus();
+				annotationLabelSelector.show();
+
 			} else {
 				toggleButton.removeClass("fa-floppy-o").addClass("fa-comment");
 				input.hide();
+				annotationLabelSelector.hide();
 				var comment = input.val();
 				var label = annotationLabelSelector.val();
 				toggleButton.focus();
@@ -5836,7 +5848,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		form.append(input);
 		body.append(form);
 		htmlContext.append(body);
-		annotationElement.append(htmlContext);
+		
 		annotation.metadata.commentFormAdded = true;
 	},
 
@@ -6294,7 +6306,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		// takes each point in the ydata of the graph and scales it by the scaleFactor
 
-		console.log(that.vars.chart.series[index].yData)
+		console.log(that.vars.chart.series[index].yData);
 		that.vars.chart.series[index].yData.forEach((point, idx) => {
 			if (point !== zeroPosition) {
 				that.vars.chart.series[index].yData[idx] =
