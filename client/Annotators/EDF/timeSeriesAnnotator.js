@@ -5748,8 +5748,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var form = $("<form>");
 		form.css({
 			position: "absolute",
-			top: "0",
-			left: "0",
+			top: "50%",
+			// left: 
 			display: "flex",
 			width: "100%",
 			height: "100%",
@@ -5779,7 +5779,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		// //add margin top and bottom
 		annotationLabelSelector.css({
 			width: "40%",
-			height: "20%",
+			height: "50%",
 		});
 
 		//TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
@@ -5809,8 +5809,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		)
 			.hide()
 			.css({
-			width: "50%",
-			height: "20%",
+			width: "40%",
+			height: "50%",
 			})
 			.keydown(function (event) {
 				event.stopPropagation();
@@ -7467,9 +7467,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (channels && !channels.length) {
 			channels = [channels];
 		}
-		console.log(metadata);
+		
 		const context = that.options.context;
-		console.log(annotationId);
+
 		if (!annotationId || !Annotations.findOne(annotationId)) {
 			// //console.log("nZ");
 			var graph = $(".graph");
@@ -7506,6 +7506,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				rationale: rationale,
 			};
 			that._addArbitrationInformationToObject(annotationDocument);
+			console.log(annotationDocument);
 			annotationDocument.id = Annotations.insert(
 				annotationDocument,
 				(error, annotationId) => {
