@@ -4451,7 +4451,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 			// drag function for box annotations.
 			function drag(e) {
-				console.log("drag");
 				var annotation,
 					//gets the  xy position of the mouse when you click
 					clickX = e.pageX - container.offsetLeft,
@@ -4579,7 +4578,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						clickY: clickYOne,
 					};
 
-					console.log(that.vars.annotationClicks.clickOne);
+
 				} else if (that.vars.annotationClicks.clickTwo === null) {
 					(clickXTwo = e.pageX - container.offsetLeft),
 						(clickYTwo = e.pageY - container.offsetTop);
@@ -4589,7 +4588,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						clickY: clickYTwo,
 					};
 
-					console.log(that.vars.annotationClicks.clickTwo);
+
 
 					var annotation = that._addAnnotationChangePoint();
 
@@ -4638,7 +4637,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	_addAnnotationType: function (annotation) {
 		var that = this;
 		// get the channels by name
-		console.log(annotation.metadata);
 		const channelIndices = annotation.metadata.channelIndices;
 		let channelLabels = [];
 
@@ -4658,7 +4656,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			// channelLabels = [...channelLabels, that._getAnnotationLabel(channelName)];
 		});
 
-		console.log(channelLabels);
 		return channelLabels;
 	},
 
@@ -5704,7 +5701,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		var annotations = that.vars.chart.annotations.allItems;
 
-		console.log(annotation);
+		// console.log(annotation);
 		var annotationElement = $(annotation.group.element);
 
 		// To learn more about the foreignObject tag, see:
@@ -5795,11 +5792,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		}
 
 		//TODO: add annotation label handling
-		var label = annotation.metadata.label;
+		var annotationLabel = annotation.metadata.annotationLabel;
 
 		//make the selector show the current label if it exists
-		if (label) {
-			annotationLabelSelector.val(label);
+		if (annotationLabel) {
+			annotationLabelSelector.val(annotationLabel);
 		}
 
 		var input = $(
@@ -5828,19 +5825,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				input.hide();
 				annotationLabelSelector.hide();
 				var comment = input.val();
-				var label = annotationLabelSelector.val();
+				var annotationLabel = annotationLabelSelector.val();
 				toggleButton.focus();
 				annotations
 					.filter((a) => a.metadata.id == annotation.metadata.id)
 					.forEach((a) => {
 						a.metadata.comment = comment;
-						a.metadata.label = label;
+						a.metadata.annotationLabel = annotationLabel;
 						$(a.group.element)
 							.find(".toolbar.comment input")
 							.val(comment);
 
 						//gets the label from the form selector
-						$(a.group.element).find(".form-control").val(label);
+						$(a.group.element).find(".form-control").val(annotationLabel);
 					});
 				that._saveFeatureAnnotation(annotation);
 			}
@@ -5864,7 +5861,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var rationale = undefined;
 		var metadata = {};
 		//TODO: add label handling
-		var label = annotation.metadata.label;
+		var annotationLabel = annotation.metadata.annotationLabel;
 
 		if (that._isHITModeEnabled()) {
 			metadata = {
@@ -5887,7 +5884,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			confidence,
 			comment,
 			metadata,
-			label,
+			annotationLabel,
 			rationale,
 			function (savedAnnotation, error) {
 				if (savedAnnotation) {
@@ -7455,7 +7452,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		confidence,
 		comment,
 		metadata,
-		label,
+		annotationLabel,
 		rationale,
 		callback
 	) {
@@ -7490,6 +7487,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						recording: that.options.recordingName,
 						channels_displayed: that._getChannelsDisplayed(),
 						comment: comment,
+						annotationLabel: annotationLabel,
 						metadata: metadata,
 						annotatorConfig: {
 							task: that.options.context.task.annotatorConfig,
@@ -7523,7 +7521,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			that._updateMarkAssignmentAsCompletedButtonState();
 			updateCache(annotationDocument);
 		} else {
-			console.log("here");
+			// console.log("here");
 
 			console.log("annotationId: " + annotationId);
 			console.log("recording_name: " + recording_name);
@@ -7534,10 +7532,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			console.log("confidence: " + confidence);
 			console.log("comment: " + comment);
 			console.log("metadata: " + metadata);
-			console.log("label: " + label);
+			console.log("label: " + annotationLabel);
 			console.log("rationale: " + rationale);
 
 			const annotationModifier = {
+				"value.metadata.annotationLabel": annotationLabel,
 				"value.label": type,
 				"value.confidence": confidence,
 				"value.metadata.comment": comment,
@@ -7545,6 +7544,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			};
 			that._addArbitrationInformationToObject(annotationModifier);
 			//TODO: BUG HERE - if the with regards to id
+			console.log(annotationModifier);
 			Annotations.update(
 				annotationId,
 				{ $set: annotationModifier },
@@ -7558,7 +7558,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						return;
 					}
 					var annotationDocument = Annotations.findOne(annotationId);
-					console.log(annotationDocument);
 					annotationDocument.id = annotationDocument._id;
 					updateCache(annotationDocument);
 				}
@@ -7578,6 +7577,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					annotations: [],
 				};
 			}
+
+			console.log(cacheEntry)
 			if (cacheEntry.annotations) {
 				cacheEntry.annotations.unshift(annotation.value);
 			}

@@ -1609,7 +1609,7 @@ Annotations.helpers({
 });
 Annotations.attachSchema(Schemas.Annotations);
 Annotations.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
-Annotations.permit(['insert', 'update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
+Annotations.permit(['insert', 'update', 'remove']).ifForOwnAssignment().allowInClientCode();
 Annotations.attachCollectionRevisions(CollectionRevisions.Annotations);
 exports.Annotations = Annotations;
 
