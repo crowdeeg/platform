@@ -29,15 +29,16 @@ const rootUser = userAccounts["ADMIN"];
 const testUser = userAccounts["TEST"];
 
 const recordingPaths = [
-	{ path: "/physionet/edfx/SC4001E0-PSG.edf", source: "PSG" },
-	{ path: "/physionet/edfx/200930_761428_ANNE.edf", source: "ANNE" },
-	{ path: "/physionet/edfx/200930_761428_PSGfiltered.edf", source: "PSG" },
+	// { path: "/physionet/edfx/SC4001E0-PSG.edf", source: "PSG" },
+	// { path: "/physionet/edfx/200930_761428_ANNE.edf", source: "ANNE" },
+	// { path: "/physionet/edfx/200930_761428_PSGfiltered.edf", source: "PSG" },
 	// { path: "/physionet/edfx/03_001_AxivityNEW.edf", source: "GENEActiv" },
-	{
-		path: "/physionet/edfx/170814_3104359_PSGfiltered.edf",
-		source: "PSG",
-	},
-	{ path: "/physionet/edfx/03_001_Acc.edf", source: "GENEActiv" },
+	// {
+	// 	path: "/physionet/edfx/170814_3104359_PSGfiltered.edf",
+	// 	source: "PSG",
+	// },
+	{ path: "/physionet/edfx/PSGreduced.edf", source: "PSG" },
+	{ path: "/physionet/edfx/MUSEreduced.edf", source: "MUSE" },
 
 	// {
 	// 	path: "/physionet/edfx/001D_left wrist_038090_2017-08-15 17-20-38.bin",

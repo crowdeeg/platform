@@ -184,7 +184,6 @@ let WFDB = {
 			const columnNames = rows[0].map((value) => {
 				return value.substr(1).slice(0, -1);
 			});
-			console.log("\n\n\n\n\n\n\n\n\n\n\n\n" + columnNames);
 			let channelNames = columnNames.slice(1);
 			const index = channelNames.indexOf("EDF Annotations");
 			// console.log(index);
@@ -192,11 +191,7 @@ let WFDB = {
 			// 	channelNames.splice(index, 1);
 			// }
 			// //console.log("rows[0]:", rows[0], "\ncolumnNames:", columnNames);
-			console.log(
-				"\n\n\n\n\n\n\n\nchannelNames:" +
-					channelNames +
-					"\n\n\n\n\n\n\n\n"
-			);
+
 			rows.shift();
 			const columnUnits = rows[0].map((value) => {
 				return value.substr(1).slice(0, -1);
@@ -689,8 +684,10 @@ Meteor.methods({
 		let count = 0;
 
 		// this is the original version of codes which display all channels specified in the options:
-		// let channelsDisplayed = options.channels_displayed;
-		let channelsDisplayed = {};
+		let channelsDisplayed = options.channels_displayed;
+		console.log(channelsDisplayed);
+
+		// let channelsDisplayed = {};
 
 		let channelTimeshift = options.channel_timeshift;
 		let allRecordings = options.recordings;
@@ -715,6 +712,7 @@ Meteor.methods({
 				channelsDisplayed[recording.source],
 				recording._id
 			);
+			console.log("recording =" + recording.source);
 			return recording;
 		});
 
@@ -733,6 +731,9 @@ Meteor.methods({
 				? startTime + channelTimeshift[recording._id]
 				: startTime;
 
+			console.log(
+				recording.channelsDisplayedParsed.individualChannelsRequired
+			);
 			currDataFrame = WFDB.rdsamp({
 				// runs the rdsamp function with the specified parameters that we have defined above
 				recordingName: recording.path,
