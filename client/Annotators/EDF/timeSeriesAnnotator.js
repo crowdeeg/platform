@@ -1857,11 +1857,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			});
 
 			select.material_select();
-
-			select.change(function () {
-				that.options.features.annotationType = select.val();
-				that._setupAnnotationInteraction();
-			});
+			// $(document).ready(function() {
+				select.change(function () {
+					that.options.features.annotationType = select.val();
+					that._setupAnnotationInteraction();
+				});
+			// });
 			select.change();
 		});
 	},
@@ -4166,12 +4167,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							that.options.graph.enableMouseTracking,
 						stickyTracking: true,
 						events: {
-							mouseOver: function (e) {
-								//	that._selectChannel(e.target.index);
-							},
-							mouseOut: function (e) {
-								//	that._unselectChannels();
-							},
+							// mouseOver: function (e) {
+							// 	//	that._selectChannel(e.target.index);
+							// },
+							// mouseOut: function (e) {
+							// 	//	that._unselectChannels();
+							// },
 						},
 						point: {
 							events: {
@@ -4634,32 +4635,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			}
 
 			function clickAll(e) {
-				if (that.vars.annotationClicks.clickOne === null) {
-					(clickXOne = e.pageX - container.offsetLeft),
-						(that.vars.annotationClicks.clickOne = {
-							clickX: clickXOne,
-						});
-
-					console.log(that.vars.annotationClicks.clickOne);
-				} else if (that.vars.annotationClicks.clickTwo === null) {
-					(clickXTwo = e.pageX - container.offsetLeft),
-						(that.vars.annotationClicks.clickTwo = {
-							clickX: clickXTwo,
-						});
-
-					var annotation = that._addAnnotationChangePointAll();
-
-					that.vars.annotationClicks.clickOne = null;
-					that.vars.annotationClicks.clickTwo = null;
-				}
+				clickX = e.pageX - container.offsetLeft;
+				var annotation = that._addAnnotationChangePointAll(clickX);
 			}
 
 			if (that.options.features.annotationType == "box") {
 				Highcharts.removeEvent(container, "mousedown");
 				Highcharts.addEvent(container, "mousedown", drag);
-			} else if (that.options.features.annotationType == "") {
-				Highcharts.removeEvent(container, "mousedown", drag);
-				Highcharts.removeEvent(container, "mousedown", drag3);
+			} else if (that.options.features.annotationType == "none") {
+				console.log("here")
+				Highcharts.removeEvent(container, "mousedown");
 			} else if (that.options.features.annotationType == "cpoint") {
 				Highcharts.removeEvent(container, "mousedown");
 				Highcharts.addEvent(container, "mousedown", click);
@@ -5053,6 +5038,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					}
 			}
 		} else if (that.options.features.annotationType === "cpointall") {
+			console.log("here " + currentMontage);
 			switch (currentMontage) {
 				case "PSG":
 					switch (channelName) {
@@ -5313,16 +5299,314 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		return annotation;
 	},
 
-	_addAnnotationChangePointAll: function () {
+	_addCommentFormToAnnotationBoxChangePoint: function (annotation) {
+		if (annotation.metadata.commentFormAdded) {
+			return;
+		}
+
+		var that = this;
+		var annotations = that.vars.chart.annotations.allItems;
+
+		// console.log(annotation);
+		var annotationElement = $(annotation.group.element);
+
+		// annotationElement.attr({
+		// 	"stroke-dasharray": "150,50",
+		// 	"stroke": "red",
+		// 	"stroke-width": "25",
+		// 	"stroke-dashoffset": "-500",
+		// });
+
+		// To learn more about the foreignObject tag, see:
+		// https://developer.mozilla.org/en/docs/Web/SVG/Element/foreignObject
+		var htmlContext = $(
+			document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"foreignObject"
+			)
+		);
+
+		annotationElement.append(htmlContext);
+
+		htmlContext
+			.attr({
+				width: `${annotation.group.element.getBBox().width}`,
+				height: `${annotation.group.element.getBBox().height}`,
+				// x: 0,
+				// y: 20,
+				zIndex: 2,
+			})
+			.mousedown(function (event) {
+				event.stopPropagation();
+			})
+			.click(function (event) {
+				event.stopPropagation();
+			})
+			.dblclick(function (event) {
+				event.stopPropagation();
+				event.preventDefault();
+				that._deleteAnnotation(annotation.id);
+			});
+
+		var body = $("<body>")
+			.addClass("comment toolbar")
+			// .attr("xmlns", "http://www.w3.org/1999/xhtml");
+			.attr({
+				width: "100%",
+				height: "100%",
+			});
+
+		// dont make form disappear when not hovering over
+		body.mouseover(function (event) {
+			event.stopPropagation();
+		});
+
+		var form = $("<form>");
+		form.css({
+			position: "absolute",
+			// left:
+			display: "flex",
+			width: "100%",
+			height: "100%",
+		});
+
+		//gets all the relevant labels based on annotation type
+		const channelLabels = that._addAnnotationType(annotation);
+
+		//create a select element using Jquery
+		var annotationLabelSelector = $(
+			'<select class="form-control">'
+		).keydown(function (event) {
+			event.stopPropagation();
+		});;
+		// .keydown(function (event) {
+		// 	event.stopPropagation();
+		// });
+		//add the options to the select element
+
+		channelLabels.forEach((label) => {
+			annotationLabelSelector.append(
+				$('<option value="' + label + '">' + label + "</option>")
+			);
+		});
+
+		// //add margin top and bottom
+		annotationLabelSelector.css({
+			width: "100%",
+			height: "50px",
+		});
+
+		//TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
+		//add selector to form
+		form.append(annotationLabelSelector);
+
+		//TODO: add annotation label handling
+		var annotationLabel = annotation.metadata.annotationLabel;
+
+		//make the selector show the current label if it exists
+		if (annotationLabel) {
+			annotationLabelSelector.val(annotationLabel);
+		}
+
+		annotationLabelSelector.change(function () {
+			// console.log(event.target.value);
+			// event.preventDefault();
+			form.submit(function (event) {
+				event.preventDefault();
+
+				var annotationLabel = annotationLabelSelector.val();
+				annotations
+					.filter((a) => a.metadata.id == annotation.metadata.id)
+					.forEach((a) => {
+						a.metadata.annotationLabel = annotationLabel;
+
+						//gets the label from the form selector
+						$(a.group.element)
+							.find(".form-control")
+							.val(annotationLabel);
+					});
+				that._saveFeatureAnnotation(annotation);
+			});
+		});
+		body.append(form);
+		htmlContext.append(body);
+
+		annotation.metadata.commentFormAdded = true;
+	},
+
+	_addAnnotationBoxChangePoint: function (
+		annotationId,
+		timeStart,
+		channelIndices,
+		featureType,
+		timeEnd,
+		confidence,
+		comment,
+		annotationData
+	) {
+		var that = this;
+		// //console.log("anotater");
+		// gets all the annotations
+		var annotations = that.vars.chart.annotations.allItems;
+		////console.log(annotations);
+
+		// makes the channelIndicies an array
+		if (!Array.isArray(channelIndices)) {
+			channelIndices = [channelIndices];
+		}
+		if (
+			annotations.some(
+				// checks if the annotation already exists
+				(a) =>
+					a.metadata.id == annotationId &&
+					(a.metadata.channelIndices == channelIndices ||
+						(channelIndices.length == 1 &&
+							a.metadata.channelIndices.indexOf(
+								channelIndices[0]
+							) > -1))
+			)
+		) {
+			return;
+		}
+
+		// sets timeEnd to the end time if it is defined
+		var timeEnd = timeEnd !== undefined ? timeEnd : false;
+
+		// gets the annotation data if the annotationData is defined
+		var annotationData = annotationData !== undefined ? annotationData : {};
+
+		// checks if there is a timeEnd value
+		var preliminary = timeEnd === false;
+
+		//gets the height and yvalues
+		var { height, yValue } =
+			that._getAnnotationBoxHeightAndYValueForChannelIndices(
+				channelIndices
+			);
+
+		var shapeParams = {
+			height: height, //thje height of the annotation box
+		};
+
+		// if there is a timeEnd value
+		if (preliminary) {
+			shapeParams.width = 0;
+			shapeParams.fill = "transparent";
+
+			shapeParams.stroke = that._getFeatureColor(
+				featureType,
+				annotationData.is_answer
+			);
+
+			shapeParams.strokeWidth = 10;
+		} else {
+			shapeParams.width = timeEnd - timeStart;
+			shapeParams.fill = "rgba(255,100,255,0.5)";
+			shapeParams.stroke = "transparent";
+			shapeParams.strokeWidth = 0;
+
+
+			// shapeParams.fill = "rgba(255,255,255,0.2)";
+			// shapeParams.stroke = "rgba(0,0,0,12)";
+			// shapeParams.strokeWidth = 10;
+			// shapeParams["stroke-dasharray"] = `75px`;
+			// shapeParams["stroke-dashoffset"] = "750px";
+		}
+
+		//adds the annotation box to the chart
+		that.vars.chart.addAnnotation({
+			xValue: timeStart,
+			yValue: yValue,
+			allowDragX: true,
+			allowDragY: false,
+			anchorX: "left",
+			anchorY: "top",
+
+			shape: {
+				type: "rect",
+				units: "values",
+				params: shapeParams,
+			},
+			events: {
+				mouseup: function (event) {
+					$(this.group.element)
+						.find('rect[shape-rendering="crispEdges"]')
+						.last()
+						.remove();
+				},
+
+				dblclick: function (event) {
+					// deletes the annotation on db click
+					if (that.options.isReadOnly) return;
+					if (annotationData.is_answer) return;
+					event.preventDefault();
+					var xMinFixed = that._getAnnotationXMinFixed(this);
+					var xMaxFixed = that._getAnnotationXMaxFixed(this);
+					var annotationId = annotation.metadata.id;
+					var channelIndices = annotation.metadata.channelIndices;
+					var channelsDisplayed = that._getChannelsDisplayed();
+					if (annotation.metadata.originalData) {
+						channelIndices =
+							annotation.metadata.originalData.channels;
+						channelsDisplayed =
+							annotation.metadata.originalData.channels_displayed;
+					}
+					that._deleteAnnotation(
+						annotationId,
+						that.vars.currentWindowRecording,
+						xMinFixed,
+						xMaxFixed,
+						channelIndices,
+						channelsDisplayed
+					);
+					annotations
+						.slice()
+						.reverse()
+						.filter((a) => a.metadata.id == annotationId)
+						.forEach((a) => {
+							a.destroy();
+							that.vars.chart.selectedAnnotation = null;
+						});
+				},
+			},
+		});
+
+		// gets the last annotaion
+		var annotation = annotations[annotations.length - 1];
+		if (!preliminary) {
+			var classString = $(annotation.group.element).attr("class");
+			classString += " saved";
+			$(annotation.group.element).attr("class", classString);
+		}
+		$(annotation.group.element).on("mousedown", function (event) {
+			event.stopPropagation();
+		});
+		annotation.metadata = {
+			id: annotationId,
+			featureType: featureType,
+			channelIndices: channelIndices,
+			comment: "",
+		};
+
+		if (!preliminary) {
+			annotation.metadata.confidence = confidence;
+			annotation.metadata.comment = comment;
+			annotation.metadata.originalData = annotationData;
+		}
+		if (!that.options.isReadOnly && !annotationData.is_answer) {
+			if (!preliminary) {
+				size = shapeParams;
+				that._addCommentFormToAnnotationBoxChangePoint(annotation);
+			}
+		}
+		return annotation;
+	},
+
+	_addAnnotationChangePointAll: function (clickX) {
 		var that = this;
 
-		const clickXOne = that.vars.annotationClicks.clickOne.clickX;
-		const clickXTwo = that.vars.annotationClicks.clickTwo.clickX;
-
-		const clickXOneValue = that._convertPixelsToValue(clickXOne, "x");
-		const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
-
-		console.log(clickXOneValue, clickXTwoValue);
+		const clickXOneValue = that._convertPixelsToValue(clickX, "x");
+		const clickXTwoValue = that._convertPixelsToValue(clickX + 75, "x");
 
 		const channelIndicies = [];
 
@@ -5331,10 +5615,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		}
 
 		const featureType = that.vars.activeFeatureType;
-
 		const annotationId = undefined;
 
-		var annotation = that._addAnnotationBox(
+		var annotation = that._addAnnotationBoxChangePoint(
 			annotationId,
 			clickXOneValue,
 			channelIndicies,
@@ -6395,7 +6678,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		var that = this;
 		that._customAmplitude(index, 100);
-
 	},
 
 	_decreaseAmplitude: function (index) {
@@ -6403,7 +6685,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		var that = this;
 		that._customAmplitude(index, -50);
-
 	},
 
 	_customAmplitude: function (index, scaleFactor) {
