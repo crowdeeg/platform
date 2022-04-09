@@ -465,7 +465,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				clickTwo: null,
 			},
 			recordScalingFactors: true,
+			recordPolarity: true,
 			scalingFactors: {},
+			polarity: {},
 			uniqueClass: that._getUUID(),
 			activeFeatureType: 0,
 			chart: null,
@@ -629,6 +631,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	_createHTMLContent: function () {
 		var that = this;
 		var content =
+			//TODO: lines 645 to end of comment is hwere the N1 things are located
 			' \
             <div class="graph_container"> \
                 <div class="graph"></div> \
@@ -641,7 +644,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     <div class="button_container container-fluid"> \
                         <div class="feature_panel btn-group" role="group"> \
                         </div> \
-                        <div class="artifact_panel epoch-classification-panel btn-group notransition" role="group"> \
+                       <!-- <div class="artifact_panel epoch-classification-panel btn-group notransition" role="group"> \
                             <button type="button" class="btn btn-default no-transition artifact" data-annotation-type="artifacts_none">No Artifacts<div class="votes-info"></div></button> \
                             <button type="button" class="btn btn-default no-transition artifact" data-annotation-type="artifacts_light">Light Artifacts<div class="votes-info"></div></button> \
                             <button type="button" class="btn btn-default no-transition artifact" data-annotation-type="artifacts_medium">Medium Artifacts<div class="votes-info"></div></button> \
@@ -653,7 +656,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             <button type="button" class="btn btn-default no-transition grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_n2">N<span class="shortcut-key">2</span><div class="votes-info"></div></button> \
                             <button type="button" class="btn btn-default no-transition grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_n3">N<span class="shortcut-key">3</span><div class="votes-info"></div></button> \
                             <button type="button" class="btn btn-default no-transition grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_rem"><span class="shortcut-key">R</span>EM<span class="shortcut-key hidden">5</span><div class="votes-info"></div></button> \
-                        </div> \
+                        </div> --> \
                         <div class="adjustment_buttons btn-group" role="group""> \
                             <button type="button" class="btn btn-default gain-button gainUp" aria-label="Left Align"> \
                             <span class="fa fa-plus" aria-hidden="true"></span> \
@@ -684,6 +687,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 								</form>\
 								<button id="scaletoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE TO SCREEN</button> \
 								<button id="scalealltoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE  ALL TO SCREEN</button> \
+								<button id="reversepolarity" type="button" class="btn btn-default amplitude_adjustment_button" disabled>REVERSE POLARITY</button> \
+								<button id="moveup" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&uarr;</button> \
+								<button id="movedown" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&darr;</button> \
                             </div>\
                          </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
@@ -1925,31 +1931,31 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var firstFeature = that.options.features.order[0];
 		that.vars.activeFeatureType = firstFeature;
 
-		for (var i = 0; i < that.options.features.order.length; i++) {
-			var feature_key = that.options.features.order[i];
-			var feature_name = that.options.features.options[feature_key].name;
-			var featureButton = $(
-				'<button type="button" class="btn feature ' +
-					feature_key +
-					'">' +
-					feature_name +
-					"</button>"
-			).data("annotation-type", feature_key);
-			$(".feature_panel").append(featureButton);
-			$(
-				'<style type="text/css">.feature.' +
-					feature_key +
-					", .feature." +
-					feature_key +
-					":hover { background-color: " +
-					that._getFeatureColor(feature_key, false, 0.05) +
-					"} .feature." +
-					feature_key +
-					".active { background-color: " +
-					that._getFeatureColor(feature_key) +
-					"}</style>"
-			).appendTo("head");
-		}
+		// for (var i = 0; i < that.options.features.order.length; i++) {
+		// 	var feature_key = that.options.features.order[i];
+		// 	var feature_name = that.options.features.options[feature_key].name;
+		// 	var featureButton = $(
+		// 		'<button type="button" class="btn feature ' +
+		// 			feature_key +
+		// 			'">' +
+		// 			feature_name +
+		// 			"</button>"
+		// 	).data("annotation-type", feature_key);
+		// 	$(".feature_panel").append(featureButton);
+		// 	$(
+		// 		'<style type="text/css">.feature.' +
+		// 			feature_key +
+		// 			", .feature." +
+		// 			feature_key +
+		// 			":hover { background-color: " +
+		// 			that._getFeatureColor(feature_key, false, 0.05) +
+		// 			"} .feature." +
+		// 			feature_key +
+		// 			".active { background-color: " +
+		// 			that._getFeatureColor(feature_key) +
+		// 			"}</style>"
+		// 	).appendTo("head");
+		// }
 		$(that.element)
 			.find(".feature")
 			.click(function (event) {
@@ -2341,7 +2347,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					recordingLength,
 					Math.max(0, timeshift)
 				);
-				that.vars.reprint = 1;
+				// that.vars.reprint = 1;
 				that._savePreferences({
 					channelTimeshift: that.vars.channelTimeshift,
 				});
@@ -3445,9 +3451,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// scaleValueChange = Math.pow(scaleFactorAmplitude, 2);
 				var scaleValueChange = maxIn * scaleFactorAmplitude;
 
+				// checks if there are negative and positive values in the values array
 				const hasNegativeValues = values.some((v) => v <= 0);
 				const hasPositiveValues = values.some((v) => v >= 0);
 
+				// if the array has only negative or positive values, then we add/subtract the avg
 				if (!(hasNegativeValues && hasPositiveValues)) {
 					if (hasPositiveValues) {
 						values = values.map((v) => v - avg);
@@ -3492,6 +3500,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						case "Chin 1-Chin 2":
 							scaleFault = 500;
 							break;
+						// case "eeg-ch1":
+						// 	scaleFault = 0.05;
+						// 	break;
+						// case "eeg-ch2":
+						// 	scaleFault = 0.5;
+						// 	break;
+						// case "eeg-ch3":
+						// 	scaleFault = 0.05;
+						// 	break;
+						// case "eeg-ch4":
+						// 	scaleFault = 0.05;
+						// 	break;
 
 						case "ECG":
 							scaleFault = 100;
@@ -3862,6 +3882,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		);
 
 		that.vars.recordScalingFactors = false;
+		that.vars.recordPolarity = false;
 
 		// checks if the object is empty
 		if (!that._objectIsEmpty(that.vars.scalingFactors)) {
@@ -3874,6 +3895,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// console.log(that.vars.chart.series[index].yData);
 			}
 		}
+
+		if (!that._objectIsEmpty(that.vars.polarity)) {
+			for (const index in that.vars.polarity) {
+				that._reversePolarity(index);
+			}
+		}
+
+		that.vars.recordPolarity = true;
 		that.vars.recordScalingFactors = true;
 
 		that.vars.chart.redraw(); // efficiently redraw the entire window in one go
@@ -6180,6 +6209,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			const scaleinput = $("#scaleinput");
 			const scaleToScreen = $("#scaletoscreen");
 			const scaleAllToScreen = $("#scalealltoscreen");
+
+
+			const reversePolarity = $("#reversepolarity");
+			const moveUp = $("#moveup");
+			const moveDown = $("#movedown");
+
 			// gets the selected channel's name
 			const channelName =
 				this.vars.currentWindowData.channels[index].name;
@@ -6244,7 +6279,73 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					that._scaleAllToScreen();
 					that.vars.chart.redraw(); //redraws the chart with the scaled data
 				});
+
+			$(reversePolarity)
+				.off()
+				.on("click", function () {
+					that._reversePolarity(index);
+					that.vars.chart.redraw(); //redraws the chart with the reversed polarity
+				});
+
+			$(moveUp)
+				.off()
+				.on("click", function () {
+					that._moveUp(index);
+					that.vars.chart.redraw(); //redraws the chart with the moved channel
+				}
+			);
+
+			$(moveDown)
+				.off()
+				.on("click", function () {
+					that._moveDown(index);
+					that.vars.chart.redraw(); //redraws the chart with the moved channel
+				}
+			);
 		}
+	},
+
+	_reversePolarity: function (index) {
+		var that = this;
+
+
+		var that = this;
+		if (that._isChannelSelected() === true) {
+			// checks if a channel is selected
+			channel = that.vars.allChannels[index];
+		}
+
+		//gets the zeroPosition of each channel (where they would = 0 if the channel was centred at y = 0)
+		const zeroPosition = that._getOffsetForChannelIndexPostScale(index);
+
+
+		console.log(that.vars.chart.series[index].yData);
+		that.vars.chart.series[index].yData.forEach((point, idx) => {
+			if (point !== zeroPosition) {
+				that.vars.chart.series[index].yData[idx] =
+					// some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
+					// to get an accurate percentage scaling
+					zeroPosition + (point - zeroPosition) * (-1);
+			}
+		});
+
+		if (that.vars.recordPolarity) {
+			if (that.vars.polarity.hasOwnProperty(index)) {
+				delete that.vars.polarity[index];
+			} else {
+				that.vars.polarity[index] = -1;
+			}
+		}
+
+	},
+
+	_moveDown: function (index) {
+
+	},
+
+	_moveUp: function (index) {
+
+
 	},
 
 	_increaseAmplitude: function (index) {
@@ -6481,6 +6582,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		if (that._isChannelSelected() === true) {
 			that.vars.scalingFactors = {}; // clears the scalingFactors object
+			that.vars.polarity = {}
 			that._reloadCurrentWindow(); // reloads the current window
 
 			// OLD CODE:

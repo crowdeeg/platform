@@ -37,8 +37,8 @@ const recordingPaths = [
 	// 	path: "/physionet/edfx/170814_3104359_PSGfiltered.edf",
 	// 	source: "PSG",
 	// },
-	{ path: "/physionet/edfx/PSGreduced.edf", source: "PSG" },
-	{ path: "/physionet/edfx/MUSEreduced.edf", source: "MUSE" },
+	{ path: "/physionet/edfx/351PSG.edf", source: "PSG" },
+	{ path: "/physionet/edfx/351MUSE.edf", source: "MUSE" },
 
 	// {
 	// 	path: "/physionet/edfx/001D_left wrist_038090_2017-08-15 17-20-38.bin",
