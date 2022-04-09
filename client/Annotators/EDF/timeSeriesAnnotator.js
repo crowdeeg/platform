@@ -466,6 +466,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			},
 			recordScalingFactors: true,
 			recordPolarity: true,
+			recordTranslation: true,
+			translation: {},
 			scalingFactors: {},
 			polarity: {},
 			uniqueClass: that._getUUID(),
@@ -3883,6 +3885,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		that.vars.recordScalingFactors = false;
 		that.vars.recordPolarity = false;
+		that.vars.recordTranslation = false;
 
 		// checks if the object is empty
 		if (!that._objectIsEmpty(that.vars.scalingFactors)) {
@@ -3896,6 +3899,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			}
 		}
 
+		console.log(that.vars.translation);
+		if (!that._objectIsEmpty(that.vars.translation)) {
+			for (const index in that.vars.translation) {
+				that._customTranslation(index, that.vars.translation[index]);
+			}
+		}
+
 		if (!that._objectIsEmpty(that.vars.polarity)) {
 			for (const index in that.vars.polarity) {
 				that._reversePolarity(index);
@@ -3904,6 +3914,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		that.vars.recordPolarity = true;
 		that.vars.recordScalingFactors = true;
+		that.vars.recordTranslation = true;
 
 		that.vars.chart.redraw(); // efficiently redraw the entire window in one go
 
@@ -4606,8 +4617,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						clickX: clickXOne,
 						clickY: clickYOne,
 					};
-
-
 				} else if (that.vars.annotationClicks.clickTwo === null) {
 					(clickXTwo = e.pageX - container.offsetLeft),
 						(clickYTwo = e.pageY - container.offsetTop);
@@ -4616,8 +4625,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 						clickX: clickXTwo,
 						clickY: clickYTwo,
 					};
-
-
 
 					var annotation = that._addAnnotationChangePoint();
 
@@ -5499,7 +5506,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (!that.options.isReadOnly && !annotationData.is_answer) {
 			that._addConfidenceLevelButtonsToAnnotationBox(annotation);
 			if (!preliminary) {
-				size = shapeParams
+				size = shapeParams;
 				that._addCommentFormToAnnotationBox(annotation, size);
 			}
 		}
@@ -5744,7 +5751,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		annotationElement.append(htmlContext);
 
-
 		htmlContext
 			.attr({
 				width: `${annotation.group.element.getBBox().width}`,
@@ -5761,21 +5767,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			})
 			.dblclick(function (event) {
 				event.preventDefault();
-				that._deleteAnnotation(annotation.id)
+				that._deleteAnnotation(annotation.id);
 			});
 
-		var body = $("<body>")
-			.addClass("comment toolbar")
-			// .attr("xmlns", "http://www.w3.org/1999/xhtml");
-			// .attr({
-			// 	"width": "100%",
-			// 	"height": "100%"
-			// })
+		var body = $("<body>").addClass("comment toolbar");
+		// .attr("xmlns", "http://www.w3.org/1999/xhtml");
+		// .attr({
+		// 	"width": "100%",
+		// 	"height": "100%"
+		// })
 		var form = $("<form>");
 		form.css({
 			position: "absolute",
 			top: "50%",
-			// left: 
+			// left:
 			display: "flex",
 			width: "100%",
 			height: "100%",
@@ -5837,8 +5842,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		)
 			.hide()
 			.css({
-			width: "40%",
-			height: "50%",
+				width: "40%",
+				height: "50%",
 			})
 			.keydown(function (event) {
 				event.stopPropagation();
@@ -5850,7 +5855,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				toggleButton.removeClass("fa-comment").addClass("fa-floppy-o");
 				input.show().focus();
 				annotationLabelSelector.show();
-
 			} else {
 				toggleButton.removeClass("fa-floppy-o").addClass("fa-comment");
 				input.hide();
@@ -5868,7 +5872,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 							.val(comment);
 
 						//gets the label from the form selector
-						$(a.group.element).find(".form-control").val(annotationLabel);
+						$(a.group.element)
+							.find(".form-control")
+							.val(annotationLabel);
 					});
 				that._saveFeatureAnnotation(annotation);
 			}
@@ -5876,7 +5882,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		form.append(input);
 		body.append(form);
 		htmlContext.append(body);
-		
+
 		annotation.metadata.commentFormAdded = true;
 	},
 
@@ -6210,7 +6216,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			const scaleToScreen = $("#scaletoscreen");
 			const scaleAllToScreen = $("#scalealltoscreen");
 
-
 			const reversePolarity = $("#reversepolarity");
 			const moveUp = $("#moveup");
 			const moveDown = $("#movedown");
@@ -6292,22 +6297,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				.on("click", function () {
 					that._moveUp(index);
 					that.vars.chart.redraw(); //redraws the chart with the moved channel
-				}
-			);
+				});
 
 			$(moveDown)
 				.off()
 				.on("click", function () {
 					that._moveDown(index);
 					that.vars.chart.redraw(); //redraws the chart with the moved channel
-				}
-			);
+				});
 		}
 	},
 
 	_reversePolarity: function (index) {
 		var that = this;
-
 
 		var that = this;
 		if (that._isChannelSelected() === true) {
@@ -6318,14 +6320,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		//gets the zeroPosition of each channel (where they would = 0 if the channel was centred at y = 0)
 		const zeroPosition = that._getOffsetForChannelIndexPostScale(index);
 
+		const movement = that.vars.translation[index]
+			? that.vars.translation[index]
+			: 0;
 
-		console.log(that.vars.chart.series[index].yData);
+		console.log(`movement = ${movement}`);
+		// console.log(that.vars.chart.series[index].yData);
 		that.vars.chart.series[index].yData.forEach((point, idx) => {
 			if (point !== zeroPosition) {
 				that.vars.chart.series[index].yData[idx] =
 					// some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
 					// to get an accurate percentage scaling
-					zeroPosition + (point - zeroPosition) * (-1);
+
+					zeroPosition +
+					movement +
+					(point - zeroPosition - movement) * -1;
 			}
 		});
 
@@ -6336,16 +6345,49 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				that.vars.polarity[index] = -1;
 			}
 		}
+	},
 
+	_customTranslation: function (index, value) {
+		var that = this;
+		if (that._isChannelSelected() === true) {
+			// checks if a channel is selected
+			channel = that.vars.allChannels[index];
+		}
+
+		// takes each point in the ydata of the graph and scales it by the scaleFactor
+
+		// console.log(that.vars.chart.series[index].yData);
+		that.vars.chart.series[index].yData.forEach((point, idx) => {
+			that.vars.chart.series[index].yData[idx] =
+				// some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
+				// to get an accurate percentage scaling;
+				point + value;
+		});
+
+		// code allowing the scaling to persist when you switch windows
+		if (that.vars.recordTranslation) {
+			// checks if the recordScalingFactors object has the current index in it
+			if (that.vars.translation.hasOwnProperty(index)) {
+				// if it does, we multiply the percentage in order to be able to scale upcoming screens with the same percentage
+				that.vars.translation[index] += value;
+			} else {
+				// if not we just add a new key value pair to the object
+				that.vars.translation[index] = value;
+			}
+		}
+
+		console.log(that.vars.translation);
+		console.log(that.vars.recordTranslation);
 	},
 
 	_moveDown: function (index) {
-
+		var that = this;
+		that._customTranslation(index, -25);
 	},
 
 	_moveUp: function (index) {
-
-
+		var that = this;
+		that._customTranslation(index, 25);
 	},
 
 	_increaseAmplitude: function (index) {
@@ -6354,17 +6396,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		that._customAmplitude(index, 100);
 
-		// OLD CODE:
-		//dont really know what this does, 95% sure will have to change it later
-		// that.vars.valueOptions = 1; // transfromData -> requestData -> switchToWindow
-		// that.vars.increaseOnce = 1; // transfromData -> requestData -> switchToWindow
-		// that.vars.channelAmplitudeOnChange = {
-		// 	name: channel.name,
-		// 	dataId: channel.dataId,
-		// }; // transfromData -> requestData -> switchToWindow
-		// that.vars.reprint = 1; //indicates that we have to reload the data because we cache it
-		// console.log(that.vars.chart.series[that.vars.selectedChannelIndex]);
-		// that._reloadCurrentWindow();
 	},
 
 	_decreaseAmplitude: function (index) {
@@ -6373,22 +6404,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		that._customAmplitude(index, -50);
 
-		// OLD CODE:
-		// var that = this;
-		// if (that._isChannelSelected() === true) {
-		// 	// checks if a channel is selected
-		// 	channel = that.vars.allChannels[index];
-
-		// 	// dont really know what this does, 95% sure will have to change it later
-		// 	that.vars.valueOptions = -1;
-		// 	that.vars.channelAmplitudeOnChange = {
-		// 		name: channel.name,
-		// 		dataId: channel.dataId,
-		// 	};
-		// 	that.vars.increaseOnce = 1;
-		// 	that.vars.reprint = 1;
-		// 	that._reloadCurrentWindow();
-		// }
 	},
 
 	_customAmplitude: function (index, scaleFactor) {
@@ -6406,7 +6421,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 		// takes each point in the ydata of the graph and scales it by the scaleFactor
 
-		console.log(that.vars.chart.series[index].yData);
+		// console.log(that.vars.chart.series[index].yData);
 		that.vars.chart.series[index].yData.forEach((point, idx) => {
 			if (point !== zeroPosition) {
 				that.vars.chart.series[index].yData[idx] =
@@ -6496,12 +6511,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 					// if the lowerdifference is greater, we scale the data by the percentage difference
 
 					that._customAmplitude(index, percentageDifferenceLower);
-					console.log("1");
 				} else {
 					// if the upperdifference is greater, we scale the data by the percentage difference
 
 					that._customAmplitude(index, percentageDifferenceUpper);
-					console.log("2");
 				}
 			} else if (
 				lowerBound > minChannelData &&
@@ -6511,7 +6524,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// we scale the data by the percentage difference
 
 				that._customAmplitude(index, percentageDifferenceLower);
-				console.log("3");
 			} else if (
 				lowerBound < minChannelData &&
 				upperBound < maxChannelData
@@ -6520,7 +6532,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// we scale the data by the percentage difference
 
 				that._customAmplitude(index, percentageDifferenceUpper);
-				console.log("4");
 			}
 		} else if (lowerBound < minChannelData || upperBound > maxChannelData) {
 			// checks if data is within bounds, but is not scaled enough to "fit the screen"
@@ -6532,10 +6543,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 				if (absoluteLowerDifference > absoluteUpperDifference) {
 					that._customAmplitude(index, percentageDifferenceUpper);
-					console.log("5");
 				} else {
 					that._customAmplitude(index, percentageDifferenceLower);
-					console.log("6");
 				}
 			} else if (
 				lowerBound < minChannelData &&
@@ -6545,7 +6554,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// we scale the data by the percentage difference
 
 				that._customAmplitude(index, percentageDifferenceLower);
-				console.log("7");
 			} else if (
 				lowerBound > minChannelData &&
 				upperBound > maxChannelData
@@ -6554,7 +6562,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				// we scale the data by the percentage difference
 
 				that._customAmplitude(index, percentageDifferenceUpper);
-				console.log("8");
 			}
 		}
 	},
@@ -6582,7 +6589,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		if (that._isChannelSelected() === true) {
 			that.vars.scalingFactors = {}; // clears the scalingFactors object
-			that.vars.polarity = {}
+			that.vars.polarity = {};
+			that.vars.translation = {};
 			that._reloadCurrentWindow(); // reloads the current window
 
 			// OLD CODE:
@@ -7568,7 +7576,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		if (channels && !channels.length) {
 			channels = [channels];
 		}
-		
+
 		const context = that.options.context;
 
 		if (!annotationId || !Annotations.findOne(annotationId)) {
@@ -7682,7 +7690,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 				};
 			}
 
-			console.log(cacheEntry)
+			console.log(cacheEntry);
 			if (cacheEntry.annotations) {
 				cacheEntry.annotations.unshift(annotation.value);
 			}
