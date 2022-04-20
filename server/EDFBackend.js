@@ -703,18 +703,32 @@ Meteor.methods({
 
 		// I think we get the channels using wfdb desc
 		allRecordings = allRecordings.map((recording) => {
-			channelsDisplayed[recording.source] = Data.findOne(
-				recording._id
-			).metadata.wfdbdesc.Groups[0].Signals.map(
-				(signal) => "'" + signal.Description + "'"
-			);
-			recording.channelsDisplayedParsed = parseChannelsDisplayed(
-				channelsDisplayed[recording.source],
-				recording._id
-			);
-			console.log("recording =" + recording.source);
-			return recording;
-		});
+      temp = parseChannelsDisplayed(
+        channelsDisplayed[recording.source],
+        recording._id
+      );
+
+      temp = temp.individualChannelsRequired.map((channel) => {
+        return channel.name;
+      });
+
+      channelsDisplayed[recording.source] = Data.findOne(
+        recording._id
+      ).metadata.wfdbdesc.Groups[0].Signals.map(
+        (signal) => "'" + signal.Description + "'"
+      );
+
+      channelsDisplayed[recording.source] = channelsDisplayed[
+        recording.source
+      ].filter((value) => temp.includes(value));
+
+      recording.channelsDisplayedParsed = parseChannelsDisplayed(
+        channelsDisplayed[recording.source],
+        recording._id
+      );
+
+      return recording;
+    });
 
 		let targetSamplingRate = options.target_sampling_rate;
 		let lowResolutionData = options.low_resolution_data;
