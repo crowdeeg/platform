@@ -666,6 +666,19 @@
     margin-right: 0.5rem;
 }
 
+.time_sync {
+    font-size: 1rem;
+    font-weight: thin;
+    color: #000000;
+    background-color: rgba(51, 247, 60, 0.774);
+    display: inline;
+    line-height: 2rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
 
 .amplitude_adjustment_container{
   float: left;

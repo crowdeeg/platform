@@ -718,6 +718,7 @@ Meteor.methods({
         (signal) => "'" + signal.Description + "'"
       );
 
+	  //TODO: Uncomment this
       channelsDisplayed[recording.source] = channelsDisplayed[
         recording.source
       ].filter((value) => temp.includes(value));

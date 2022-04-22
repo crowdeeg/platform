@@ -633,8 +633,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 	_createHTMLContent: function () {
 		var that = this;
 		var content =
-			//TODO: lines 645 to end of comment is hwere the N1 things are located
-			' \
+      //TODO: lines 645 to end of comment is hwere the N1 things are located
+      ' \
             <div class="graph_container"> \
                 <div class="graph"></div> \
                 <div class="graph_control"> \
@@ -680,6 +680,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                         <div class="amplitude_adjustment_container"> \
                             <div class="amplitude_adjustment_panel">\
                                 <p class=channel_name></p> \
+								<p class=time_sync></p> \
                                 <button id="increase" type="button" class="btn btn-default amplitude_adjustment_button" disabled>+</button> \
                                 <button id="decrease" type="button" class="btn btn-default amplitude_adjustment_button" disabled>-</button> \
                                 <button id="default" type="button" class="btn btn-default amplitude_adjustment_button" disabled>RESET ALL</button> \
@@ -722,8 +723,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                                     <span class="fa fa-chevron-right" aria-hidden="true"></span> \
                                 </button> \
                                 <button type="button" class="btn btn-default keyboardShortcuts" data-html="true" data-container=".' +
-			that.vars.uniqueClass +
-			'" data-toggle="popover" data-placement="bottom" data-content="<p>Forward: Right Arrow, Page up, D</p> \
+      that.vars.uniqueClass +
+      '" data-toggle="popover" data-placement="bottom" data-content="<p>Forward: Right Arrow, Page up, D</p> \
                                                                     <p>Backward: Left Arrow, Page Down, A</p> \
                                                                     <p>Skip 5 Min: Up/Down Arrows</p> \
                                                                     <p>Back to Last Annotation: R</p> \
@@ -2371,16 +2372,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		switch (mode) {
 			case "crosshair":
+				$(".time_sync").text("");
 				$(".timesync").prop("disabled", false);
 				that._toggleNoTimelockScroll(false);
 				that._displayCrosshair(that.vars.crosshairPosition);
 				break;
 			case "notimelock":
+				$(".time_sync").text("");
 				$(".timesync").prop("disabled", true);
 				that._destroyCrosshair();
 				that._toggleNoTimelockScroll(true);
 				break;
 			case "offset":
+				$(".time_sync").text("");
 				$(".timesync").prop("disabled", false);
 				that._toggleNoTimelockScroll(false);
 				that._destroyCrosshair();
@@ -2404,6 +2408,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			let diff =
 				crosshairPosition[0].timeInSeconds -
 				crosshairPosition[1].timeInSeconds;
+			console.log("=======" + diff + "======");
+      $(".time_sync").text("Time Difference: " + diff);
 			if (diff > 0) {
 				if (currentDiff[1]) {
 					let remainder = diff - currentDiff[1];
@@ -3900,7 +3906,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			}
 		}
 
-		console.log(that.vars.translation);
 		if (!that._objectIsEmpty(that.vars.translation)) {
 			for (const index in that.vars.translation) {
 				that._customTranslation(index, that.vars.translation[index]);
