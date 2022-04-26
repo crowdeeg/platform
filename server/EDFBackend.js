@@ -718,10 +718,10 @@ Meteor.methods({
         (signal) => "'" + signal.Description + "'"
       );
 
-	  //TODO: Uncomment this
-      channelsDisplayed[recording.source] = channelsDisplayed[
-        recording.source
-      ].filter((value) => temp.includes(value));
+	  //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
+    //   channelsDisplayed[recording.source] = channelsDisplayed[
+    //     recording.source
+    //   ].filter((value) => temp.includes(value));
 
       recording.channelsDisplayedParsed = parseChannelsDisplayed(
         channelsDisplayed[recording.source],

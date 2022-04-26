@@ -460,6 +460,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		// initializing variables for future usage by the functions
 		var that = this;
 		that.vars = {
+			currentTimeDiff: 0,
 			annotationClicks: {
 				clickOne: null,
 				clickTwo: null,
@@ -2372,19 +2373,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 		var that = this;
 		switch (mode) {
 			case "crosshair":
-				$(".time_sync").text("");
 				$(".timesync").prop("disabled", false);
 				that._toggleNoTimelockScroll(false);
 				that._displayCrosshair(that.vars.crosshairPosition);
 				break;
 			case "notimelock":
-				$(".time_sync").text("");
+				
 				$(".timesync").prop("disabled", true);
 				that._destroyCrosshair();
 				that._toggleNoTimelockScroll(true);
+				$(".time_sync").text("");
+				that.vars.currentTimeDiff = "";
 				break;
 			case "offset":
-				$(".time_sync").text("");
+				// $(".time_sync").text("");
 				$(".timesync").prop("disabled", false);
 				that._toggleNoTimelockScroll(false);
 				that._destroyCrosshair();
@@ -2408,8 +2410,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			let diff =
 				crosshairPosition[0].timeInSeconds -
 				crosshairPosition[1].timeInSeconds;
+			that.vars.currentTimeDiff += diff;
 			console.log("=======" + diff + "======");
-      $(".time_sync").text("Time Difference: " + diff);
+      $(".time_sync").text("Time Difference: " + that.vars.currentTimeDiff);
 			if (diff > 0) {
 				if (currentDiff[1]) {
 					let remainder = diff - currentDiff[1];
@@ -2469,6 +2472,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 			.material_select();
 		that._savePreferences({ channelTimeshift: that.vars.channelTimeshift });
 		that._reloadCurrentWindow();
+		console.log(that.vars.channelTimeshift)
+		that.vars.currentTimeDiff = 0;
+		$(".time_sync").text("");
+
 	},
 
 	_setupTimeSyncPanel: function () {
