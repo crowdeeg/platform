@@ -39,7 +39,6 @@ const recordingPaths = [
   // },
   { path: "/physionet/edfx/351PSG.edf", source: "PSG" },
   { path: "/physionet/edfx/351MUSE.edf", source: "MUSE" },
-
   { path: "/physionet/edfx/161PSG.edf", source: "PSG" },
   { path: "/physionet/edfx/161MUSE.edf", source: "MUSE" },
 

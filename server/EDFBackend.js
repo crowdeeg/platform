@@ -676,33 +676,33 @@ Meteor.methods({
 		};
 	},
 	"get.edf.data"(options) {
-		//
-		//console.log('get.edf.data');
-		options = options || {};
-		let startTime = options.start_time || 0;
-		let windowLength = options.window_length;
-		let count = 0;
+    //
+    //console.log('get.edf.data');
+    options = options || {};
+    let startTime = options.start_time || 0;
+    let windowLength = options.window_length;
+    let count = 0;
 
-		// this is the original version of codes which display all channels specified in the options:
-		let channelsDisplayed = options.channels_displayed;
-		console.log(channelsDisplayed);
+    // this is the original version of codes which display all channels specified in the options:
+    let channelsDisplayed = options.channels_displayed;
+    // console.log(channelsDisplayed);
 
-		// let channelsDisplayed = {};
+    // let channelsDisplayed = {};
 
-		let channelTimeshift = options.channel_timeshift;
-		let allRecordings = options.recordings;
+    let channelTimeshift = options.channel_timeshift;
+    let allRecordings = options.recordings;
 
-		// this is the original version of codes which display all channels specified in the options:
-		// allRecordings = allRecordings.map((recording) => {
-		//   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
-		//   return recording;
-		// });
-		// the following line get all the channels from the metadata of the recording and display all of them
-		// we should modify it to be only displaying the channel required in the particular montage
-		// TODO: this should only display the channels required in the montage not all of them, should speed it up
+    // this is the original version of codes which display all channels specified in the options:
+    // allRecordings = allRecordings.map((recording) => {
+    //   recording.channelsDisplayedParsed = parseChannelsDisplayed(channelsDisplayed[recording.source], recording._id);
+    //   return recording;
+    // });
+    // the following line get all the channels from the metadata of the recording and display all of them
+    // we should modify it to be only displaying the channel required in the particular montage
+    // TODO: this should only display the channels required in the montage not all of them, should speed it up
 
-		// I think we get the channels using wfdb desc
-		allRecordings = allRecordings.map((recording) => {
+    // I think we get the channels using wfdb desc
+    allRecordings = allRecordings.map((recording) => {
       temp = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
         recording._id
@@ -718,7 +718,7 @@ Meteor.methods({
         (signal) => "'" + signal.Description + "'"
       );
 
-	  //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
+      //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
     //   channelsDisplayed[recording.source] = channelsDisplayed[
     //     recording.source
     //   ].filter((value) => temp.includes(value));
@@ -731,235 +731,219 @@ Meteor.methods({
       return recording;
     });
 
-		let targetSamplingRate = options.target_sampling_rate;
-		let lowResolutionData = options.low_resolution_data;
-		let useHighPrecisionSampling = options.use_high_precision_sampling;
-		let atLeast1 = 0;
-		let dataFrame = {};
+    let targetSamplingRate = options.target_sampling_rate;
+    let lowResolutionData = options.low_resolution_data;
+    let useHighPrecisionSampling = options.use_high_precision_sampling;
+    let atLeast1 = 0;
+    let dataFrame = {};
 
-		//console.log("get.edf.data init finished");
+    //console.log("get.edf.data init finished");
 
-		var currDataFrame;
-		dataFrame = allRecordings.reduce((collections, recording) => {
-			// accumulate all the data from all recordings into one dataFrame object
-			let startTimeAfterAdjustment = channelTimeshift[recording._id]
-				? startTime + channelTimeshift[recording._id]
-				: startTime;
+    var currDataFrame;
+    dataFrame = allRecordings.reduce((collections, recording) => {
+      // accumulate all the data from all recordings into one dataFrame object
+      let startTimeAfterAdjustment = channelTimeshift[recording._id]
+        ? startTime + channelTimeshift[recording._id]
+        : startTime;
 
-			console.log(
-				recording.channelsDisplayedParsed.individualChannelsRequired
-			);
-			currDataFrame = WFDB.rdsamp({
-				// runs the rdsamp function with the specified parameters that we have defined above
-				recordingName: recording.path,
-				recordingId: recording._id,
-				startTime: startTimeAfterAdjustment,
-				windowLength,
-				channelsDisplayed:
-					recording.channelsDisplayedParsed.individualChannelsRequired.map(
-						(channel) => channel.name
-					),
-				targetSamplingRate,
-				lowResolutionData,
-				useHighPrecisionSampling,
-			});
+      // console.log(
+      // 	recording.channelsDisplayedParsed.individualChannelsRequired
+      // );
+      currDataFrame = WFDB.rdsamp({
+        // runs the rdsamp function with the specified parameters that we have defined above
+        recordingName: recording.path,
+        recordingId: recording._id,
+        startTime: startTimeAfterAdjustment,
+        windowLength,
+        channelsDisplayed:
+          recording.channelsDisplayedParsed.individualChannelsRequired.map(
+            (channel) => channel.name
+          ),
+        targetSamplingRate,
+        lowResolutionData,
+        useHighPrecisionSampling,
+      });
 
-			currDataFrame.channelInfo = currDataFrame.channelNames.map(
-				(channelName) => {
-					return { name: channelName, dataId: recording._id };
-				}
-			);
-			delete currDataFrame.channelNames;
-			currDataFrame.data = currDataFrame.data.map((data) => {
-				return { data: data, dataId: recording._id };
-			});
-			if (currDataFrame.numSamples === 0) {
-				currDataFrame.startTime = Number.POSITIVE_INFINITY;
-				currDataFrame.endTime = Number.NEGATIVE_INFINITY;
-				currDataFrame.duration = Number.NEGATIVE_INFINITY;
-				currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
-			}
-			if (!Object.keys(collections).length) return currDataFrame;
-			collections.channelInfo = collections.channelInfo.concat(
-				currDataFrame.channelInfo
-			);
-			collections.data = collections.data.concat(currDataFrame.data);
-			collections.startTime = Math.min(
-				collections.startTime,
-				currDataFrame.startTime
-			);
-			collections.endTime = Math.max(
-				collections.endTime,
-				currDataFrame.endTime
-			);
-			collections.duration = Math.max(
-				collections.duration,
-				currDataFrame.duration
-			);
-			collections.numSamples = Math.max(
-				collections.numSamples,
-				currDataFrame.numSamples
-			);
-			collections.samplingRate = Math.min(
-				collections.samplingRate,
-				currDataFrame.samplingRate
-			);
-			return collections;
-		}, {});
+      currDataFrame.channelInfo = currDataFrame.channelNames.map(
+        (channelName) => {
+          return { name: channelName, dataId: recording._id };
+        }
+      );
+      delete currDataFrame.channelNames;
+      currDataFrame.data = currDataFrame.data.map((data) => {
+        return { data: data, dataId: recording._id };
+      });
+      if (currDataFrame.numSamples === 0) {
+        currDataFrame.startTime = Number.POSITIVE_INFINITY;
+        currDataFrame.endTime = Number.NEGATIVE_INFINITY;
+        currDataFrame.duration = Number.NEGATIVE_INFINITY;
+        currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
+      }
+      if (!Object.keys(collections).length) return currDataFrame;
+      collections.channelInfo = collections.channelInfo.concat(
+        currDataFrame.channelInfo
+      );
+      collections.data = collections.data.concat(currDataFrame.data);
+      collections.startTime = Math.min(
+        collections.startTime,
+        currDataFrame.startTime
+      );
+      collections.endTime = Math.max(
+        collections.endTime,
+        currDataFrame.endTime
+      );
+      collections.duration = Math.max(
+        collections.duration,
+        currDataFrame.duration
+      );
+      collections.numSamples = Math.max(
+        collections.numSamples,
+        currDataFrame.numSamples
+      );
+      collections.samplingRate = Math.min(
+        collections.samplingRate,
+        currDataFrame.samplingRate
+      );
+      return collections;
+    }, {});
 
-		if (dataFrame.numSamples === 0) {
-			return {};
-		}
-		// console.time('computeSubtractions');
-		let channelsDisplayedParsed = allRecordings.reduce(
-			(parsedCombined, recording) => {
-				if (!Object.keys(parsedCombined).length)
-					return recording.channelsDisplayedParsed;
-				parsedCombined.subtractions =
-					parsedCombined.subtractions.concat(
-						recording.channelsDisplayedParsed.subtractions
-					);
-				parsedCombined.individualChannelsRequired =
-					parsedCombined.individualChannelsRequired.concat(
-						recording.channelsDisplayedParsed
-							.individualChannelsRequired
-					);
-				return parsedCombined;
-			},
-			{}
-		);
+    if (dataFrame.numSamples === 0) {
+      return {};
+    }
+    // console.time('computeSubtractions');
+    let channelsDisplayedParsed = allRecordings.reduce(
+      (parsedCombined, recording) => {
+        if (!Object.keys(parsedCombined).length)
+          return recording.channelsDisplayedParsed;
+        parsedCombined.subtractions = parsedCombined.subtractions.concat(
+          recording.channelsDisplayedParsed.subtractions
+        );
+        parsedCombined.individualChannelsRequired =
+          parsedCombined.individualChannelsRequired.concat(
+            recording.channelsDisplayedParsed.individualChannelsRequired
+          );
+        return parsedCombined;
+      },
+      {}
+    );
 
-		// console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
-		let subtractionOrder =
-			channelsDisplayedParsed.individualChannelsRequired;
-		let allChannelInfo = dataFrame.channelInfo;
+    // console.log("channelsDisplayedParsed:", channelsDisplayedParsed);
+    let subtractionOrder = channelsDisplayedParsed.individualChannelsRequired;
+    let allChannelInfo = dataFrame.channelInfo;
 
-		channelsDisplayedParsed.subtractions.forEach((subtraction) => {
-			let dataId = subtraction.dataId;
-			if (indexOfChannel(subtractionOrder, subtraction.key, dataId) > -1)
-				return;
-			let has = {};
-			let channelIndex = {};
-			let channelName = {};
-			let channelData = {};
-			["plus", "minus"].forEach((operandName) => {
-				let operand = subtraction[operandName];
-				has[operandName] = operand !== undefined;
-				if (!has[operandName]) {
-					return;
-				}
-				if (operand.computed) {
-					if (
-						indexOfChannel(
-							subtractionOrder,
-							operand.channelKey,
-							dataId
-						) < 0
-					) {
-						let computedChannelData = computeChannelData(
-							operand,
-							dataFrame,
-							subtractionOrder,
-							dataId
-						);
-						allChannelInfo.push({
-							name: operand.channelKey,
-							dataId: dataId,
-						});
-						subtractionOrder.push({
-							name: operand.channelKey,
-							dataId: dataId,
-						});
-						dataFrame.data.push({
-							data: computedChannelData,
-							dataId: dataId,
-						});
-					}
-					let channelIndex = indexOfChannel(
-						subtractionOrder,
-						operand.channelKey,
-						dataId
-					);
-					channelData[operandName] =
-						dataFrame.data[channelIndex].data;
-					channelName[operandName] = operand.channelName;
-				} else {
-					let channelIndex = indexOfChannel(
-						subtractionOrder,
-						operand,
-						dataId
-					);
-					channelData[operandName] =
-						dataFrame.data[channelIndex].data;
-					channelName[operandName] =
-						allChannelInfo[channelIndex].name;
-				}
-			});
-			let subtractionName = "";
-			if (has.plus) {
-				subtractionName += channelName.plus;
-			}
-			if (has.minus) {
-				subtractionName += "-" + channelName.minus;
-			}
-			if (has.plus) {
-				if (has.minus) {
-					if (channelData.plus === channelData.minus) {
-						subtractionData = new FloatArrayType(
-							dataFrame.numSamples
-						);
-						subtractionData.fill(0);
-					} else {
-						subtractionData = channelData.plus.map((value, v) => {
-							return value - channelData.minus[v];
-						});
-					}
-				} else {
-					subtractionData = channelData.plus;
-				}
-			} else {
-				if (has.minus) {
-					subtractionData = channelData.minus.map((value, v) => {
-						return -value;
-					});
-				} else {
-					subtractionData = new FloatArrayType(dataFrame.numSamples);
-					subtractionData.fill(0);
-				}
-			}
-			allChannelInfo.push({ name: subtractionName, dataId: dataId });
-			subtractionOrder.push({ name: subtraction.key, dataId: dataId });
-			dataFrame.data.push({ data: subtractionData, dataId: dataId });
-		});
-		// console.timeEnd('computeSubtractions');
-		let channelInfoOrdered = [];
-		let dataOrdered = [];
-		channelsDisplayedParsed.subtractions.forEach((subtraction) => {
-			const subtractionIndex = indexOfChannel(
-				subtractionOrder,
-				subtraction.key,
-				subtraction.dataId
-			);
-			const channelInfo = dataFrame.channelInfo[subtractionIndex];
-			const channelData = dataFrame.data[subtractionIndex].data;
-			channelInfoOrdered.push(channelInfo);
-			dataOrdered.push(channelData);
-		});
-		dataFrame.channelInfo = channelInfoOrdered;
-		dataFrame.data = dataOrdered;
-		// console.timeEnd('get.edf.data');
-		let dataDict = {};
-		dataFrame.channelInfo.forEach((info, c) => {
-			if (!dataDict[info.dataId]) dataDict[info.dataId] = {};
-			dataDict[info.dataId][info.name] = dataFrame.data[c];
-		});
+    channelsDisplayedParsed.subtractions.forEach((subtraction) => {
+      let dataId = subtraction.dataId;
+      if (indexOfChannel(subtractionOrder, subtraction.key, dataId) > -1)
+        return;
+      let has = {};
+      let channelIndex = {};
+      let channelName = {};
+      let channelData = {};
+      ["plus", "minus"].forEach((operandName) => {
+        let operand = subtraction[operandName];
+        has[operandName] = operand !== undefined;
+        if (!has[operandName]) {
+          return;
+        }
+        if (operand.computed) {
+          if (
+            indexOfChannel(subtractionOrder, operand.channelKey, dataId) < 0
+          ) {
+            let computedChannelData = computeChannelData(
+              operand,
+              dataFrame,
+              subtractionOrder,
+              dataId
+            );
+            allChannelInfo.push({
+              name: operand.channelKey,
+              dataId: dataId,
+            });
+            subtractionOrder.push({
+              name: operand.channelKey,
+              dataId: dataId,
+            });
+            dataFrame.data.push({
+              data: computedChannelData,
+              dataId: dataId,
+            });
+          }
+          let channelIndex = indexOfChannel(
+            subtractionOrder,
+            operand.channelKey,
+            dataId
+          );
+          channelData[operandName] = dataFrame.data[channelIndex].data;
+          channelName[operandName] = operand.channelName;
+        } else {
+          let channelIndex = indexOfChannel(subtractionOrder, operand, dataId);
+          channelData[operandName] = dataFrame.data[channelIndex].data;
+          channelName[operandName] = allChannelInfo[channelIndex].name;
+        }
+      });
+      let subtractionName = "";
+      if (has.plus) {
+        subtractionName += channelName.plus;
+      }
+      if (has.minus) {
+        subtractionName += "-" + channelName.minus;
+      }
+      if (has.plus) {
+        if (has.minus) {
+          if (channelData.plus === channelData.minus) {
+            subtractionData = new FloatArrayType(dataFrame.numSamples);
+            subtractionData.fill(0);
+          } else {
+            subtractionData = channelData.plus.map((value, v) => {
+              return value - channelData.minus[v];
+            });
+          }
+        } else {
+          subtractionData = channelData.plus;
+        }
+      } else {
+        if (has.minus) {
+          subtractionData = channelData.minus.map((value, v) => {
+            return -value;
+          });
+        } else {
+          subtractionData = new FloatArrayType(dataFrame.numSamples);
+          subtractionData.fill(0);
+        }
+      }
+      allChannelInfo.push({ name: subtractionName, dataId: dataId });
+      subtractionOrder.push({ name: subtraction.key, dataId: dataId });
+      dataFrame.data.push({ data: subtractionData, dataId: dataId });
+    });
+    // console.timeEnd('computeSubtractions');
+    let channelInfoOrdered = [];
+    let dataOrdered = [];
+    channelsDisplayedParsed.subtractions.forEach((subtraction) => {
+      const subtractionIndex = indexOfChannel(
+        subtractionOrder,
+        subtraction.key,
+        subtraction.dataId
+      );
+      const channelInfo = dataFrame.channelInfo[subtractionIndex];
+      const channelData = dataFrame.data[subtractionIndex].data;
+      channelInfoOrdered.push(channelInfo);
+      dataOrdered.push(channelData);
+    });
+    dataFrame.channelInfo = channelInfoOrdered;
+    dataFrame.data = dataOrdered;
+    // console.timeEnd('get.edf.data');
+    let dataDict = {};
+    dataFrame.channelInfo.forEach((info, c) => {
+      if (!dataDict[info.dataId]) dataDict[info.dataId] = {};
+      dataDict[info.dataId][info.name] = dataFrame.data[c];
+    });
 
-		return {
-			channel_order: dataFrame.channelInfo,
-			sampling_rate: dataFrame.samplingRate,
-			channel_values: dataDict,
-		};
-	},
+    return {
+      channel_order: dataFrame.channelInfo,
+      sampling_rate: dataFrame.samplingRate,
+      channel_values: dataDict,
+    };
+  },
 	"setup.edf.downsampled"(allRecordings, metadata) {
 		// a method that does the downsampling
 		// currently the sampling rate (frequency) for the downsampled recording is set to 2 Hz

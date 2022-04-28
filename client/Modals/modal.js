@@ -428,7 +428,7 @@ exports.MaterializeModal = (function() {
 
   Template.materializeModal.onDestroyed(function() {
     if (DEBUG) {
-      return //console.log("Template.materializeModal.onDestroyed");
+      return console.log("Template.materializeModal.onDestroyed");
     }
   });
 
