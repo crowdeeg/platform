@@ -112,6 +112,20 @@ Router.route('/assign', {
     }
 });
 
+Router.route("/files", {
+  name: "files",
+  waitOn: function () {
+    return [Meteor.subscribe("roles"), Meteor.subscribe("all")];
+  },
+  action: function () {
+    if (!Roles.userIsInRole(Meteor.userId(), "admin")) {
+      this.redirect("home");
+      return;
+    }
+    this.render("Files");
+  },
+});
+
 Router.route('/data', {
     name: 'data',
     waitOn: function () {

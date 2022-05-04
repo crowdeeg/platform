@@ -273,7 +273,7 @@ let WFDB = {
 		}
 	},
 	downsamp(options) {
-		// function that downamples the data
+		// function that downsamples the data
 		const isCallFromClient = !!this.connection;
 		if (
 			isCallFromClient &&

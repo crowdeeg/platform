@@ -4060,7 +4060,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             },
           },
           //TODO: change how chart zooms, does not work well with annotations
-          //zoomType: "xy",
+          // zoomType: "xy",
 
           resetZoomButton: {
             position: {
@@ -4568,7 +4568,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else if (that.options.features.annotationType == "none") {
         console.log("here");
         Highcharts.removeEvent(container, "mousedown");
-      } else if (that.features.annotationType == "cpoint") {
+      } else if (that.options.features.annotationType == "cpoint") {
         Highcharts.removeEvent(container, "mousedown");
         Highcharts.addEvent(container, "mousedown", click);
       } else if (that.options.features.annotationType == "cpointall") {
