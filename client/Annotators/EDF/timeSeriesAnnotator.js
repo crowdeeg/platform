@@ -3348,9 +3348,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var channelAudioRepresentations = {};
     var channelNumSamples = {};
     var samplingRate = input.sampling_rate;
+    console.log("samplingRate", samplingRate);
+    console.log(that.options.targetSamplingRate);
     // for each dataId in the channelvalues array
     for (var dataId in input.channel_values) {
-      //console.log(dataId);
+      console.log(that._getCurrentMontage());
       //console.log(
       // 	"==============================================================================================="
       // );

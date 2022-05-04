@@ -133,6 +133,16 @@ let WFDB = {
 					channels + " '" + signal.Description + "'",
 				"-s"
 			);
+			console.log("channelDisplayed:", channelDisplayed);
+
+      const channelsDisplayed = options.channelsDisplayed;
+
+      let channelsDisplayedString = "-s";
+      channelsDisplayed.forEach((channel) => {
+        channelsDisplayedString += " " + channel;
+      });
+
+      console.log("channelsDisplayedString:", channelsDisplayedString);
 			//console.log('channel displayed', channelDisplayed);
 			// this is the original version of codes which display all channels specified in the options:
 			// const channelDisplayed = options.channelsDisplayed ? ' -s ' + options.channelsDisplayed.join(' ') : '';
@@ -142,17 +152,17 @@ let WFDB = {
 				// if the x-axis scale is less then 5 mins/page (+4 sec padded)
 				// rdsamp the original high sampling rate .edf file
 				signalRawOutput = runWFDBCommand(
-					'rdsamp -r "' +
-						recordingFilename +
-						'" -f ' +
-						options.startTime +
-						" -l " +
-						options.windowLength +
-						useHighPrecisionSamplingString +
-						" -c -H -v " +
-						channelDisplayed,
-					recordingDirectory
-				);
+          'rdsamp -r "' +
+            recordingFilename +
+            '" -f ' +
+            options.startTime +
+            " -l " +
+            options.windowLength +
+            useHighPrecisionSamplingString +
+            " -c -H -v " +
+            channelsDisplayedString,
+          recordingDirectory
+        );
 			} else {
 				let downsampledExists = runWFDBCommand(
 					`test -f "${downsampledFile}" && test -f "${downsampledHeaderFile}" && echo "t" || echo "f"`,
@@ -719,9 +729,9 @@ Meteor.methods({
       );
 
       //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
-    //   channelsDisplayed[recording.source] = channelsDisplayed[
-    //     recording.source
-    //   ].filter((value) => temp.includes(value));
+      channelsDisplayed[recording.source] = channelsDisplayed[
+        recording.source
+      ].filter((value) => temp.includes(value));
 
       recording.channelsDisplayedParsed = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
@@ -746,9 +756,6 @@ Meteor.methods({
         ? startTime + channelTimeshift[recording._id]
         : startTime;
 
-      // console.log(
-      // 	recording.channelsDisplayedParsed.individualChannelsRequired
-      // );
       currDataFrame = WFDB.rdsamp({
         // runs the rdsamp function with the specified parameters that we have defined above
         recordingName: recording.path,
@@ -769,6 +776,13 @@ Meteor.methods({
           return { name: channelName, dataId: recording._id };
         }
       );
+      //   console.log("=====currentdataFrame.channelInfo=====");
+      //   console.dir(currDataFrame.channelInfo);
+      //   console.dir(
+      //   recording.channelsDisplayedParsed.individualChannelsRequired.map(
+      //     (channel) => channel.name
+      //   )
+      // );
       delete currDataFrame.channelNames;
       currDataFrame.data = currDataFrame.data.map((data) => {
         return { data: data, dataId: recording._id };
@@ -938,6 +952,8 @@ Meteor.methods({
       dataDict[info.dataId][info.name] = dataFrame.data[c];
     });
 
+	// console.log("=====current dataFrame=====");
+	// console.dir(dataFrame.channelInfo)
     return {
       channel_order: dataFrame.channelInfo,
       sampling_rate: dataFrame.samplingRate,
