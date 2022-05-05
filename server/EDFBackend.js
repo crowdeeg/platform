@@ -184,7 +184,7 @@ let WFDB = {
             options.windowLength +
             useHighPrecisionSamplingString +
             " -c -H -v " +
-            channelDisplayed,
+            channelsDisplayedString,
           recordingDirectory
         );
       }
@@ -206,6 +206,7 @@ let WFDB = {
       const columnUnits = rows[0].map((value) => {
         return value.substr(1).slice(0, -1);
       });
+      console.log(rows);
       const channelUnits = columnUnits.slice(1);
       // //console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits);
       // console.log("\nchannelUnits", channelUnits);
@@ -726,9 +727,9 @@ Meteor.methods({
       );
 
       //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
-      channelsDisplayed[recording.source] = channelsDisplayed[
-        recording.source
-      ].filter((value) => temp.includes(value));
+      // channelsDisplayed[recording.source] = channelsDisplayed[
+      //   recording.source
+      // ].filter((value) => temp.includes(value));
 
       recording.channelsDisplayedParsed = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
