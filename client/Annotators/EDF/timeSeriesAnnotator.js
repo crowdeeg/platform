@@ -438,6 +438,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.allRecordings = [
           { _id: id, path: recordingNameFromGetParameter },
         ];
+        console.log(
+          "recordingNameFromGetParameter:",
+          recordingNameFromGetParameter
+        );
       }
       that._setup();
     }
@@ -1994,7 +1998,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         ////console.log(options);
         that._requestData(options, function (data, error) {
           if (error) {
-            //console.log(error);
+            console.log(error);
           }
           ++numWindowsLoaded;
           updateLoadingProgress();
@@ -3238,6 +3242,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _requestData: function (options, callback) {
     var that = this;
+    console.log(that.vars.allRecordings);
     // identifierKey includes:
     // 'recordings'
     // 'start_time'
@@ -3380,8 +3385,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         var valuesLength = values.length;
 
-        var y95 = 0;
-        var y05 = 0;
+        // var y95 = 0;
+        // var y05 = 0;
         // scaleFactorAmplitude = values
         // 	.map(Math.abs)
         // 	.reduce((a, b) => Math.max(a, b)); //that._findMeanPercentile(0.95,0.005,values, valuesLength);
