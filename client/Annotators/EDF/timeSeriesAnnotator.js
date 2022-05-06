@@ -3091,7 +3091,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         start_time: windowStartTime,
         channel_timeshift: that.vars.channelTimeshift,
         window_length: window_length,
-        target_sampling_rate: that.options.targetSamplingRate,
+        target_sampling_rate: 128,
         use_high_precision_sampling: that.options.useHighPrecisionSampling,
       };
       that._requestData(options, (data, errorData) => {

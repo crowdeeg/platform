@@ -206,7 +206,7 @@ let WFDB = {
       const columnUnits = rows[0].map((value) => {
         return value.substr(1).slice(0, -1);
       });
-      console.log(rows);
+      // console.log(rows);
       const channelUnits = columnUnits.slice(1);
       // //console.log("rows[0]:", rows[0], "\ncolumnUnits:", columnUnits);
       // console.log("\nchannelUnits", channelUnits);
@@ -218,12 +218,15 @@ let WFDB = {
       const outputDurationInSeconds =
         outputEndTimeInSeconds - outputStartTimeInSeconds;
       const samplingRateRaw = numSamplesRaw / outputDurationInSeconds;
-      console.log("220 samplingRateRaw: " + samplingRateRaw);
-      console.log("221 numSamplesRaw: " + numSamplesRaw);
-      console.log("222 outputStartTimeInSeconds: " + outputDurationInSeconds);
+      // console.log("220 samplingRateRaw: " + samplingRateRaw);
+      // console.log("221 numSamplesRaw: " + numSamplesRaw);
+      // console.log("222 outputStartTimeInSeconds: " + outputDurationInSeconds);
+
+      //downsamples here
       let downSamplingFactor = 0;
 
       if (options.targetSamplingRate > 0) {
+        console.log("here")
         downSamplingFactor = Math.round(
           samplingRateRaw / options.targetSamplingRate
         );
@@ -233,9 +236,10 @@ let WFDB = {
           return r % downSamplingFactor !== 0;
         });
       }
+
       const numSamples = rows.length;
       const samplingRate = Math.round(numSamples / outputDurationInSeconds);
-      console.log("237 samplingRate : " + samplingRate); console.log("237 numSamples : " + numSamples); console.log("237 outputDurationInSeconds : " + outputDurationInSeconds);
+      // console.log("237 samplingRate : " + samplingRate); console.log("237 numSamples : " + numSamples); console.log("237 outputDurationInSeconds : " + outputDurationInSeconds);
       const data = channelNames.map(() => {
         return new FloatArrayType(numSamples);
       });
@@ -727,9 +731,9 @@ Meteor.methods({
       );
 
       //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
-      // channelsDisplayed[recording.source] = channelsDisplayed[
-      //   recording.source
-      // ].filter((value) => temp.includes(value));
+      channelsDisplayed[recording.source] = channelsDisplayed[
+        recording.source
+      ].filter((value) => temp.includes(value));
 
       recording.channelsDisplayedParsed = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
@@ -740,7 +744,7 @@ Meteor.methods({
     });
 
     let targetSamplingRate = options.target_sampling_rate;
-    console.log("742 targetSamplingRate: " + targetSamplingRate);
+    // console.log("742 targetSamplingRate: " + targetSamplingRate);
     let lowResolutionData = options.low_resolution_data;
     let useHighPrecisionSampling = options.use_high_precision_sampling;
     let atLeast1 = 0;
@@ -792,7 +796,7 @@ Meteor.methods({
         currDataFrame.duration = Number.NEGATIVE_INFINITY;
         currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
       }
-      console.log("794 currDataFrame.samplingRate: " + currDataFrame.samplingRate);
+      // console.log("794 currDataFrame.samplingRate: " + currDataFrame.samplingRate);
       if (!Object.keys(collections).length) return currDataFrame;
       collections.channelInfo = collections.channelInfo.concat(
         currDataFrame.channelInfo
@@ -814,13 +818,13 @@ Meteor.methods({
         collections.numSamples,
         currDataFrame.numSamples
       );
-      console.log("816 collections.samplingRate: " + collections.samplingRate);
-      console.log("817 currDataFrame.samplingRate: " +currDataFrame.samplingRate);
+      // console.log("816 collections.samplingRate: " + collections.samplingRate);
+      // console.log("817 currDataFrame.samplingRate: " +currDataFrame.samplingRate);
       collections.samplingRate = Math.min(
         collections.samplingRate,
         currDataFrame.samplingRate
       );
-      console.dir(collections);
+      // console.dir(collections);
       return collections;
     }, {});
 
@@ -956,7 +960,7 @@ Meteor.methods({
     });
 
     // console.log("=====current dataFrame=====");
-    console.log("957 dataFrame.samplingRate: "+dataFrame.samplingRate);
+    // console.log("957 dataFrame.samplingRate: "+dataFrame.samplingRate);
     return {
       channel_order: dataFrame.channelInfo,
       sampling_rate: dataFrame.samplingRate,

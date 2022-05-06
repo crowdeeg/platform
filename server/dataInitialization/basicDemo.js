@@ -43,7 +43,7 @@ const recordingPaths = [
   //   { path: "/physionet/edfx/161MUSE.edf", source: "MUSE" },
   { path: "/physionet/edfx/ANNE.edf", source: "ANNE" },
   { path: "/physionet/edfx/PSG.edf", source: "PSG" },
-  { path: "/physionet/edfx/mixed.edf", source: "PSG" },
+  // { path: "/physionet/edfx/mixed.edf", source: "PSG" },
 
   // {
   // 	path: "/physionet/edfx/001D_left wrist_038090_2017-08-15 17-20-38.bin",
@@ -211,9 +211,9 @@ Meteor.startup(() => {
               ],
             },
             "PSG + ANNE": {
-              PSG: ["'Thor'", "'Abdo'", "'Snore'", "'Chin 1-Chin 2'"],
+              PSG: ["'Thor'", "'Abdo'", "'Snore'", "'Chin 1-Chin 2'", "'ECG'"],
               ANNE: [
-                // "'ECG'",
+                "'ECG'",
                 // // "'Pleth'",
                 "'Accl Pitch'",
                 "'Accl Roll'",
