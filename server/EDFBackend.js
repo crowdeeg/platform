@@ -111,7 +111,9 @@ let WFDB = {
         0,
         recordingFilename.length - 4
       );
-
+      
+      //////////////////////////////////////////////////////////////////////////
+      // Here we downsample the data
       recordingFilenameWithoutDataType =
         recordingFilenameWithoutDataType.replace(".", "_");
       const downsampledFileName =
@@ -141,6 +143,7 @@ let WFDB = {
       channelsDisplayed.forEach((channel) => {
         channelsDisplayedString += " " + channel;
       });
+      
 
       // console.log("channelsDisplayedString:", channelsDisplayedString);
       //console.log('channel displayed', channelDisplayed);
@@ -233,7 +236,7 @@ let WFDB = {
       }
       if (downSamplingFactor > 1) {
         rows = rows.filter((row, r) => {
-          return r % downSamplingFactor !== 0;
+          return r % downSamplingFactor === 0;
         });
       }
 
@@ -255,6 +258,7 @@ let WFDB = {
           data[c][r] = value;
         });
       });
+      // Format of the data that we return
       let dataFrame = {
         channelNames: channelNames,
         data: data,
@@ -412,7 +416,7 @@ let filterName = (allSignals) => {
 }
 */
 let parseComputedChannelString = (computedChannelString, recordingId) => {
-  //pares the channel string and return the data of channels
+  //parses the channel string and return the data of channels
   const parts = computedChannelString.split("=");
   const channelName = parts[0].trim();
   let channelKey;
