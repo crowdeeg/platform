@@ -1779,6 +1779,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         default: true,
       },
       {
+        name: "Start & End Point Annotation (All)",
+        value: "sne",
+      },
+      {
         name: "Box Annotation",
         value: "box",
       },
@@ -6379,7 +6383,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       const moveDown = $("#movedown");
 
       // gets the selected channel's name
-      const channelName = this.vars.currentWindowData.channels[index].name;
+      const channelName = that.vars.currentWindowData.channels[index].name;
 
       // render the channel name on screen inside amplitude adjustment container
       $(".channel_name").text("Channel Selected: " + channelName);
