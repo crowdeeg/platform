@@ -556,6 +556,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //     'start_end_answer': undefined,          // <-- data for this window is not available, but can be requested
       //     'start_end_answer': {},                 // <-- data for this window has been requested already
       // }
+      
+      // annotationCrosshairPositions is used to draw annotation boxes using crosshairs across multiple pages 
+      annotationCrosshairPositions: [],
+      annotationCrosshairCurrPosition: undefined,
+      // count the number of crosshairs currently displayed on the screen.
+      // annotationCrosshairCount: 0,
+      annotationCrosshairs: [],
+      annotationMode: undefined,
     };
     if (that._getMontages()) {
       that.vars.currentMontage =
@@ -1778,22 +1786,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         value: "none",
         default: true,
       },
-      {
-        name: "Start & End Point Annotation (All)",
-        value: "sne",
-      },
+      // {
+      //   name: "Start & End Point Annotation (All)",
+      //   value: "sne",
+      // },
       {
         name: "Box Annotation",
         value: "box",
       },
       {
+        name: "Change Point Annotation (All)",
+        value: "cpointall",
+      },
+      {
         name: "Change Point Annotation (Channel)",
         value: "cpoint",
       },
-      {
-        name: "Change Point Annotation (All)",
-        value: "cpointall",
-      }
     );
 
     var selection = that.options.annotationType || [];
@@ -3989,7 +3997,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         subsequent changes to this plot to scroll through the signal use the much computationally expensive
         series update and axis update methods.
         */
-    //console.log("!!!!!!init gragh");
+    //console.log("!!!!!!init graph");
     var that = this;
     var channels = data.channels;
 
@@ -4114,14 +4122,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             point: {
               events: {
                 click: function (e) {
-                  that._setCrosshair({
+                  var crosshairPosition = {
                     plotX: this.plotX,
                     plotY: this.plotY,
                     timeInSeconds: e.point.x,
                     channelName: e.point.series.name,
                     channelIndex: e.point.series.index,
                     dataId: e.point.series.options.custom.dataId,
-                  });
+                  };
+
+                  that.vars.annotationCrosshairCurrPosition = ({...crosshairPosition});
+                  that._setCrosshair(crosshairPosition);
+
                 },
                 // workaround to trigger click event handler on point under boost mode
                 // https://github.com/highcharts/highcharts/issues/14067
@@ -4272,7 +4284,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         legend: {
           enabled: false,
         },
-        series: that._initSeries(data),
+        series: that._initSeries(data)
+        //.push(
+        //   {
+        //     type : 'flags',
+        //     data : [{
+        //         x : 0,      // Point where the flag appears
+        //         title : '', // Title of flag displayed on the chart 
+        //         text : ''   // Text displayed when the flag are highlighted.
+        //     }],
+        //     onSeries : '',  // Id of which series it should be placed on. If not defined 
+        //                     // the flag series will be put on the X axis
+        //     shape : 'flag'  // Defines the shape of the flags.
+        // }
+        // )
+        ,
         annotationsOptions: {
           enabledButtons: false,
         },
@@ -4437,7 +4463,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // drag function for box annotations.
       function drag(e) {
         var annotation,
-          //gets the  xy position of the mouse when you click
+          //gets the xy position of the mouse when you click
           clickX = e.pageX - container.offsetLeft,
           clickY = e.pageY - container.offsetTop;
         if (
@@ -4513,6 +4539,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           };
         }
 
+
         // updates the annotation box with relevant channel indicies that it's selecting
         function step(e) {
           annotation.update(getAnnotationAttributes(e));
@@ -4541,6 +4568,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           };
           $("html").on("mousedown", annotation.outsideClickHandler);
         }
+      }
+      
+      // Display the starting crosshair marking the starting position of 
+      // an universal start and endpoint annotation.
+      function dropStartCrosshair(e) {
+        if (that.vars.annotationCrosshairs.length === 2 || that.vars.annotationCrosshairPositions === 2) {
+          (that.vars.annotationCrosshairs).forEach( c => c.destroy());
+          that.vars.annotationCrosshairs = [];
+          that.vars.annotationCrosshairPositions = [];
+        }
+        that.vars.annotationCrosshairPositions.push(that.vars.annotationCrosshairCurrPosition);
+        let crosshair = that._paintCrosshairGeneral(e, that.vars.annotationCrosshairPositions, 0, chart.series.length);
+        that.vars.annotationCrosshairs.push(crosshair);
+        
       }
 
       function click(e) {
@@ -4572,12 +4613,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         clickX = e.pageX - container.offsetLeft;
         var annotation = that._addAnnotationChangePointAll(clickX);
       }
-
+      
+      that.vars.annotationMode = that.options.features.annotationType;
+      // Define behaviour of different types of annotation.
       if (that.options.features.annotationType == "box") {
         Highcharts.removeEvent(container, "mousedown");
         Highcharts.addEvent(container, "mousedown", drag);
       } else if (that.options.features.annotationType == "none") {
-        console.log("here");
+        // console.log("here");
         Highcharts.removeEvent(container, "mousedown");
       } else if (that.options.features.annotationType == "cpoint") {
         Highcharts.removeEvent(container, "mousedown");
@@ -4585,6 +4628,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else if (that.options.features.annotationType == "cpointall") {
         Highcharts.removeEvent(container, "mousedown");
         Highcharts.addEvent(container, "mousedown", clickAll);
+      } else if (that.options.features.annotationType == "sne") {
+        // Highcharts.removeEvent(container, "click");
+        Highcharts.addEvent(container, "click", dropStartCrosshair);
       }
     }
   },
@@ -5213,7 +5259,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     const annotationId = undefined;
 
-    var annotation = that._addAnnotationBox(
+    var annotation = that._addAnnotationBoxChangePoint(
       annotationId,
       clickXOneValue,
       [channelIndex],
@@ -5221,7 +5267,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       clickXTwoValue
     );
 
-    that._addCommentFormToAnnotationBox(annotation);
+    // that._addCommentFormToAnnotationBox(annotation);
 
     return annotation;
   },
@@ -5403,25 +5449,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
 
     var shapeParams = {
-      height: height, //thje height of the annotation box
+      height: height, //the height of the annotation box
     };
 
     // if there is a timeEnd value
     if (preliminary) {
-      shapeParams.width = 0;
-      shapeParams.fill = "transparent";
+      shapeParams.width = 2;
+      shapeParams.fill = "solid";
 
       shapeParams.stroke = that._getFeatureColor(
         featureType,
         annotationData.is_answer
       );
 
-      shapeParams.strokeWidth = 10;
+      shapeParams.strokeWidth = 2;
     } else {
-      shapeParams.width = timeEnd - timeStart;
-      shapeParams.fill = "rgba(255,100,255,0.5)";
-      shapeParams.stroke = "transparent";
-      shapeParams.strokeWidth = 0;
+      shapeParams.width = 2;
+      shapeParams.fill = "rgba(255,0,0,1)";
+      shapeParams.stroke = "solid";
+      shapeParams.strokeWidth = 2;
 
       // shapeParams.fill = "rgba(255,255,255,0.2)";
       // shapeParams.stroke = "rgba(0,0,0,12)";
@@ -5441,7 +5487,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       shape: {
         type: "rect",
-        units: "values",
+        units: "pixel",
         params: shapeParams,
       },
       events: {
@@ -5510,9 +5556,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.originalData = annotationData;
     }
     if (!that.options.isReadOnly && !annotationData.is_answer) {
+      that._addConfidenceLevelButtonsToAnnotationBox(annotation);
       if (!preliminary) {
         size = shapeParams;
-        that._addCommentFormToAnnotationBoxChangePoint(annotation);
+        // that._addCommentFormToAnnotationBoxChangePoint(annotation);
       }
     }
     return annotation;
@@ -5522,7 +5569,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
 
     const clickXOneValue = that._convertPixelsToValue(clickX, "x");
-    const clickXTwoValue = that._convertPixelsToValue(clickX + 75, "x");
+    const clickXTwoValue = that._convertPixelsToValue(clickX + 0, "x");
 
     const channelIndicies = [];
 
@@ -5594,7 +5641,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
 
     var shapeParams = {
-      height: height, //thje height of the annotation box
+      height: height, //the height of the annotation box
     };
 
     // if there is a timeEnd value
@@ -7907,4 +7954,109 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
   },
+
+  _paintCrosshairGeneral: function (e, crosshairPosition, firstIndexOfChannel, lastIndexOfChannel) {
+    var that = this;
+    let chart = that.vars.chart;
+        _crosshair = chart.renderer.g().add();
+        // crosshairPosition = [that.vars.annotationCrosshairPosition];
+        crosshairPosition.forEach((crosshair) => {
+          if (!that._isInCrosshairWindow(crosshair)) return;
+          let left = chart.plotLeft;
+          let top = chart.plotTop;
+          let height = chart.plotHeight;
+          let heightPerChannel =
+            height / that.vars.currentWindowData.channels.length;
+
+          let crosshairTop = firstIndexOfChannel * heightPerChannel;
+          let crosshairBottom = (lastIndexOfChannel + 1) * heightPerChannel;
+          // draw the crosshair using svgPath and add it as a highchart SVGElement
+          let svgPath = [
+            "M",
+            left + crosshair.plotX,
+            top + crosshairTop,
+            "L",
+            left + crosshair.plotX,
+            top + crosshairBottom,
+          ];
+          chart.renderer
+            .path(svgPath)
+            .attr({
+              "stroke-width": 3,
+              stroke: "red",
+            })
+            .add(_crosshair);
+        });
+      return _crosshair;
+  },
+
+  // _setAnnotationCrosshair: function (point) {
+  //   var that = this;
+
+  //   if (!that._isInCrosshairSyncMode()) return;
+
+  //   if (
+  //     that.vars.crosshairPosition.length === 0 &&
+  //     !that._isFromPSG(point.dataId)
+  //   )
+  //     return;
+  //   let crosshairPosition = that.vars.crosshairPosition;
+  //   let sameRecording = false;
+  //   let index = undefined;
+  //   crosshairPosition.forEach((crosshair, i) => {
+  //     if (crosshair.dataId === point.dataId) {
+  //       sameRecording = true;
+  //       index = i;
+  //     }
+  //   });
+  //   if (sameRecording) {
+  //     crosshairPosition[index] = point;
+  //   } else {
+  //     if (crosshairPosition.length < 2) {
+  //       crosshairPosition.push(point);
+  //     }
+  //     // if (crosshairPosition.length > 2) {
+  //     //   crosshairPosition.shift();
+  //     // }
+  //   }
+  //   that.vars.crosshairPosition = crosshairPosition;
+  //   that._displayCrosshair(crosshairPosition);
+  //   that._renderAlignmentAlert();
+  // },
+
+  // _dropStartCrosshair(e) {
+  //   var that = this;
+
+
+  //   // let crosshairPosition = that.vars.annotationCrosshairPositions;
+  //   // let sameRecording = false;
+  //   // let index = undefined;
+  //   // crosshairPosition.forEach((crosshair, i) => {
+  //   //   if (crosshair.dataId === that.vars.annotationCrosshairCurrPosition.dataId) {
+  //   //     sameRecording = true;
+  //   //     index = i;
+  //   //   }
+  //   // });
+  //   // if (sameRecording) {
+  //   //   crosshairPosition[index] = that.vars.annotationCrosshairCurrPosition;
+  //   // } else {
+  //   //   if (crosshairPosition.length < 2) {
+  //   //     crosshairPosition.push(that.vars.annotationCrosshairCurrPosition);
+  //   //   }
+
+  //   // }
+
+
+
+  //   if (that.vars.annotationCrosshairs.length === 2 || that.vars.annotationCrosshairPositions === 2) {
+  //     (that.vars.annotationCrosshairs).forEach( c => c.destroy());
+  //     that.vars.annotationCrosshairs = [];
+  //     that.vars.annotationCrosshairPositions = [];
+  //   }
+  //   that.vars.annotationCrosshairPositions.push(that.vars.annotationCrosshairCurrPosition);
+  //   let crosshair = that._paintCrosshairGeneral(e, that.vars.annotationCrosshairPositions, 0, that.vars.chart.series.length);
+  //   that.vars.annotationCrosshairs.push(crosshair);
+    
+  // }
+
 });
