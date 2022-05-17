@@ -5435,46 +5435,37 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return;
     }
 
-    // sets timeEnd to the end time if it is defined
-    var timeEnd = timeEnd !== undefined ? timeEnd : false;
+    // // sets timeEnd to the end time if it is defined
+    // var timeEnd = timeEnd !== undefined ? timeEnd : false;
 
-    // gets the annotation data if the annotationData is defined
-    var annotationData = annotationData !== undefined ? annotationData : {};
+    // // gets the annotation data if the annotationData is defined
+    // var annotationData = annotationData !== undefined ? annotationData : {};
 
-    // checks if there is a timeEnd value
-    var preliminary = timeEnd === false;
+    // // checks if there is a timeEnd value
+    // var preliminary = timeEnd === false;
 
     //gets the height and yvalues
     var { height, yValue } =
       that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
 
     var shapeParams = {
-      height: height, //the height of the annotation box
+      height: that._convertValueToPixelsLength(height, "y"), //the height of the annotation box
     };
+    // console.log("height:" + height);
 
     // if there is a timeEnd value
-    if (preliminary) {
-      shapeParams.width = 2;
-      shapeParams.fill = "solid";
 
-      shapeParams.stroke = that._getFeatureColor(
-        featureType,
-        annotationData.is_answer
-      );
+    shapeParams.width = 2;
+    shapeParams.strokeWidth = 2;
+    shapeParams.fill = "rgba(255,0,0,1)";
+    shapeParams.stroke = "solid";
 
-      shapeParams.strokeWidth = 2;
-    } else {
-      shapeParams.width = 2;
-      shapeParams.fill = "rgba(255,0,0,1)";
-      shapeParams.stroke = "solid";
-      shapeParams.strokeWidth = 2;
-
-      // shapeParams.fill = "rgba(255,255,255,0.2)";
-      // shapeParams.stroke = "rgba(0,0,0,12)";
-      // shapeParams.strokeWidth = 10;
-      // shapeParams["stroke-dasharray"] = `75px`;
-      // shapeParams["stroke-dashoffset"] = "750px";
-    }
+    // shapeParams.fill = "rgba(255,255,255,0.2)";
+    // shapeParams.stroke = "rgba(0,0,0,12)";
+    // shapeParams.strokeWidth = 10;
+    // shapeParams["stroke-dasharray"] = `75px`;
+    // shapeParams["stroke-dashoffset"] = "750px";
+    
 
     //adds the annotation box to the chart
     that.vars.chart.addAnnotation({
@@ -5501,7 +5492,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         dblclick: function (event) {
           // deletes the annotation on db click
           if (that.options.isReadOnly) return;
-          if (annotationData.is_answer) return;
           event.preventDefault();
           var xMinFixed = that._getAnnotationXMinFixed(this);
           var xMaxFixed = that._getAnnotationXMaxFixed(this);
@@ -5534,15 +5524,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     // gets the last annotaion
-    var annotation = annotations[annotations.length - 1];
-    if (!preliminary) {
-      var classString = $(annotation.group.element).attr("class");
-      classString += " saved";
-      $(annotation.group.element).attr("class", classString);
-    }
-    $(annotation.group.element).on("mousedown", function (event) {
-      event.stopPropagation();
-    });
+    var annotation = annotations[annotations.length-1];
+    // if (!preliminary) {
+      // var classString = $(annotation.group.element).attr("class");
+      // classString += " saved";
+      // $(annotation.group.element).attr("class", classString);
+    // }
+    // $(annotation.group.element).on("mousedown", function (event) {
+    //   event.stopPropagation();
+    // });
     annotation.metadata = {
       id: annotationId,
       featureType: featureType,
@@ -5550,17 +5540,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       comment: "",
     };
 
-    if (!preliminary) {
+    // if (!preliminary) {
       annotation.metadata.confidence = confidence;
       annotation.metadata.comment = comment;
       annotation.metadata.originalData = annotationData;
-    }
-    if (!that.options.isReadOnly && !annotationData.is_answer) {
+    // }
+    if (!that.options.isReadOnly) {
       that._addConfidenceLevelButtonsToAnnotationBox(annotation);
-      if (!preliminary) {
-        size = shapeParams;
+      // if (!preliminary) {
+        // size = shapeParams;
         // that._addCommentFormToAnnotationBoxChangePoint(annotation);
-      }
+      // }
     }
     return annotation;
   },
@@ -5569,7 +5559,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
 
     const clickXOneValue = that._convertPixelsToValue(clickX, "x");
-    const clickXTwoValue = that._convertPixelsToValue(clickX + 0, "x");
+    const clickXTwoValue = that._convertPixelsToValue(clickX, "x");
 
     const channelIndicies = [];
 
@@ -5810,11 +5800,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         .data("confidence", buttonDefinition.confidence)
         .click(function (event) {
           var confidence = $(this).data("confidence");
-          var newColor = that._getFeatureColor(
-            annotation.metadata.featureType,
-            false,
-            confidence
-          );
+          // var newColor = that._getFeatureColor(
+          //   annotation.metadata.featureType,
+          //   false,
+          //   confidence
+          // );
           annotations
             .filter((a) => a.metadata.id == annotation.metadata.id)
             .forEach((a) => {
@@ -5831,8 +5821,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 shape: {
                   params: {
                     strokeWidth: 0,
-                    stroke: "transparent",
-                    fill: newColor,
+                    stroke: "solid",
+                    // fill: newColor,
                   },
                 },
               });
@@ -5929,7 +5919,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 shape: {
                   params: {
                     strokeWidth: 0,
-                    stroke: "transparent",
+                    stroke: "solid",
                     fill: newColor,
                   },
                 },
