@@ -4788,7 +4788,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               return ["Sleep Period", "Wake Period"];
           }
           break;
-
+//TODO: FIX THIS
         case "ANNE + PSG":
         case "PSG + ANNE":
           switch (channelName) {
@@ -5322,8 +5322,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .addClass("comment toolbar")
       // .attr("xmlns", "http://www.w3.org/1999/xhtml");
       .attr({
-        width: "100%",
-        height: "100%",
+        width: "100px",
+        height: "100px",
       });
 
     // dont make form disappear when not hovering over
@@ -5336,7 +5336,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       position: "absolute",
       // left:
       display: "flex",
-      width: "100%",
+      width: "100px",
       height: "100%",
     });
 
@@ -5546,7 +5546,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.originalData = annotationData;
     // }
     if (!that.options.isReadOnly) {
-      that._addConfidenceLevelButtonsToAnnotationBox(annotation);
+      that._addCommentFormToAnnotationBox(annotation);
       // if (!preliminary) {
         // size = shapeParams;
         // that._addCommentFormToAnnotationBoxChangePoint(annotation);
@@ -5961,7 +5961,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     htmlContext
       .attr({
-        width: `${annotation.group.element.getBBox().width}`,
+        width: 200,
         height: `${annotation.group.element.getBBox().height}`,
         // x: 0,
         // y: 20,
@@ -6001,7 +6001,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
 
     //gets all the relevant labels based on annotation type
-    const channelLabels = that._addAnnotationType(annotation);
+    // const channelLabels = that._addAnnotationType(annotation);
+    const channelLabels = ["W", "N1", "N2", "N3", "R", "A"];
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
