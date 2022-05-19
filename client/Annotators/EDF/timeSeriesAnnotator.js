@@ -1790,10 +1790,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //   name: "Start & End Point Annotation (All)",
       //   value: "sne",
       // },
-      {
-        name: "Box Annotation",
-        value: "box",
-      },
+      // {
+      //   name: "Box Annotation",
+      //   value: "box",
+      // },
       {
         name: "Change Point Annotation (All)",
         value: "cpointall",
@@ -5312,11 +5312,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .click(function (event) {
         event.stopPropagation();
       })
-      .dblclick(function (event) {
-        event.stopPropagation();
-        event.preventDefault();
-        that._deleteAnnotation(annotation.id);
-      });
+      // .dblclick(function (event) {
+      //   event.stopPropagation();
+      //   event.preventDefault();
+      //   that._deleteAnnotation(annotation.id);
+      // })
+      ;
 
     var body = $("<body>")
       .addClass("comment toolbar")
@@ -5489,37 +5490,37 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             .remove();
         },
 
-        dblclick: function (event) {
-          // deletes the annotation on db click
-          if (that.options.isReadOnly) return;
-          event.preventDefault();
-          var xMinFixed = that._getAnnotationXMinFixed(this);
-          var xMaxFixed = that._getAnnotationXMaxFixed(this);
-          var annotationId = annotation.metadata.id;
-          var channelIndices = annotation.metadata.channelIndices;
-          var channelsDisplayed = that._getChannelsDisplayed();
-          if (annotation.metadata.originalData) {
-            channelIndices = annotation.metadata.originalData.channels;
-            channelsDisplayed =
-              annotation.metadata.originalData.channels_displayed;
-          }
-          that._deleteAnnotation(
-            annotationId,
-            that.vars.currentWindowRecording,
-            xMinFixed,
-            xMaxFixed,
-            channelIndices,
-            channelsDisplayed
-          );
-          annotations
-            .slice()
-            .reverse()
-            .filter((a) => a.metadata.id == annotationId)
-            .forEach((a) => {
-              a.destroy();
-              that.vars.chart.selectedAnnotation = null;
-            });
-        },
+        // dblclick: function (event) {
+        //   // deletes the annotation on db click
+        //   if (that.options.isReadOnly) return;
+        //   event.preventDefault();
+        //   var xMinFixed = that._getAnnotationXMinFixed(this);
+        //   var xMaxFixed = that._getAnnotationXMaxFixed(this);
+        //   var annotationId = annotation.metadata.id;
+        //   var channelIndices = annotation.metadata.channelIndices;
+        //   var channelsDisplayed = that._getChannelsDisplayed();
+        //   if (annotation.metadata.originalData) {
+        //     channelIndices = annotation.metadata.originalData.channels;
+        //     channelsDisplayed =
+        //       annotation.metadata.originalData.channels_displayed;
+        //   }
+        //   that._deleteAnnotation(
+        //     annotationId,
+        //     that.vars.currentWindowRecording,
+        //     xMinFixed,
+        //     xMaxFixed,
+        //     channelIndices,
+        //     channelsDisplayed
+        //   );
+        //   annotations
+        //     .slice()
+        //     .reverse()
+        //     .filter((a) => a.metadata.id == annotationId)
+        //     .forEach((a) => {
+        //       a.destroy();
+        //       that.vars.chart.selectedAnnotation = null;
+        //     });
+        // },
       },
     });
 
@@ -5677,38 +5678,38 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             .last()
             .remove();
         },
-        dblclick: function (event) {
-          // deletes the annotation on db click
-          if (that.options.isReadOnly) return;
-          if (annotationData.is_answer) return;
-          event.preventDefault();
-          var xMinFixed = that._getAnnotationXMinFixed(this);
-          var xMaxFixed = that._getAnnotationXMaxFixed(this);
-          var annotationId = annotation.metadata.id;
-          var channelIndices = annotation.metadata.channelIndices;
-          var channelsDisplayed = that._getChannelsDisplayed();
-          if (annotation.metadata.originalData) {
-            channelIndices = annotation.metadata.originalData.channels;
-            channelsDisplayed =
-              annotation.metadata.originalData.channels_displayed;
-          }
-          that._deleteAnnotation(
-            annotationId,
-            that.vars.currentWindowRecording,
-            xMinFixed,
-            xMaxFixed,
-            channelIndices,
-            channelsDisplayed
-          );
-          annotations
-            .slice()
-            .reverse()
-            .filter((a) => a.metadata.id == annotationId)
-            .forEach((a) => {
-              a.destroy();
-              that.vars.chart.selectedAnnotation = null;
-            });
-        },
+        // dblclick: function (event) {
+        //   // deletes the annotation on db click
+        //   if (that.options.isReadOnly) return;
+        //   if (annotationData.is_answer) return;
+        //   event.preventDefault();
+        //   var xMinFixed = that._getAnnotationXMinFixed(this);
+        //   var xMaxFixed = that._getAnnotationXMaxFixed(this);
+        //   var annotationId = annotation.metadata.id;
+        //   var channelIndices = annotation.metadata.channelIndices;
+        //   var channelsDisplayed = that._getChannelsDisplayed();
+        //   if (annotation.metadata.originalData) {
+        //     channelIndices = annotation.metadata.originalData.channels;
+        //     channelsDisplayed =
+        //       annotation.metadata.originalData.channels_displayed;
+        //   }
+        //   that._deleteAnnotation(
+        //     annotationId,
+        //     that.vars.currentWindowRecording,
+        //     xMinFixed,
+        //     xMaxFixed,
+        //     channelIndices,
+        //     channelsDisplayed
+        //   );
+        //   annotations
+        //     .slice()
+        //     .reverse()
+        //     .filter((a) => a.metadata.id == annotationId)
+        //     .forEach((a) => {
+        //       a.destroy();
+        //       that.vars.chart.selectedAnnotation = null;
+        //     });
+        // },
       },
     });
 
@@ -5956,12 +5957,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var htmlContext = $(
       document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
     );
-
+    
     annotationElement.append(htmlContext);
-
+    htmlContext.hide();
     htmlContext
       .attr({
-        width: 200,
+        width: 300,
         height: `${annotation.group.element.getBBox().height}`,
         // x: 0,
         // y: 20,
@@ -5972,10 +5973,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       .click(function (event) {
         event.stopPropagation();
+        
+      });
+
+    $('.highcharts-annotation')  
+      .mouseenter(function (event) {
+        $('foreignObject').show();
       })
-      .dblclick(function (event) {
-        event.preventDefault();
-        that._deleteAnnotation(annotation.id);
+      .mouseleave(function (event) {
+        $('foreignObject').hide();
       });
 
     var body = $("<body>").addClass("comment toolbar");
@@ -5989,20 +5995,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       position: "absolute",
       top: "50%",
       // left:
-      display: "flex",
+      display: "table",
       width: "100%",
       height: "100%",
       // maxWidth: "100%",
       maxHeight: "100px",
     });
+    
 
+    // Buttons
     var toggleButton = $(
-      '<button type="submit" class="btn btn-primary fa fa-comment"></button>'
+      '<button type="submit" class="btn btn-primary fa fa-pencil"></button>'
+    );
+
+    var trashButton = $(
+      '<button type="reset" class="btn btn-primary fa fa-trash"></button>'
     );
 
     //gets all the relevant labels based on annotation type
     // const channelLabels = that._addAnnotationType(annotation);
-    const channelLabels = ["W", "N1", "N2", "N3", "R", "A"];
+    const channelLabels = ["null", "W", "N1", "N2", "N3", "R", "A"];
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
@@ -6021,12 +6033,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // //add margin top and bottom
     annotationLabelSelector.css({
       width: "40%",
-      height: "50%",
+      height: "25%",
+      padding: "1%",
     });
 
     //TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
-
     form.append(toggleButton);
+    form.append(trashButton);
+    
+    
     //add selector to form
     form.append(annotationLabelSelector);
 
@@ -6045,27 +6060,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     var input = $(
-      '<input type="text" placeholder="Your comment..." value="' +
+      '<input type="textbox" placeholder="Your comment..." value="' +
         comment +
         '">'
     )
       .hide()
       .css({
         width: "40%",
-        height: "50%",
+        height: "100%",
+        padding: "1%",
       })
       .keydown(function (event) {
         event.stopPropagation();
       });
+
     form.submit(function (event) {
       event.preventDefault();
-      var collapsed = toggleButton.hasClass("fa-comment");
+      var collapsed = toggleButton.hasClass("fa-pencil");
       if (collapsed) {
-        toggleButton.removeClass("fa-comment").addClass("fa-floppy-o");
+        toggleButton.removeClass("fa-pencil").addClass("fa-floppy-o");
         input.show().focus();
         annotationLabelSelector.show();
       } else {
-        toggleButton.removeClass("fa-floppy-o").addClass("fa-comment");
+        toggleButton.removeClass("fa-floppy-o").addClass("fa-pencil");
         input.hide();
         annotationLabelSelector.hide();
         var comment = input.val();
@@ -6084,6 +6101,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._saveFeatureAnnotation(annotation);
       }
     });
+
+    form.on('reset', function (event) {
+      event.preventDefault();
+      if (that.options.isReadOnly) return;
+      
+      annotations
+        .slice()
+        .reverse()
+        .filter((a) => a.metadata.id == annotation.metadata.id)
+        .forEach((a) => {
+          a.destroy();
+          that.vars.chart.selectedAnnotation = null;
+        });
+      that._deleteAnnotation(
+        annotation.metadata.id,
+      );
+    });
+
     form.append(input);
     body.append(form);
     htmlContext.append(body);
