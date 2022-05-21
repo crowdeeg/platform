@@ -1790,10 +1790,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //   name: "Start & End Point Annotation (All)",
       //   value: "sne",
       // },
-      // {
-      //   name: "Box Annotation",
-      //   value: "box",
-      // },
       {
         name: "Change Point Annotation (All)",
         value: "cpointall",
@@ -1801,6 +1797,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       {
         name: "Change Point Annotation (Channel)",
         value: "cpoint",
+      },
+      {
+        name: "Box Annotation",
+        value: "box",
       },
     );
 
@@ -4562,9 +4562,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             annotation.update(getAnnotationAttributes(e));
           }
           annotation.outsideClickHandler = function () {
-            annotation.destroy();
-            $("html").off("mousedown", annotation.outsideClickHandler);
-            that.vars.chart.selectedAnnotation = null;
+            // annotation.destroy();
+            // $("html").off("mousedown", annotation.outsideClickHandler);
+            // that.vars.chart.selectedAnnotation = null;
           };
           $("html").on("mousedown", annotation.outsideClickHandler);
         }
@@ -4583,35 +4583,42 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.annotationCrosshairs.push(crosshair);
         
       }
-
+///////////////////TODO: Change this to fix channel specific changepoint annotation
       function click(e) {
-        if (that.vars.annotationClicks.clickOne === null) {
-          (clickXOne = e.pageX - container.offsetLeft),
-            (clickYOne = e.pageY - container.offsetTop);
+        // if (that.vars.annotationClicks.clickOne === null) {
+        //   (clickXOne = e.pageX - container.offsetLeft),
+        //     (clickYOne = e.pageY - container.offsetTop);
 
-          that.vars.annotationClicks.clickOne = {
-            clickX: clickXOne,
-            clickY: clickYOne,
-          };
-        } else if (that.vars.annotationClicks.clickTwo === null) {
-          (clickXTwo = e.pageX - container.offsetLeft),
-            (clickYTwo = e.pageY - container.offsetTop);
+        //   that.vars.annotationClicks.clickOne = {
+        //     clickX: clickXOne,
+        //     clickY: clickYOne,
+        //   };
+        // } else if (that.vars.annotationClicks.clickTwo === null) {
+        //   (clickXTwo = e.pageX - container.offsetLeft),
+        //     (clickYTwo = e.pageY - container.offsetTop);
 
-          that.vars.annotationClicks.clickTwo = {
-            clickX: clickXTwo,
-            clickY: clickYTwo,
-          };
+        //   that.vars.annotationClicks.clickTwo = {
+        //     clickX: clickXTwo,
+        //     clickY: clickYTwo,
+        //   };
 
-          var annotation = that._addAnnotationChangePoint();
+        //   var annotation = that._addAnnotationChangePoint();
 
-          that.vars.annotationClicks.clickOne = null;
-          that.vars.annotationClicks.clickTwo = null;
-        }
+        //   that.vars.annotationClicks.clickOne = null;
+        //   that.vars.annotationClicks.clickTwo = null;
+        // }
+        clickX = e.pageX - container.offsetLeft;
+        clickY = e.pageY - container.offsetTop
+        var annotation = that._addAnnotationChangePoint(clickX, clickY);
+
       }
+
 
       function clickAll(e) {
         clickX = e.pageX - container.offsetLeft;
+
         var annotation = that._addAnnotationChangePointAll(clickX);
+
       }
       
       that.vars.annotationMode = that.options.features.annotationType;
@@ -4628,9 +4635,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else if (that.options.features.annotationType == "cpointall") {
         Highcharts.removeEvent(container, "mousedown");
         Highcharts.addEvent(container, "mousedown", clickAll);
-      } else if (that.options.features.annotationType == "sne") {
-        // Highcharts.removeEvent(container, "click");
-        Highcharts.addEvent(container, "click", dropStartCrosshair);
+      // } else if (that.options.features.annotationType == "sne") {
+      //   // Highcharts.removeEvent(container, "click");
+      //   Highcharts.addEvent(container, "click", dropStartCrosshair);
       }
     }
   },
@@ -5225,7 +5232,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _addAnnotationChangePoint: function () // annotationId,
+  _addAnnotationChangePoint: function (clickX, clickY) // annotationId,
   // timeStart,
   // channelIndices,
   // featureType,
@@ -5236,21 +5243,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   {
     var that = this;
 
-    const clickXOne = that.vars.annotationClicks.clickOne.clickX;
-    const clickYOne = that.vars.annotationClicks.clickOne.clickY;
+    // const clickXOne = that.vars.annotationClicks.clickOne.clickX;
+    // const clickYOne = that.vars.annotationClicks.clickOne.clickY;
 
-    const clickXTwo = that.vars.annotationClicks.clickTwo.clickX;
-    const clickYTwo = that.vars.annotationClicks.clickTwo.clickY;
+    // const clickXTwo = that.vars.annotationClicks.clickTwo.clickX;
+    // const clickYTwo = that.vars.annotationClicks.clickTwo.clickY;
 
-    const clickXOneValue = that._convertPixelsToValue(clickXOne, "x");
-    const clickYOneValue = that._convertPixelsToValue(clickYOne, "y");
+    // const clickXOneValue = that._convertPixelsToValue(clickXOne, "x");
+    // const clickYOneValue = that._convertPixelsToValue(clickYOne, "y");
 
-    const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
-    const clickYTwoValue = that._convertPixelsToValue(clickYTwo, "y");
+    // const clickXTwoValue = that._convertPixelsToValue(clickXTwo, "x");
+    // const clickYTwoValue = that._convertPixelsToValue(clickYTwo, "y");
 
-    console.log(clickXOneValue, clickYOneValue, clickXTwoValue, clickYTwoValue);
+    // console.log(clickXOneValue, clickYOneValue, clickXTwoValue, clickYTwoValue);
 
-    const channelIndex = that._getChannelIndexFromY(clickYOneValue);
+    const clickXValue = that._convertPixelsToValue(clickX, "x");
+    const clickYValue = that._convertPixelsToValue(clickY, "y");
+
+    const channelIndex = that._getChannelIndexFromY(clickYValue);
     console.log(that.vars.allChannels[channelIndex].name);
     const featureType = that.vars.activeFeatureType;
 
@@ -5261,10 +5271,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var annotation = that._addAnnotationBoxChangePoint(
       annotationId,
-      clickXOneValue,
+      clickXValue,
       [channelIndex],
       featureType,
-      clickXTwoValue
     );
 
     // that._addCommentFormToAnnotationBox(annotation);
@@ -5482,6 +5491,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         units: "pixel",
         params: shapeParams,
       },
+
+      labels: [{
+        text: 'Max value'
+    }],
+
       events: {
         mouseup: function (event) {
           $(this.group.element)
@@ -5522,6 +5536,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         //     });
         // },
       },
+
     });
 
     // gets the last annotaion
@@ -5553,6 +5568,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // that._addCommentFormToAnnotationBoxChangePoint(annotation);
       // }
     }
+    that._saveFeatureAnnotation(annotation);
     return annotation;
   },
 
@@ -5596,10 +5612,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     annotationData
   ) {
     var that = this;
-    // //console.log("anotater");
     // gets all the annotations
     var annotations = that.vars.chart.annotations.allItems;
-    ////console.log(annotations);
 
     // makes the channelIndicies an array
     if (!Array.isArray(channelIndices)) {
@@ -5640,19 +5654,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       shapeParams.width = 0;
       shapeParams.fill = "transparent";
 
-      shapeParams.stroke = that._getFeatureColor(
-        featureType,
-        annotationData.is_answer
-      );
+      shapeParams.fill = "rgba(255,0,0,0.5)";
+
+      // shapeParams.stroke = that._getFeatureColor(
+      //   featureType,
+      //   annotationData.is_answer
+      // );
 
       shapeParams.strokeWidth = 10;
     } else {
       shapeParams.width = timeEnd - timeStart;
-      shapeParams.fill = that._getFeatureColor(
-        featureType,
-        annotationData.is_answer,
-        confidence
-      );
+      // shapeParams.fill = that._getFeatureColor(
+      //   featureType,
+      //   annotationData.is_answer,
+      //   confidence
+      // );
+      shapeParams.fill = "rgba(255,0,0,1)";
       shapeParams.stroke = "transparent";
       shapeParams.strokeWidth = 0;
     }
@@ -5677,6 +5694,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             .find('rect[shape-rendering="crispEdges"]')
             .last()
             .remove();
+          that._saveFeatureAnnotation(annotation);
+
         },
         // dblclick: function (event) {
         //   // deletes the annotation on db click
@@ -5736,12 +5755,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.originalData = annotationData;
     }
     if (!that.options.isReadOnly && !annotationData.is_answer) {
-      that._addConfidenceLevelButtonsToAnnotationBox(annotation);
-      if (!preliminary) {
-        size = shapeParams;
-        that._addCommentFormToAnnotationBox(annotation, size);
-      }
+      $("html").off("mousedown", annotation.outsideClickHandler);
+      var classString = $(annotation.group.element).attr("class");
+      classString += " saved";
+      $(annotation.group.element).attr("class", classString);
+      that._addCommentFormToAnnotationBox(annotation);
+      // if (!preliminary) {
+      //   size = shapeParams;
+      //   that._addCommentFormToAnnotationBox(annotation, size);
+      // }
     }
+
+    // that._addCommentFormToAnnotationBox(annotation);
     return annotation;
   },
 
@@ -5963,9 +5988,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     htmlContext
       .attr({
         width: 300,
-        height: `${annotation.group.element.getBBox().height}`,
-        // x: 0,
-        // y: 20,
+        height: 100,
         zIndex: 2,
       })
       .mousedown(function (event) {
@@ -5993,7 +6016,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var form = $("<form>");
     form.css({
       position: "absolute",
-      top: "50%",
+      top: "0%",
       // left:
       display: "table",
       width: "100%",
@@ -6014,7 +6037,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets all the relevant labels based on annotation type
     // const channelLabels = that._addAnnotationType(annotation);
-    const channelLabels = ["null", "W", "N1", "N2", "N3", "R", "A"];
+    const channelLabels = ["null", "W", "N1", "N2", "N3", "R", "A", "(data missing)"];
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
