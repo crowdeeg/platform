@@ -5348,6 +5348,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       display: "flex",
       width: "100px",
       height: "100%",
+      zIndex: 2,
     });
 
     //gets all the relevant labels based on annotation type
@@ -5568,7 +5569,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // that._addCommentFormToAnnotationBoxChangePoint(annotation);
       // }
     }
+    
+    // we need to change the width back to 0 as the change point is 
+    annotation.creationType = 'ChangePoint';
     that._saveFeatureAnnotation(annotation);
+
+    that._addChangePointLabelLeft(annotation);
+    that._addChangePointLabelRight(annotation);
+
+
     return annotation;
   },
 
@@ -5765,7 +5774,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //   that._addCommentFormToAnnotationBox(annotation, size);
       // }
     }
-
     // that._addCommentFormToAnnotationBox(annotation);
     return annotation;
   },
@@ -5965,7 +5973,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     annotationElement.append(htmlContext);
   },
 
-  //TODO: adds a comment form
+  // adds a comment form
   _addCommentFormToAnnotationBox: function (annotation) {
     if (annotation.metadata.commentFormAdded) {
       return;
@@ -5989,14 +5997,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .attr({
         width: 300,
         height: 100,
-        zIndex: 2,
+        zIndex: 10,
       })
       .mousedown(function (event) {
         event.stopPropagation();
       })
       .click(function (event) {
         event.stopPropagation();
-        
       });
 
     $('.highcharts-annotation')  
@@ -6013,6 +6020,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // 	"width": "100%",
     // 	"height": "100%"
     // })
+    body.css({zIndex: 10});
+
     var form = $("<form>");
     form.css({
       position: "absolute",
@@ -6023,6 +6032,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       height: "100%",
       // maxWidth: "100%",
       maxHeight: "100px",
+      zIndex: 10,
     });
     
 
@@ -6037,20 +6047,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets all the relevant labels based on annotation type
     // const channelLabels = that._addAnnotationType(annotation);
-    const channelLabels = ["null", "W", "N1", "N2", "N3", "R", "A", "(data missing)"];
+    const channelLabels = [undefined, "W", "N1", "N2", "N3", "R", "A", "(data missing)"];
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
       .hide()
       .keydown(function (event) {
         event.stopPropagation();
-      });
+      })
+      .css({zIndex: 10});
     //add the options to the select element
 
     channelLabels.forEach((label) => {
       annotationLabelSelector.append(
         $('<option value="' + label + '">' + label + "</option>")
-      );
+      ).css({zIndex: 10});
     });
 
     // //add margin top and bottom
@@ -6058,6 +6069,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "40%",
       height: "25%",
       padding: "1%",
+      zIndex: 10,
     });
 
     //TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
@@ -6092,6 +6104,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         width: "40%",
         height: "100%",
         padding: "1%",
+        zIndex: 10,
       })
       .keydown(function (event) {
         event.stopPropagation();
@@ -6104,7 +6117,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         toggleButton.removeClass("fa-pencil").addClass("fa-floppy-o");
         input.show().focus();
         annotationLabelSelector.show();
+        $(".changePointLabelRight").hide();
+        $(".changePointLabelLeft").hide();
+
       } else {
+        $(".changePointLabelRight").show();
+        $(".changePointLabelLeft").show();
+
         toggleButton.removeClass("fa-floppy-o").addClass("fa-pencil");
         input.hide();
         annotationLabelSelector.hide();
@@ -6147,6 +6166,104 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     htmlContext.append(body);
 
     annotation.metadata.commentFormAdded = true;
+  },
+
+  _addChangePointLabelLeft: function (annotation) {
+  // Adds the left label tag denoting the pervious state to the bottom of a change point annotation.
+
+    var that = this;
+    // var annotations = that.vars.chart.annotations.allItems;
+
+    var annotationElement = $(annotation.group.element);
+
+    var htmlContext = $(
+      document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
+    );
+    htmlContext.hide();
+    
+    var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.id}Left>`);
+    textarea1.css({
+      position: "relative",
+      display: "table",
+      width: "100%",
+      height: "100%",
+      backgroundColor: "red",
+      zIndex: 1,
+    });
+
+
+    annotationElement.append(htmlContext);
+    const height = 26;
+    width = 30;
+    htmlContext
+      .attr({
+        width: width,
+        height: height,
+        zIndex: -2,
+        y: `${annotation.group.element.getBBox().height-height}`,
+        x: -width,
+      })
+    
+    textarea1.val("left");
+
+    var body = $("<body>").addClass("changePointLabelLeft");
+    body.css({zIndex: -2});
+
+    body.append(textarea1);
+    htmlContext.append(body);
+  },
+
+  _addChangePointLabelRight: function (annotation) {
+    // Adds the right label tag denoting the new state to the bottom of a change point annotation.
+  
+      var that = this;
+      // var annotations = that.vars.chart.annotations.allItems;
+  
+      var annotationElement = $(annotation.group.element);
+  
+      var htmlContext = $(
+        document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
+      );
+      htmlContext.hide();
+      
+      var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.id}Right>`);
+      textarea1.css({
+        position: "relative",
+        display: "table",
+        width: "100%",
+        height: "100%",
+        backgroundColor: "red",
+        zIndex: 1,
+      });
+  
+  
+      annotationElement.append(htmlContext);
+      const height = 26;
+      width = 30;
+      htmlContext
+        .attr({
+          width: width,
+          height: height,
+          zIndex: -2,
+          y: `${annotation.group.element.getBBox().height-height}`,
+          x: 2,
+        })
+      
+      textarea1.val(annotation.metadata.annotationLabel);
+  
+      var body = $("<body>").addClass("changePointLabelRight");
+      body.css({zIndex: -2});
+  
+      body.append(textarea1);
+      htmlContext.append(body);
+    },
+  
+  _updateChangePointLabelLeft: function (annotation) {
+    $(`#${annotation.id}Left`).val(annotation.metadata.annotationLabel);
+  },
+
+  _updateChangePointLabelRight: function (annotation) {
+    $(`#${annotation.id}Right`).val(annotation.metadata.annotationLabel);
   },
 
   _saveFeatureAnnotation: function (annotation) {
@@ -6197,8 +6314,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           annotationFormatted.rationale = savedAnnotation.rationale;
           // that._displayAnnotations([annotationFormatted]);
         }
-      }
+      },
     );
+    if (annotation.creationType == 'ChangePoint') {
+      that._updateChangePointLabelRight(annotation);
+    }
   },
 
   _saveFullWindowLabel: function (annotationCategory, label, rationale) {
@@ -6353,9 +6473,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMaxFixed: function (annotation) {
-    return parseFloat(
-      annotation.options.xValue + annotation.options.shape.params.width
-    ).toFixed(2);
+    if (annotation.creationType == 'ChangePoint') {
+      return parseFloat(annotation.options.xValue).toFixed(2);
+    } else {
+      return parseFloat(
+        annotation.options.xValue + annotation.options.shape.params.width
+      ).toFixed(2);
+    }
+    
   },
 
   _getAxis: function (key) {
