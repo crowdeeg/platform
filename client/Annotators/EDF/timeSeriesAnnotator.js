@@ -472,6 +472,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       uniqueClass: that._getUUID(),
       activeFeatureType: 0,
       chart: null,
+      universalChangePointAnnotations: [],
       activeAnnotations: [],
       annotationsLoaded: true,
       selectedChannelIndex: undefined,
@@ -5571,7 +5572,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     
     // we need to change the width back to 0 as the change point is 
-    annotation.creationType = 'ChangePoint';
+
+    if (annotation.creationType === undefined) {
+      annotation.creationType = 'ChangePoint';
+    }
+
     that._saveFeatureAnnotation(annotation);
 
     that._addChangePointLabelLeft(annotation);
@@ -5605,7 +5610,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
 
     that._addCommentFormToAnnotationBox(annotation);
-
+    annotation.creationType = 'ChangePointAll'
     return annotation;
   },
 
@@ -6181,7 +6186,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
     htmlContext.hide();
     
-    var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.id}Left>`);
+    var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Left>`);
     textarea1.css({
       position: "relative",
       display: "table",
@@ -6204,8 +6209,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         x: -width,
       })
     
-    textarea1.val("left");
-
+    var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) - 1;
+    
+    if (index > 0) {
+      textarea1.val(that.vars.universalChangePointAnnotations[index].metadata.annotationLabel);
+    } else {
+      textarea1.val("(start of file)");
+    }
+    
+      
+    
     var body = $("<body>").addClass("changePointLabelLeft");
     body.css({zIndex: -2});
 
@@ -6226,7 +6239,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       );
       htmlContext.hide();
       
-      var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.id}Right>`);
+      var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Right>`);
       textarea1.css({
         position: "relative",
         display: "table",
@@ -6259,11 +6272,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     },
   
   _updateChangePointLabelLeft: function (annotation) {
-    $(`#${annotation.id}Left`).val(annotation.metadata.annotationLabel);
+    $(`#${annotation.metadata.id}Left`).val(annotation.metadata.annotationLabel);
   },
 
   _updateChangePointLabelRight: function (annotation) {
-    $(`#${annotation.id}Right`).val(annotation.metadata.annotationLabel);
+    $(`#${annotation.metadata.id}Right`).val(annotation.metadata.annotationLabel);
   },
 
   _saveFeatureAnnotation: function (annotation) {
@@ -6316,9 +6329,54 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       },
     );
-    if (annotation.creationType == 'ChangePoint') {
+    if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
       that._updateChangePointLabelRight(annotation);
     }
+    if (annotation.creationType == 'ChangePointAll') {
+      that._saveAndSortUniversalChangePointAnnotations(annotation);
+    }
+    console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
+  },
+
+  _getUniversalAnnotationIndexByXVal: function (XVal) {
+    // returns the index of annotation with XVal in that.vars.universalChangePointAnnotations
+    // if the an annotation with this XVal does not exist, return the greatest index of annotation that has an XValue less than the given value
+    var that = this;
+    var XValue = parseFloat(XVal).toFixed(2);
+    var annotations = that.vars.universalChangePointAnnotations;
+    var XValues = annotations.map(a => that._getAnnotationXMinFixed(a));
+
+    if (XValues.includes(XValue)) {
+      // if XValue is in 
+      return XValues.indexOf(XValue);
+    } else {
+      XValues.push(XValues);
+      XValues.sort();
+      return XValues.indexOf(XValue) - 1;
+    }    
+  },
+
+  _saveAndSortUniversalChangePointAnnotations: function (annotation) {
+    // save and sort the universal change point annotation list for the purpose of displaying the previous changepoint state
+    var that = this;
+    var annotations = that.vars.universalChangePointAnnotations;
+    var XValue = that._getAnnotationXMinFixed(annotation);
+
+    if (annotation.metadata.annotationLabel != undefined && 
+      annotation.metadata.annotationLabel != "undefined" &&
+      annotation.metadata.annotationLabel != "(data missing)") {
+      if (!annotations.map(a => that._getAnnotationXMinFixed(a))
+        .includes(XValue)) {
+          annotations.push(annotation);
+          annotations.sort( (a, b) => {
+            return that._getAnnotationXMinFixed(b) - that._getAnnotationXMaxFixed(a);
+          }
+        );
+      } else {
+        annotations[that._getUniversalAnnotationIndexByXVal(XValue)] = annotation;
+      }
+     }
+    console.log(annotations);
   },
 
   _saveFullWindowLabel: function (annotationCategory, label, rationale) {
@@ -6473,7 +6531,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMaxFixed: function (annotation) {
-    if (annotation.creationType == 'ChangePoint') {
+    if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
       return parseFloat(annotation.options.xValue).toFixed(2);
     } else {
       return parseFloat(
@@ -7939,7 +7997,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         rationale: rationale,
       };
       that._addArbitrationInformationToObject(annotationDocument);
-      console.log(annotationDocument);
+      // console.log(annotationDocument);
       annotationDocument.id = Annotations.insert(
         annotationDocument,
         (error, annotationId) => {
@@ -7958,17 +8016,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     } else {
       // console.log("here");
 
-      console.log("annotationId: " + annotationId);
-      console.log("recording_name: " + recording_name);
-      console.log("type: " + type);
-      console.log("start: " + start);
-      console.log("end: " + end);
-      console.log("channels: " + channels);
-      console.log("confidence: " + confidence);
-      console.log("comment: " + comment);
-      console.log("metadata: " + metadata);
-      console.log("label: " + annotationLabel);
-      console.log("rationale: " + rationale);
+      // console.log("annotationId: " + annotationId);
+      // console.log("recording_name: " + recording_name);
+      // console.log("type: " + type);
+      // console.log("start: " + start);
+      // console.log("end: " + end);
+      // console.log("channels: " + channels);
+      // console.log("confidence: " + confidence);
+      // console.log("comment: " + comment);
+      // console.log("metadata: " + metadata);
+      // console.log("label: " + annotationLabel);
+      // console.log("rationale: " + rationale);
 
       const annotationModifier = {
         "value.metadata.annotationLabel": annotationLabel,
@@ -8013,7 +8071,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         };
       }
 
-      console.log(cacheEntry);
+      // console.log(cacheEntry);
       if (cacheEntry.annotations) {
         cacheEntry.annotations.unshift(annotation.value);
       }
