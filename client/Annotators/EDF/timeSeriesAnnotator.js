@@ -472,7 +472,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       uniqueClass: that._getUUID(),
       activeFeatureType: 0,
       chart: null,
-      universalChangePointAnnotations: [],
+      universalChangePointAnnotationsCache: [],
       activeAnnotations: [],
       annotationsLoaded: true,
       selectedChannelIndex: undefined,
@@ -4099,7 +4099,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           text: that.options.recordingName,
         },
         tooltip: {
-          enabled: false,
+          enabled: true,
+          formatter: function () {
+            var x = this.x;
+            try {
+              var annotation = that.vars.universalChangePointAnnotationsCache[
+                that._getUniversalAnnotationIndexByXVal(x)
+              ];
+              var label;
+              if (annotation !== undefined) {
+                label = annotation.metadata.annotationLabel;
+              }
+              // console.log(label);
+  
+              return "Time Stamp: " + "<b>" + this.x + "</b>" + " s" + '<br/>' +
+              "Previous Universal Change Point:" + "<br/>" + 
+              "<b>" + label + "</b>";
+            } catch {
+              return "Error";
+            }
+          },
         },
         annotations: null,
         plotOptions: {
@@ -4571,19 +4590,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       }
       
-      // Display the starting crosshair marking the starting position of 
-      // an universal start and endpoint annotation.
-      function dropStartCrosshair(e) {
-        if (that.vars.annotationCrosshairs.length === 2 || that.vars.annotationCrosshairPositions === 2) {
-          (that.vars.annotationCrosshairs).forEach( c => c.destroy());
-          that.vars.annotationCrosshairs = [];
-          that.vars.annotationCrosshairPositions = [];
-        }
-        that.vars.annotationCrosshairPositions.push(that.vars.annotationCrosshairCurrPosition);
-        let crosshair = that._paintCrosshairGeneral(e, that.vars.annotationCrosshairPositions, 0, chart.series.length);
-        that.vars.annotationCrosshairs.push(crosshair);
-        
-      }
+
 ///////////////////TODO: Change this to fix channel specific changepoint annotation
       function click(e) {
         // if (that.vars.annotationClicks.clickOne === null) {
@@ -5610,7 +5617,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
 
     that._addCommentFormToAnnotationBox(annotation);
-    annotation.creationType = 'ChangePointAll'
+    annotation.creationType = 'ChangePointAll';
     return annotation;
   },
 
@@ -6124,6 +6131,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         annotationLabelSelector.show();
         $(".changePointLabelRight").hide();
         $(".changePointLabelLeft").hide();
+        that.vars.chart.tooltip.label.hide();
 
       } else {
         $(".changePointLabelRight").show();
@@ -6146,6 +6154,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             $(a.group.element).find(".form-control").val(annotationLabel);
           });
         that._saveFeatureAnnotation(annotation);
+        that.vars.chart.tooltip.label.show();
       }
     });
 
@@ -6153,6 +6162,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       event.preventDefault();
       if (that.options.isReadOnly) return;
       
+      var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
+      var nextAnnotation = that.vars.universalChangePointAnnotationsCache[index];
+
       annotations
         .slice()
         .reverse()
@@ -6164,6 +6176,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._deleteAnnotation(
         annotation.metadata.id,
       );
+      that._getNonTrivialUniversalAnnotations();
+      if (nextAnnotation !== undefined) {
+        that._updateChangePointLabelLeft(nextAnnotation);
+      }
     });
 
     form.append(input);
@@ -6171,6 +6187,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     htmlContext.append(body);
 
     annotation.metadata.commentFormAdded = true;
+  },
+
+  _getChangePointColor: function (changePoint) {
+    switch(changePoint) {
+      case "W":
+        return "orange";
+      case "N1":
+        return "aquamarine"
+      case "N2":
+        return "cyan";
+      case "N3":
+        return "deepskyblue";
+      case "R":
+        return "yellow";
+      case "A":
+        return "violet";
+      default:
+        return "red";
+    }
+
   },
 
   _addChangePointLabelLeft: function (annotation) {
@@ -6209,12 +6245,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         x: -width,
       })
     
-    var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) - 1;
-    
-    if (index > 0) {
-      textarea1.val(that.vars.universalChangePointAnnotations[index].metadata.annotationLabel);
+    var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) ;
+    // var annotations = that.vars.universalChangePointAnnotationsCache;
+    var annotations = that._getNonTrivialUniversalAnnotations();
+  
+    if (annotations.length != 0 && index >=0) {
+      textarea1.val(annotations[index].metadata.annotationLabel);
     } else {
-      textarea1.val("(start of file)");
+      textarea1.val("");
     }
     
       
@@ -6225,6 +6263,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     body.append(textarea1);
     htmlContext.append(body);
   },
+
+  
 
   _addChangePointLabelRight: function (annotation) {
     // Adds the right label tag denoting the new state to the bottom of a change point annotation.
@@ -6272,11 +6312,31 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     },
   
   _updateChangePointLabelLeft: function (annotation) {
-    $(`#${annotation.metadata.id}Left`).val(annotation.metadata.annotationLabel);
+    var that = this;
+    // var annotations = that.vars.universalChangePointAnnotationsCache;
+    var annotations = that._getNonTrivialUniversalAnnotations();
+    // grab the previous annotation in sorted order
+    var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) - 1;
+    
+
+    var element = $(`#${annotation.metadata.id}Left`);
+
+    if (annotations.length != 0 && index >= 0) {
+      var label = annotations[index].metadata.annotationLabel;
+      element.val(label);
+      element.css({backgroundColor: that._getChangePointColor(label)});
+    } else {
+      element.val("");
+    }
+    
   },
 
   _updateChangePointLabelRight: function (annotation) {
-    $(`#${annotation.metadata.id}Right`).val(annotation.metadata.annotationLabel);
+    var that = this;
+    var label = annotation.metadata.annotationLabel;
+    var element = $(`#${annotation.metadata.id}Right`);
+    element.val(label);
+    element.css({backgroundColor: that._getChangePointColor(label)});
   },
 
   _saveFeatureAnnotation: function (annotation) {
@@ -6333,9 +6393,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._updateChangePointLabelRight(annotation);
     }
     if (annotation.creationType == 'ChangePointAll') {
-      that._saveAndSortUniversalChangePointAnnotations(annotation);
+      that._updateChangePointLabelLeft(annotation);
+
+      var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
+      var annotations = that._getNonTrivialUniversalAnnotations();
+      if (annotations[index] != undefined) {
+        that._updateChangePointLabelLeft(annotations[index]);
+      }
+    
     }
-    console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
+    // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
+    console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
 
   _getUniversalAnnotationIndexByXVal: function (XVal) {
@@ -6343,41 +6411,62 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // if the an annotation with this XVal does not exist, return the greatest index of annotation that has an XValue less than the given value
     var that = this;
     var XValue = parseFloat(XVal).toFixed(2);
-    var annotations = that.vars.universalChangePointAnnotations;
-    var XValues = annotations.map(a => that._getAnnotationXMinFixed(a));
+    var annotations = that.vars.universalChangePointAnnotationsCache;
+    var XValues = annotations.map(a => parseFloat(that._getAnnotationXMinFixed(a)).toFixed(2));
+
+    var index;
 
     if (XValues.includes(XValue)) {
-      // if XValue is in 
-      return XValues.indexOf(XValue);
+      index = XValues.indexOf(XValue);
     } else {
-      XValues.push(XValues);
-      XValues.sort();
-      return XValues.indexOf(XValue) - 1;
-    }    
+      XValues.push(XValue);
+      XValues.sort((a, b) => a - b);
+      index = XValues.indexOf(XValue) - 1;
+    }
+    return index;
   },
 
-  _saveAndSortUniversalChangePointAnnotations: function (annotation) {
-    // save and sort the universal change point annotation list for the purpose of displaying the previous changepoint state
+  _getNonTrivialUniversalAnnotations: function() {
     var that = this;
-    var annotations = that.vars.universalChangePointAnnotations;
-    var XValue = that._getAnnotationXMinFixed(annotation);
+    // non trivial means that an annotation has an actual sleep stage value saved in it.
+    that.vars.chart.annotations.allItems.sort((a, b) => {
+      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMaxFixed(b);
+    });
 
-    if (annotation.metadata.annotationLabel != undefined && 
-      annotation.metadata.annotationLabel != "undefined" &&
-      annotation.metadata.annotationLabel != "(data missing)") {
-      if (!annotations.map(a => that._getAnnotationXMinFixed(a))
-        .includes(XValue)) {
-          annotations.push(annotation);
-          annotations.sort( (a, b) => {
-            return that._getAnnotationXMinFixed(b) - that._getAnnotationXMaxFixed(a);
-          }
-        );
-      } else {
-        annotations[that._getUniversalAnnotationIndexByXVal(XValue)] = annotation;
-      }
-     }
-    console.log(annotations);
+    var annotations = that.vars.chart.annotations.allItems.filter(a => a.creationType == 'ChangePointAll' && 
+      a.metadata.annotationLabel !== undefined &&
+      a.metadata.annotationLabel != "undefined" &&
+      a.metadata.annotationLabel != "(data missing)");
+    
+    that.vars.universalChangePointAnnotationsCache = annotations;
+    return annotations;
   },
+
+  // _saveAndSortUniversalChangePointAnnotations: function (annotation) {
+  //   // save and sort the universal change point annotation list for the purpose of displaying the previous changepoint state
+  //   var that = this;
+  //   var annotations = that.vars.universalChangePointAnnotations;
+  //   // var annotations = that.vars.chart.annotations.allItems.filter(a => a.creationType == 'ChangePointALl' && 
+  //   //   a.metadata.annotationLabel != "undefined" &&
+  //   //   a.metadata.annotationLabel != "(data missing)");
+  //   var XValue = that._getAnnotationXMinFixed(annotation);
+
+  //   if (annotation.metadata.annotationLabel != undefined && 
+  //     annotation.metadata.annotationLabel != "undefined" &&
+  //     annotation.metadata.annotationLabel != "(data missing)") {
+  //     if (!annotations.map(a => that._getAnnotationXMinFixed(a))
+  //       .includes(XValue)) {
+  //         annotations.push(annotation);
+  //         annotations.sort( (a, b) => {
+  //           return that._getAnnotationXMinFixed(b) - that._getAnnotationXMaxFixed(a);
+  //         }
+  //       );
+  //     } else {
+  //       annotations[that._getUniversalAnnotationIndexByXVal(XValue)] = annotation;
+  //     }
+  //    }
+  //   console.log(annotations);
+  // },
 
   _saveFullWindowLabel: function (annotationCategory, label, rationale) {
     var that = this;
