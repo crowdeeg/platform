@@ -1456,6 +1456,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       })
       .catch((error) => console.error(error));
+    
   },
 
   _getUrlParameter: function (sParam) {
@@ -3255,7 +3256,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _requestData: function (options, callback) {
     var that = this;
-    console.log(that.vars.allRecordings);
+    // console.log(that.vars.allRecordings);
     // identifierKey includes:
     // 'recordings'
     // 'start_time'
@@ -3366,11 +3367,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var channelAudioRepresentations = {};
     var channelNumSamples = {};
     var samplingRate = input.sampling_rate;
-    console.log("samplingRate", samplingRate);
-    console.log(that.options.targetSamplingRate);
+    // console.log("samplingRate", samplingRate);
+    // console.log(that.options.targetSamplingRate);
     // for each dataId in the channelvalues array
     for (var dataId in input.channel_values) {
-      console.log(that._getCurrentMontage());
+      // console.log(that._getCurrentMontage());
       //console.log(
       // 	"==============================================================================================="
       // );
@@ -3884,6 +3885,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._renderChannelSelection();
     that._updateBookmarkCurrentPageButton();
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
+  
+    console.log("here we scale all channels to screen");
+    that._scaleAllToScreen();
+    that.vars.chart.redraw();
   },
 
   //checks if an object is empty
@@ -7150,34 +7155,34 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       if (!that.options.showReferenceLines) return;
 
-      var referenceValues = that._getReferenceValuesForChannel(channel);
-      referenceValues.forEach((referenceValue, r) => {
-        var referenceValueWithGain =
-          (referenceValue + offsetPreScale) * that._getGainForChannelIndex(c);
-        var referenceLineID = "channel_" + c + "_reference_" + r;
-        axis.removePlotLine(referenceLineID);
-        var flipFactor = that._getFlipFactorForChannel(channel);
-        var referenceLineOptions = {
-          id: referenceLineID,
-          color: "#ff0000",
-          dashStyle: "dash",
-          value: offsetPostScale + referenceValueWithGain,
-          width: 1,
-          zIndex: 1,
-          label: {
-            text: flipFactor * referenceValue + " " + channelUnit,
-            textAlign: "right",
-            verticalAlign: "middle",
-            x: -15,
-            y: 3,
-            style: {
-              color: "red",
-              marginRight: "50px",
-            },
-          },
-        };
-        axis.addPlotLine(referenceLineOptions);
-      });
+      // var referenceValues = that._getReferenceValuesForChannel(channel);
+      // referenceValues.forEach((referenceValue, r) => {
+      //   var referenceValueWithGain =
+      //     (referenceValue + offsetPreScale) * that._getGainForChannelIndex(c);
+      //   var referenceLineID = "channel_" + c + "_reference_" + r;
+      //   axis.removePlotLine(referenceLineID);
+      //   var flipFactor = that._getFlipFactorForChannel(channel);
+      //   var referenceLineOptions = {
+      //     id: referenceLineID,
+      //     color: "#ff0000",
+      //     dashStyle: "dash",
+      //     value: offsetPostScale + referenceValueWithGain,
+      //     width: 1,
+      //     zIndex: 1,
+      //     label: {
+      //       text: flipFactor * referenceValue + " " + channelUnit,
+      //       textAlign: "right",
+      //       verticalAlign: "middle",
+      //       x: -15,
+      //       y: 3,
+      //       style: {
+      //         color: "red",
+      //         marginRight: "50px",
+      //       },
+      //     },
+      //   };
+      //   axis.addPlotLine(referenceLineOptions);
+      // });
     });
   },
 
