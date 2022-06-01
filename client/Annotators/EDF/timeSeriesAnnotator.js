@@ -2129,8 +2129,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       alert("Could not retrieve user data.");
       return;
     }
-    that._triggerOnReadyEvent();
-    $(window).resize(that._reinitChart);
+    // that._triggerOnReadyEvent();
+    // $(window).resize(that._reinitChart);
   },
 
   _setupArtifactPanel: function () {
@@ -5590,8 +5590,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     that._saveFeatureAnnotation(annotation);
-
-    that._addChangePointLabelLeft(annotation);
     that._addChangePointLabelRight(annotation);
 
 
@@ -5623,6 +5621,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     that._addCommentFormToAnnotationBox(annotation);
     annotation.creationType = 'ChangePointAll';
+    that._addChangePointLabelLeft(annotation);
+
+    
+
     return annotation;
   },
 
@@ -6064,7 +6066,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets all the relevant labels based on annotation type
     // const channelLabels = that._addAnnotationType(annotation);
-    const channelLabels = [undefined, "W", "N1", "N2", "N3", "R", "A", "(data missing)"];
+    const channelLabels = [undefined, "W", "N1", "N2", "N3", "R", "A", "(unknown)", "(data missing)", "(end previous state)"];
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
@@ -6260,8 +6262,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       textarea1.val("");
     }
     
-      
-    
     var body = $("<body>").addClass("changePointLabelLeft");
     body.css({zIndex: -2});
 
@@ -6314,8 +6314,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   
       body.append(textarea1);
       htmlContext.append(body);
-    },
+  },
   
+
+
   _updateChangePointLabelLeft: function (annotation) {
     var that = this;
     // var annotations = that.vars.universalChangePointAnnotationsCache;
@@ -6394,6 +6396,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       },
     );
+    // var element = $(`#${annotation.metadata.id}Right`);
+    // if (annotation.creationType == 'ChangePoint' && 
+    // annotation.metadata.annotationLabel == "(end previous state)") {
+    //   if (element.length) {
+    //     element.hide();
+    //   }
+    // } else if (annotation.creationType == 'ChangePoint' && 
+    // annotation.metadata.annotationLabel != "(end previous state)") {
+    //   if (!(element.length)) {
+    //     element.show();
+    //   }
+    // }
+
     if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
       that._updateChangePointLabelRight(annotation);
     }
@@ -6406,9 +6421,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._updateChangePointLabelLeft(annotations[index]);
       }
     
-    }
+    }    
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
+
   },
 
   _getUniversalAnnotationIndexByXVal: function (XVal) {
@@ -7254,7 +7270,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       case "SPO2":
         return "%";
       default:
-        return "?";
+        return "unit unknown";
     }
   },
 
