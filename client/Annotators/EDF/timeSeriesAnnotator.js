@@ -5205,6 +5205,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
+  _getAnnotationLabelFromCreationType: function(annotation) {
+    if (annotation.creationType == 'ChangePointAll') {
+      return [undefined, "Awake", "N1", "N2", "SWS", "REM", "(unanalyzable)"];
+    } else if (annotation.creationType == 'ChangePoint') {
+      return [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)", "(end previous state)"];
+    } else { 
+      return [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"]; 
+    }
+  },
+
   _getCurrentMontage: function () {
     var that = this;
 
@@ -5288,6 +5298,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       [channelIndex],
       featureType,
     );
+    if (!that.options.isReadOnly) {
+      that._addCommentFormToAnnotationBox(annotation);
+      // if (!preliminary) {
+        // size = shapeParams;
+        // that._addCommentFormToAnnotationBoxChangePoint(annotation);
+      // }
+    }
 
     // that._addCommentFormToAnnotationBox(annotation);
 
@@ -5575,19 +5592,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.comment = comment;
       annotation.metadata.originalData = annotationData;
     // }
-    if (!that.options.isReadOnly) {
-      that._addCommentFormToAnnotationBox(annotation);
-      // if (!preliminary) {
-        // size = shapeParams;
-        // that._addCommentFormToAnnotationBoxChangePoint(annotation);
-      // }
-    }
-    
-    // we need to change the width back to 0 as the change point is 
 
     if (annotation.creationType === undefined) {
       annotation.creationType = 'ChangePoint';
     }
+
+
+
+    
 
     that._saveFeatureAnnotation(annotation);
     that._addChangePointLabelRight(annotation);
@@ -5618,9 +5630,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       featureType,
       clickXTwoValue
     );
-
-    that._addCommentFormToAnnotationBox(annotation);
     annotation.creationType = 'ChangePointAll';
+    that._addCommentFormToAnnotationBox(annotation);
     that._addChangePointLabelLeft(annotation);
 
     
@@ -6010,12 +6021,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
     );
     
-    annotationElement.append(htmlContext);
-    htmlContext.hide();
+    // htmlContext.hide();
     htmlContext
       .attr({
-        width: 300,
-        height: 100,
+        width: 120,
+        height: 70,
         zIndex: 10,
       })
       .mousedown(function (event) {
@@ -6024,15 +6034,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .click(function (event) {
         event.stopPropagation();
       });
+    
+    annotationElement.append(htmlContext);
 
-    $('.highcharts-annotation')  
-      .mouseenter(function (event) {
-        $('foreignObject').show();
-      })
-      .mouseleave(function (event) {
-        $('foreignObject').hide();
-      });
-
+    
     var body = $("<body>").addClass("comment toolbar");
     // .attr("xmlns", "http://www.w3.org/1999/xhtml");
     // .attr({
@@ -6040,6 +6045,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // 	"height": "100%"
     // })
     body.css({zIndex: 10});
+
+    $('.highcharts-annotation')  
+      .mouseenter(function (event) {
+        $("body[class='comment toolbar']").show();
+      })
+      .mouseleave(function (event) {
+        $("body[class='comment toolbar']").hide();
+      });
+
+    
 
     var form = $("<form>");
     form.css({
@@ -6066,7 +6081,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets all the relevant labels based on annotation type
     // const channelLabels = that._addAnnotationType(annotation);
-    const channelLabels = [undefined, "W", "N1", "N2", "N3", "R", "A", "(unknown)", "(data missing)", "(end previous state)"];
+    const channelLabels = that._getAnnotationLabelFromCreationType(annotation);
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
@@ -6085,7 +6100,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // //add margin top and bottom
     annotationLabelSelector.css({
-      width: "40%",
+      width: "100%",
       height: "25%",
       padding: "1%",
       zIndex: 10,
@@ -6120,7 +6135,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     )
       .hide()
       .css({
-        width: "40%",
+        width: "100%",
         height: "100%",
         padding: "1%",
         zIndex: 10,
@@ -6227,7 +6242,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var htmlContext = $(
       document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
     );
-    htmlContext.hide();
+    // htmlContext.hide();
     
     var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Left>`);
     textarea1.css({
@@ -6239,6 +6254,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       zIndex: 1,
     });
 
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
 
     annotationElement.append(htmlContext);
     const height = 26;
@@ -6248,7 +6264,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         width: width,
         height: height,
         zIndex: -2,
-        y: `${annotation.group.element.getBBox().height-height}`,
+        y: annotationHeight - height,
+        // y: `${annotation.group.element.getBBox().height-height}`,
         x: -width,
       })
     
@@ -6282,19 +6299,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var htmlContext = $(
         document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
       );
-      htmlContext.hide();
+      // htmlContext.hide();
       
       var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Right>`);
       textarea1.css({
         position: "relative",
         display: "table",
-        width: "100%",
+        // width: "100%",
         height: "100%",
         backgroundColor: "red",
         zIndex: 1,
+        overflow: "visible",
       });
+
+      textarea1.val(annotation.metadata.annotationLabel);
   
-  
+      var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+
       annotationElement.append(htmlContext);
       const height = 26;
       width = 30;
@@ -6303,11 +6324,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           width: width,
           height: height,
           zIndex: -2,
-          y: `${annotation.group.element.getBBox().height-height}`,
+          // y: `${annotation.group.element.getBBox().height-height}`,
+          y: annotationHeight - height,
           x: 2,
-        })
+        });
       
-      textarea1.val(annotation.metadata.annotationLabel);
+      
   
       var body = $("<body>").addClass("changePointLabelRight");
       body.css({zIndex: -2});
@@ -6423,6 +6445,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     
     }    
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
+    console.log(annotation);
     console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
 
   },
