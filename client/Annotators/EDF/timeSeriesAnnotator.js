@@ -242,7 +242,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     marginTop: null,
     marginBottom: null,
     windowSizeInSeconds: 30,
-    windowJumpSizeFastForwardBackward: 10,
+    windowJumpSizeFastForwardBackward: 1,
     preloadEntireRecording: false,
     numberOfForwardWindowsToPrefetch: 3,
     numberOfFastForwardWindowsToPrefetch: 3,
@@ -810,7 +810,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         .parents(".annotator-edf")
         .find(".input-panel-container")
         .hide();
-      $(".mark-assignment-as-completed").show();
+      // $(".mark-assignment-as-completed").show();
+      $(".mark-assignment-as-completed").hide();
+
       that._updateMarkAssignmentAsCompletedButtonState();
     }
     if (!that._isHITModeEnabled()) {
@@ -1511,8 +1513,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (windowsRemaining < 1) {
       that._lastWindowReached();
     }
+    var fastForwardEnabled = windowsRemaining >= that.options.windowJumpSizeFastForwardBackward;
+    
+    
     that._setFastForwardEnabledStatus(
-      windowsRemaining >= that.options.windowJumpSizeFastForwardBackward
+      fastForwardEnabled
     );
     that._setBackwardEnabledStatus(currentWindowIndex >= 1);
     that._setFastBackwardEnabledStatus(
@@ -2216,14 +2221,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".forward")
         .click(function () {
-          that._shiftChart(1);
+          that._shiftChart(1/5);
         });
     }
     if (that.options.showBackwardButton) {
       $(that.element)
         .find(".backward")
         .click(function () {
-          that._shiftChart(-1);
+          that._shiftChart(-1/5);
         });
     }
     if (that.options.showFastForwardButton) {
@@ -2969,12 +2974,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("_switchToWindow.that:", that);
 
     // can be ignored for now, something to do with the machine learning component of the app
+    // console.log(!that._isCurrentWindowSpecifiedTrainingWindow());
+    
     if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
       //console.log("0");
       if (that.options.visibleRegion.start !== undefined) {
         //console.log("0-1");
         start_time = Math.max(that.options.visibleRegion.start, start_time);
         start_time = window_length * Math.ceil(start_time / window_length);
+
         that._setBackwardEnabledStatus(
           start_time - window_length >= that.options.visibleRegion.start
         );
@@ -2984,7 +2992,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that.options.visibleRegion.start
         );
       }
-
+      // console.log(that.options.visibleRegion.end);
       if (that.options.visibleRegion.end !== undefined) {
         //console.log("0-2");
         start_time = Math.min(
@@ -3000,10 +3008,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           //console.log("0-2-1");
           that._lastWindowReached();
         }
+        var fastForwardEnabled = start_time +
+        window_length * that.options.windowJumpSizeFastForwardBackward <
+        that.options.visibleRegion.end - window_length;
+        
+        // console.log(fastForwardEnabled);
+
         that._setFastForwardEnabledStatus(
-          start_time +
-            window_length * that.options.windowJumpSizeFastForwardBackward <
-            that.options.visibleRegion.end - window_length
+          fastForwardEnabled
         );
       }
     }
@@ -3073,36 +3085,44 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         i <= that.options.numberOfFastForwardWindowsToPrefetch;
         ++i
       ) {
-        windowsToRequest.push(
-          start_time +
-            i * that.options.windowJumpSizeFastForwardBackward * window_length
-        );
+        let window = start_time + i * that.options.windowJumpSizeFastForwardBackward * window_length;
+        if (!windowsToRequest.includes(window)) {
+          windowsToRequest.push(window);
+        }
       }
       for (
         var i = 1;
         i <= that.options.numberOfBackwardWindowsToPrefetch;
         ++i
       ) {
-        windowsToRequest.push(start_time - i * window_length);
+        let window = start_time - i * window_length;
+        if (!windowsToRequest.includes(window)) {
+          windowsToRequest.push(window);
+        }
       }
       for (
         var i = 1;
         i <= that.options.numberOfFastBackwardWindowsToPrefetch;
         ++i
       ) {
-        windowsToRequest.push(
-          start_time -
-            i * that.options.windowJumpSizeFastForwardBackward * window_length
-        );
+        let window = start_time - i * that.options.windowJumpSizeFastForwardBackward * window_length;
+        if (!windowsToRequest.includes(window)) {
+          windowsToRequest.push(window);
+        }
       }
     }
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
       // gets the data for all the prefetched windows
+      var startTime = (windowStartTime > 0 ? 
+        windowStartTime :
+        (windowStartTime > -window_length ? Math.max(0, windowStartTime) : windowStartTime)
+        );
+      
       var options = {
         recordings: allRecordings,
         channels_displayed: that._getChannelsDisplayed(), // get all channels we would like to display
-        start_time: windowStartTime,
+        start_time: startTime,
         channel_timeshift: that.vars.channelTimeshift,
         window_length: window_length,
         target_sampling_rate: that.options.targetSamplingRate,
@@ -3111,6 +3131,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._requestData(options, (data, errorData) => {
         //console.log("7, data:", data);
         var windowAvailable = !errorData;
+        // console.log(errorData);
         if (
           windowAvailable &&
           windowStartTime == that.vars.currentWindowStart
@@ -3130,33 +3151,37 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that._setFastBackwardEnabledStatus(false);
           } else {
             // enable/disable the forward backward buttons according to the current position
+        
+
             switch (windowStartTime) {
               case that.vars.currentWindowStart + window_length:
                 if (that.options.visibleRegion.end === undefined) {
                   //console.log('winAva:', windowAvailable);
                   that._setForwardEnabledStatus(windowAvailable);
                   if (!windowAvailable) {
-                    that._lastWindowReached();
+                    // that._lastWindowReached();
                   }
                 }
-                break;
+                
               case that.vars.currentWindowStart +
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.end === undefined) {
+
                   that._setFastForwardEnabledStatus(windowAvailable);
                 }
-                break;
+                // break;
               case that.vars.currentWindowStart - window_length:
                 if (that.options.visibleRegion.start === undefined) {
+                  console.log(windowAvailable);
                   that._setBackwardEnabledStatus(windowAvailable);
                 }
-                break;
+                // break;
               case that.vars.currentWindowStart -
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.start === undefined) {
                   that._setFastBackwardEnabledStatus(windowAvailable);
                 }
-                break;
+                // break;
             }
           }
         }
@@ -5389,11 +5414,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       function (event) {
         event.stopPropagation();
       }
-    );
-    // .keydown(function (event) {
-    // 	event.stopPropagation();
-    // });
-    //add the options to the select element
+    )
+    .keydown(function (event) {
+    	event.stopPropagation();
+    });
+    // add the options to the select element
 
     channelLabels.forEach((label) => {
       annotationLabelSelector.append(
@@ -5577,9 +5602,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // classString += " saved";
       // $(annotation.group.element).attr("class", classString);
     // }
-    // $(annotation.group.element).on("mousedown", function (event) {
-    //   event.stopPropagation();
-    // });
+    $(annotation.group.element).on("mousedown", function (event) {
+      event.stopPropagation();
+    });
     annotation.metadata = {
       id: annotationId,
       featureType: featureType,
@@ -5733,41 +5758,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             .find('rect[shape-rendering="crispEdges"]')
             .last()
             .remove();
-          that._saveFeatureAnnotation(annotation);
+          // that._saveFeatureAnnotation(annotation);
 
         },
-        // dblclick: function (event) {
-        //   // deletes the annotation on db click
-        //   if (that.options.isReadOnly) return;
-        //   if (annotationData.is_answer) return;
-        //   event.preventDefault();
-        //   var xMinFixed = that._getAnnotationXMinFixed(this);
-        //   var xMaxFixed = that._getAnnotationXMaxFixed(this);
-        //   var annotationId = annotation.metadata.id;
-        //   var channelIndices = annotation.metadata.channelIndices;
-        //   var channelsDisplayed = that._getChannelsDisplayed();
-        //   if (annotation.metadata.originalData) {
-        //     channelIndices = annotation.metadata.originalData.channels;
-        //     channelsDisplayed =
-        //       annotation.metadata.originalData.channels_displayed;
-        //   }
-        //   that._deleteAnnotation(
-        //     annotationId,
-        //     that.vars.currentWindowRecording,
-        //     xMinFixed,
-        //     xMaxFixed,
-        //     channelIndices,
-        //     channelsDisplayed
-        //   );
-        //   annotations
-        //     .slice()
-        //     .reverse()
-        //     .filter((a) => a.metadata.id == annotationId)
-        //     .forEach((a) => {
-        //       a.destroy();
-        //       that.vars.chart.selectedAnnotation = null;
-        //     });
-        // },
       },
     });
 
@@ -5805,6 +5798,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // }
     }
     // that._addCommentFormToAnnotationBox(annotation);
+    // console.log(annotation);
     return annotation;
   },
 
@@ -6026,7 +6020,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .attr({
         width: 120,
         height: 70,
-        zIndex: 10,
+        zIndex: 1,
       })
       .mousedown(function (event) {
         event.stopPropagation();
@@ -6044,7 +6038,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // 	"width": "100%",
     // 	"height": "100%"
     // })
-    body.css({zIndex: 10});
+    body.css({zIndex: 1});
 
     $('.highcharts-annotation')  
       .mouseenter(function (event) {
@@ -6066,7 +6060,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       height: "100%",
       // maxWidth: "100%",
       maxHeight: "100px",
-      zIndex: 10,
+      zIndex: 1,
     });
     
 
@@ -6089,13 +6083,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .keydown(function (event) {
         event.stopPropagation();
       })
-      .css({zIndex: 10});
+      .css({zIndex: 1});
     //add the options to the select element
 
     channelLabels.forEach((label) => {
       annotationLabelSelector.append(
         $('<option value="' + label + '">' + label + "</option>")
-      ).css({zIndex: 10});
+      ).css({zIndex: 1});
     });
 
     // //add margin top and bottom
@@ -6103,7 +6097,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "100%",
       height: "25%",
       padding: "1%",
-      zIndex: 10,
+      zIndex: 1,
     });
 
     //TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
@@ -6138,7 +6132,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         width: "100%",
         height: "100%",
         padding: "1%",
-        zIndex: 10,
+        zIndex: 1,
       })
       .keydown(function (event) {
         event.stopPropagation();
@@ -6156,6 +6150,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.tooltip.label.hide();
 
       } else {
+
+
+        //////
         $(".changePointLabelRight").show();
         $(".changePointLabelLeft").show();
 
@@ -6213,19 +6210,32 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _getChangePointColor: function (changePoint) {
     switch(changePoint) {
-      case "W":
-        return "orange";
+      // Sleep stages
+      case "Awake":
+        return "lightgreen";
       case "N1":
         return "aquamarine"
       case "N2":
         return "cyan";
-      case "N3":
+      case "SWS":
+        return "mediumturquoise";
+      case "REM":
         return "deepskyblue";
-      case "R":
-        return "yellow";
-      case "A":
-        return "violet";
       default:
+      // Apnea and Hypoapnea
+        if (changePoint) {
+          if (changePoint.includes("Apnea")) {
+            return "yellow";
+          } else if (changePoint.includes("Hypoapnea")) {
+            return "orange";
+          } else if (changePoint.includes("Arousal")) {
+            return "gold";
+          } else if (changePoint == "Desat. Event" || changePoint == "Flow Limitation" ) {
+            return "lightsalmon";
+          } else if (changePoint == "(end previous state)") {
+            return "white";
+          }
+        }
         return "red";
     }
 
@@ -6251,19 +6261,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "100%",
       height: "100%",
       backgroundColor: "red",
-      zIndex: 1,
+      zIndex: 10,
+      "white-space": "nowrap"
     });
 
     var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
 
     annotationElement.append(htmlContext);
     const height = 26;
-    width = 30;
+    width = that._getTextWidth(annotation.metadata.annotationLabel);
     htmlContext
       .attr({
         width: width,
         height: height,
-        zIndex: -2,
+        zIndex: 10,
         y: annotationHeight - height,
         // y: `${annotation.group.element.getBBox().height-height}`,
         x: -width,
@@ -6280,7 +6291,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     
     var body = $("<body>").addClass("changePointLabelLeft");
-    body.css({zIndex: -2});
+    body.css({zIndex: 10});
 
     body.append(textarea1);
     htmlContext.append(body);
@@ -6300,45 +6311,58 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
       );
       // htmlContext.hide();
+
       
       var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Right>`);
       textarea1.css({
         position: "relative",
         display: "table",
-        // width: "100%",
+        width: "100%",
         height: "100%",
         backgroundColor: "red",
-        zIndex: 1,
-        overflow: "visible",
+        zIndex: 10,
+        "white-space": "nowrap"
       });
 
       textarea1.val(annotation.metadata.annotationLabel);
-  
+      
       var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
 
       annotationElement.append(htmlContext);
       const height = 26;
-      width = 30;
+      width = that._getTextWidth(annotation.metadata.annotationLabel);
       htmlContext
         .attr({
           width: width,
           height: height,
-          zIndex: -2,
+          zIndex: 10,
           // y: `${annotation.group.element.getBBox().height-height}`,
           y: annotationHeight - height,
           x: 2,
         });
       
-      
   
       var body = $("<body>").addClass("changePointLabelRight");
-      body.css({zIndex: -2});
+      body.css({zIndex: 10});
   
       body.append(textarea1);
       htmlContext.append(body);
   },
-  
 
+  _getTextWidth: function (text, font) {
+    var f = font || '12px arial',
+      o = $('<div></div>')
+            .text(text)
+            .css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden', 'font': f})
+            .appendTo($('body')),
+      w = o.width();
+    o.remove();
+
+    if (w != 0) {w+=6;}
+
+    return w;
+  },
+  
 
   _updateChangePointLabelLeft: function (annotation) {
     var that = this;
@@ -6354,18 +6378,32 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var label = annotations[index].metadata.annotationLabel;
       element.val(label);
       element.css({backgroundColor: that._getChangePointColor(label)});
+      var width = that._getTextWidth(label, element.css('font'));
+      element.parent().parent().attr({width: width, x: -width,});
     } else {
       element.val("");
+      element.parent().parent().attr({width: 0, x: 0,});
     }
+
+    
     
   },
 
   _updateChangePointLabelRight: function (annotation) {
     var that = this;
     var label = annotation.metadata.annotationLabel;
+    // console.log(label);
     var element = $(`#${annotation.metadata.id}Right`);
     element.val(label);
     element.css({backgroundColor: that._getChangePointColor(label)});
+    console.log(element);
+    var width = that._getTextWidth(label, element.css('font'));
+    element.parent().parent().attr({width: width});
+
+    // move label to the left if it is "(end previous state)"
+    if (label == "(end previous state)") {
+      element.parent().parent().attr({x: -width});
+    }
   },
 
   _saveFeatureAnnotation: function (annotation) {
@@ -6415,6 +6453,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             savedAnnotation.arbitrationRoundNumber;
           annotationFormatted.rationale = savedAnnotation.rationale;
           // that._displayAnnotations([annotationFormatted]);
+          
         }
       },
     );
@@ -6431,9 +6470,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //   }
     // }
 
-    if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
-      that._updateChangePointLabelRight(annotation);
+    if (annotation.creationType === undefined) {
+      that._addChangePointLabelRight(annotation);
+      annotation.creationType = "Box";
+      console.log(annotation.metadata.id);
     }
+
+    // if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
+      that._updateChangePointLabelRight(annotation);
+    // }
     if (annotation.creationType == 'ChangePointAll') {
       that._updateChangePointLabelLeft(annotation);
 

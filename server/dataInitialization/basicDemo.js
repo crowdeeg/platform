@@ -394,8 +394,8 @@ Meteor.startup(() => {
           showBackToLastActiveWindowButton: false,
           showInputPanelContainer: false,
           showBookmarkCurrentPageButton: false,
-          showFastForwardButton: false,
-          showFastBackwardButton: false,
+          showFastForwardButton: true,
+          showFastBackwardButton: true,
           graph: {
             height: 530,
             enableMouseTracking: true,
