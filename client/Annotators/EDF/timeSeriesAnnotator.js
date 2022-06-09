@@ -3114,8 +3114,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
       // gets the data for all the prefetched windows
+      console.log(that.vars.recordingLengthInSeconds);
       var startTime = (windowStartTime > 0 ? 
-        windowStartTime :
+        (windowStartTime < that.vars.recordingLengthInSeconds + window_length ? Math.min(that.vars.recordingLengthInSeconds, windowStartTime) : windowStartTime):
         (windowStartTime > -window_length ? Math.max(0, windowStartTime) : windowStartTime)
         );
       
@@ -3159,7 +3160,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   //console.log('winAva:', windowAvailable);
                   that._setForwardEnabledStatus(windowAvailable);
                   if (!windowAvailable) {
-                    // that._lastWindowReached();
+                    that._lastWindowReached();
                   }
                 }
                 
@@ -3172,7 +3173,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 // break;
               case that.vars.currentWindowStart - window_length:
                 if (that.options.visibleRegion.start === undefined) {
-                  console.log(windowAvailable);
                   that._setBackwardEnabledStatus(windowAvailable);
                 }
                 // break;
@@ -3856,6 +3856,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log("[[time end]]");
       console.timeEnd("_initGraph");
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
+      
+      that._updateChannelDataInSeries(that.vars.chart.series, data);
+
+      // console.log("here we scale all channels to screen");
+      that._scaleAllToScreen();
+      that.vars.chart.redraw();
     }
 
     // updates the data that will be displayed in the chart
@@ -3884,6 +3890,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // console.log("scaling after page change");
         // console.log(that.vars.chart.series[index].yData);
       }
+
     }
 
     if (!that._objectIsEmpty(that.vars.translation)) {
@@ -3911,9 +3918,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateBookmarkCurrentPageButton();
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
   
-    console.log("here we scale all channels to screen");
-    that._scaleAllToScreen();
-    that.vars.chart.redraw();
+
   },
 
   //checks if an object is empty
@@ -6183,7 +6188,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
       var nextAnnotation = that.vars.universalChangePointAnnotationsCache[index];
-
+      
       annotations
         .slice()
         .reverse()
@@ -6198,6 +6203,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._getNonTrivialUniversalAnnotations();
       if (nextAnnotation !== undefined) {
         that._updateChangePointLabelLeft(nextAnnotation);
+        that._updateChangePointLabelRight(nextAnnotation);
       }
     });
 
