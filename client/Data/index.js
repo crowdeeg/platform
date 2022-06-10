@@ -58,7 +58,7 @@ Template.Data.events({
                             const duplicateAssignment = Assignments.findOne({
                                 task: task._id,
                                 users: assignee._id,
-                                data: d._id,
+                                dataFiles: [d._id],
                             });
                             if (duplicateAssignment) {
                                 doAssign = false;
@@ -113,7 +113,7 @@ Template.Data.events({
                                 Assignments.insert({
                                     users: [ assigneeId ],
                                     task: task._id,
-                                    data: assignment.data._id,
+                                    dataFiles: [assignment.data._id],
                                 });
                             });
                         });

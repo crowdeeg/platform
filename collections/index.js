@@ -159,6 +159,20 @@ const SchemaHelpers = {
             'Questionnaire',
         ],
     },
+    dataSource: {
+        type: String,
+        label: 'Source',
+        allowedValues: [
+            'PSG',
+            'watchpat',
+            'ANNE',
+            'MUSE',
+            'Apnealink',
+            'GENEActiv',
+            'AX3',
+            'Actical',
+        ],
+    },
     annotator: {
         type: String,
         label: 'Annotator',
@@ -355,6 +369,7 @@ Schemas.Data = new SimpleSchema({
         label: 'Name',
     },
     type: SchemaHelpers.dataType,
+    source: SchemaHelpers.dataSource,
     patient: SchemaHelpers.fromCollection(Patients, {
         optional: true,
     }),
@@ -409,7 +424,7 @@ Data.helpers({
     },
     assignmentsCursor(filter, options) {
         filter = filter || {};
-        filter = _.extend({}, filter, { data: this._id });
+        filter = _.extend({}, filter, { dataFiles: [this._id] });
         const assignments = Assignments.find(filter, options);
         return assignments;
     },
@@ -683,9 +698,13 @@ Schemas.Assignments = new SimpleSchema({
     task: SchemaHelpers.fromCollection(Tasks, {
         optional: true,
     }),
-    data: SchemaHelpers.fromCollection(Data, {
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 0,
         optional: true,
-    }),
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     name: {
         type: String,
         label: 'Name',
@@ -778,18 +797,26 @@ Assignments.helpers({
     return task.name;
   },
   dataDoc() {
-    return Data.findOne(this.data) || false;
+    // only return the first data in dataFiles
+    let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    return Data.findOne({ $or: queryArray }) || false;
+  },
+  dataDocs() {
+    let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    return Data.find({ $or: queryArray }) || false;
   },
   patientDoc() {
-    const data = this.dataDoc();
-    if (!data) return false;
-    return data.patientDoc();
+    // only return the patient of the first data in dataFiles
+    const data = this.dataDocs().fetch();
+    if (!data.length) return false;
+    return data.map(data => data.patientDoc());
   },
   nameOrAnonymizedPatientDescription() {
     if (this.name) return this.name;
-    const patientDoc = this.patientDoc();
-    if (!patientDoc) return 'Loading ...';
-    return patientDoc.anonymizedDescription();
+    const patientDocs = this.patientDoc();
+    if (!patientDocs.length) return 'Loading ...';
+    let patientDocDescriptions = patientDocs.map(patientDoc => patientDoc.anonymizedDescription());
+    return patientDocDescriptions.join(' + ');
   },
   nameOrAnonymizedPatientDescriptionWithAdjudicationInformation() {
     let description = this.nameOrAnonymizedPatientDescription();
@@ -800,7 +827,7 @@ Assignments.helpers({
   },
   arbitrationDoc() {
     if (!this.arbitration) return false;
-    return Arbitrations.findOne(this.arbitration) || false;    
+    return Arbitrations.findOne(this.arbitration) || false;
   },
   annotationDocs(filter, options) {
     filter = filter || {};
@@ -816,24 +843,29 @@ Assignments.helpers({
     return this.annotationDocs(filter, options).length;
   },
   patientId() {
-    const patient = this.patientDoc();
-    if (!patient) return 'Loading ...';
-    return patient.id;
+    const patients = this.patientDoc();
+    if (!patients.length) return 'Loading ...';
+    return patients.map(patient => patient.id).join('\n');
   },
   dataPath() {
-    const data = this.dataDoc();
+    const data = this.dataDocs().fetch();
     if (!data) return 'Loading ...';
-    return data.path;
+    return data.map((data) => data.path).join('\n');
+  },
+  dataIds() {
+    return this.dataFiles;
   },
   dataLengthInSeconds() {
-    const data = this.dataDoc();
-    if (!data) return 'Loading ...';
-    return data.lengthInSeconds();
+    const data = this.dataDocs().fetch();
+    if (!data.length) return 'Loading ...';
+    return Math.max(...data.map(data => data.lengthInSeconds()));
   },
   dataLengthFormatted() {
-    const data = this.dataDoc();
-    if (!data) return 'Loading ...';
-    return data.lengthFormatted();
+    const data = this.dataDocs().fetch();
+    if (!data.length) return 'Loading ...';
+    let dataLength = data.map(data => data.lengthInSeconds());
+    let i = dataLength.indexOf(Math.max(...dataLength));
+    return data[i].lengthFormatted();
   },
   userDocs() {
     return Meteor.users.find({ _id: { $in: this.users } } ).fetch();
@@ -888,7 +920,7 @@ Assignments.helpers({
   isLeafAssignment() {
     return (
             this.task
-        &&  this.data
+        &&  this.dataFiles.length
         &&  (
                 !this.childAssignments
             ||  !this.childAssignments.length
@@ -1135,7 +1167,7 @@ Assignments.helpers({
     if (source.userId) {
         return Assignments.find({
             users: source.userId,
-            data: this.data,
+            dataFiles: this.dataFiles,
         }, {
             limit: 1,
         });
@@ -1325,7 +1357,12 @@ Schemas.Annotations = new SimpleSchema({
     updatedAt: SchemaHelpers.updatedAt,
     assignment: SchemaHelpers.fromCollection(Assignments),
     user: SchemaHelpers.fromCollection(Meteor.users),
-    data: SchemaHelpers.fromCollection(Meteor.data),
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 1
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     type: SchemaHelpers.annotationType,
     value: {
         type: Match.OneOf(Boolean, Number, String, Object),
@@ -1572,7 +1609,7 @@ Annotations.helpers({
 });
 Annotations.attachSchema(Schemas.Annotations);
 Annotations.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
-Annotations.permit(['insert', 'update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
+Annotations.permit(['insert', 'update', 'remove']).ifForOwnAssignment().allowInClientCode();
 Annotations.attachCollectionRevisions(CollectionRevisions.Annotations);
 exports.Annotations = Annotations;
 
@@ -1582,7 +1619,12 @@ Schemas.Preferences = new SimpleSchema({
     updatedAt: SchemaHelpers.updatedAt,
     assignment: SchemaHelpers.fromCollection(Assignments),
     user: SchemaHelpers.fromCollection(Meteor.users),
-    data: SchemaHelpers.fromCollection(Meteor.data),
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 1
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     annotatorConfig: SchemaHelpers.annotatorConfig,
     arbitration: SchemaHelpers.fromCollection(Arbitrations, {
         optional: true,
@@ -1597,7 +1639,7 @@ Schemas.Preferences = new SimpleSchema({
 ensureIndicesForCollection(Preferences, ['assignment', 'user', 'data', 'arbitration']);
 Preferences.attachSchema(Schemas.Preferences);
 Preferences.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
-Preferences.permit(['insert']).ifForOwnAssignment().allowInClientCode();
+Preferences.permit(['insert', 'update']).ifForOwnAssignment().allowInClientCode();
 Preferences.permit(['update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
 exports.Preferences = Preferences;
 
@@ -1983,20 +2025,20 @@ Arbitrations.helpers({
     let message;
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2060,20 +2102,20 @@ Arbitrations.helpers({
     let message;
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2253,20 +2295,20 @@ Arbitrations.helpers({
     options = options || {};
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2405,7 +2447,7 @@ AdminConfig = {
                 { label: 'Assignee Name', name: 'userNames()' },
                 { label: 'Task ID', name: 'task' },
                 { label: 'Task Name', name: 'taskName()' },
-                { label: 'Data ID', name: 'data' },
+                { label: 'Data IDs', name: 'dataFiles' },
                 { label: 'Data Path', name: 'dataPath()' },
                 { label: 'Status', name: 'status' },
                 { label: 'Annotations Imported', name: 'annotationsImported' },

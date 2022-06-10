@@ -55,21 +55,24 @@ Router.route('/assignment/:_id', {
             this.redirect('home');
             return;
         }
-        const data = Data.findOne(assignment.data);
+
+        let dataset = assignment.dataDocs().fetch();
+
+        //console.log("Data set:", dataset);
         const task = Tasks.findOne(assignment.task);
         const annotations = Annotations.find({ assignment: assignmentId }).fetch();
-        let preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false });
+        var preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false });
         if (!preferences) {
             const preferencesId = Preferences.insert({
                 assignment: assignment._id,
                 user: Meteor.userId(),
-                data: assignment.data,
+                dataFiles: assignment.dataFiles,
                 annotatorConfig: {},
             });
             preferences = Preferences.findOne({ assignment: assignmentId, user: Meteor.userId() }, { reactive: false })
         }
         this.render('Assignment', {
-            data: { assignment, data, task, annotations, preferences },
+            data: { assignment, dataset, task, annotations, preferences },
         });
     }
 });
@@ -107,6 +110,20 @@ Router.route('/assign', {
         }
         this.render('Assign');
     }
+});
+
+Router.route("/files", {
+  name: "files",
+  waitOn: function () {
+    return [Meteor.subscribe("roles"), Meteor.subscribe("all")];
+  },
+  action: function () {
+    if (!Roles.userIsInRole(Meteor.userId(), "admin")) {
+      this.redirect("home");
+      return;
+    }
+    this.render("Files");
+  },
 });
 
 Router.route('/data', {
@@ -151,3 +168,4 @@ Router.route('/login-with-test-account', {
         });
     }
 });
+

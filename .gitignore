@@ -11,4 +11,9 @@ settings.json
 Dockerfile.local
 
 edf_files/
+galaxy-app/edf/physionet/edfx/*
 **/.DS_Store
+
+# VSCode Files
+.vscode/*
+jsconfig.json

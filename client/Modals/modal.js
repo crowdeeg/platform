@@ -34,7 +34,7 @@ exports.MaterializeModal = (function() {
 
   MaterializeModalClass.prototype.open = function(options) {
     if (DEBUG) {
-      console.log("MaterializeModal.open()", this);
+      //console.log("MaterializeModal.open()", this);
     }
     this.onComplete = null;
     this.injectContainer();
@@ -53,7 +53,7 @@ exports.MaterializeModal = (function() {
       closeModal = true;
     }
     if (DEBUG) {
-      console.log("MaterializeModal.close()");
+      //console.log("MaterializeModal.close()");
     }
     options = this.templateOptions.get();
     if (options != null) {
@@ -84,7 +84,7 @@ exports.MaterializeModal = (function() {
 
   MaterializeModalClass.prototype.complete = function() {
     if (DEBUG) {
-      console.log("MaterializeModal: complete", this.complete);
+      //console.log("MaterializeModal: complete", this.complete);
     }
     if (typeof this.onComplete === "function") {
       this.onComplete();
@@ -213,7 +213,7 @@ exports.MaterializeModal = (function() {
       options = {};
     }
     if (DEBUG) {
-      console.log("form options", options);
+      //console.log("form options", options);
     }
     if (options.bodyTemplate == null) {
       return Materialize.toast(t9nIt("Error: No bodyTemplate specified!"), 3000, "red");
@@ -252,7 +252,7 @@ exports.MaterializeModal = (function() {
   MaterializeModalClass.prototype.fromForm = function(form) {
     var check, key, result, _i, _j, _len, _len1, _ref, _ref1;
     if (DEBUG) {
-      console.log("fromForm", form, form != null ? form.serializeArray() : void 0);
+      //console.log("fromForm", form, form != null ? form.serializeArray() : void 0);
     }
     result = {};
     _ref = form != null ? form.serializeArray() : void 0;
@@ -268,7 +268,7 @@ exports.MaterializeModal = (function() {
       }
     }
     if (DEBUG) {
-      console.log("fromForm result", result);
+      //console.log("fromForm result", result);
     }
     return result;
   };
@@ -281,7 +281,7 @@ exports.MaterializeModal = (function() {
     }
     try {
       if (DEBUG) {
-        console.log("materializeModal: doCancelCallback");
+        //console.log("materializeModal: doCancelCallback");
       }
       response = {
         submit: false
@@ -342,7 +342,7 @@ exports.MaterializeModal = (function() {
   
     updateProgressMessage: (message) ->
       if DEBUG
-        console.log("updateProgressMessage", $("#progressMessage").html(), message)
+        //console.log("updateProgressMessage", $("#progressMessage").html(), message)
       if $("#progressMessage").html()?
         $("#progressMessage").fadeOut 400, ->
           $("#progressMessage").html(message)
@@ -379,7 +379,7 @@ exports.MaterializeModal = (function() {
 
   Template.materializeModal.onCreated(function() {
     if (DEBUG) {
-      console.log("Template.materializeModal.onCreated", this.data);
+      //console.log("Template.materializeModal.onCreated", this.data);
     }
     if (typeof Materialize === "undefined" || Materialize === null) {
       throw new Error("MaterializeModal requires Materializecss !!!");
@@ -392,7 +392,7 @@ exports.MaterializeModal = (function() {
   Template.materializeModal.onRendered(function() {
     var inDuration;
     if (DEBUG) {
-      console.log("Template.materializeModal.onRendered", this.data.title);
+      //console.log("Template.materializeModal.onRendered", this.data.title);
     }
     MaterializeModal.$modal = this.$('#materializeModal');
     if (this.data.fullscreen) {
@@ -410,14 +410,14 @@ exports.MaterializeModal = (function() {
         return function(modal, trigger) {
           var _base;
           if (DEBUG) {
-            console.log("materializeModal: ready");
+            //console.log("materializeModal: ready");
           }
           return typeof (_base = _this.data).ready === "function" ? _base.ready() : void 0;
         };
       })(this),
       complete: function() {
         if (DEBUG) {
-          console.log("materializeModal: modal complete");
+          //console.log("materializeModal: modal complete");
         }
         MaterializeModal.close(false, null, false);
         return MaterializeModal.complete();
@@ -441,7 +441,7 @@ exports.MaterializeModal = (function() {
         return this.icon;
       } else {
         if (DEBUG) {
-          console.log("icon: type", this.type);
+          //console.log("icon: type", this.type);
         }
         switch (this.type) {
           case 'alert':
@@ -463,7 +463,7 @@ exports.MaterializeModal = (function() {
     "click #closeButton": function(e, tmpl) {
       e.preventDefault();
       if (DEBUG) {
-        console.log('closeButton');
+        //console.log('closeButton');
       }
       return MaterializeModal.close(false);
     },
@@ -475,7 +475,7 @@ exports.MaterializeModal = (function() {
         form = form.find('form');
       }
       if (DEBUG) {
-        console.log('submit event:', e, "form:", form);
+        //console.log('submit event:', e, "form:", form);
       }
       MaterializeModal.close(true, {
         event: e,
@@ -497,7 +497,7 @@ exports.MaterializeModal = (function() {
   });
 
   if (DEBUG) {
-    console.log("Modal T9n", T9n);
+    //console.log("Modal T9n", T9n);
   }
 
   en = {
