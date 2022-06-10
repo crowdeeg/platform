@@ -3114,7 +3114,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
       // gets the data for all the prefetched windows
-      console.log(that.vars.recordingLengthInSeconds);
       var startTime = (windowStartTime > 0 ? 
         (windowStartTime < that.vars.recordingLengthInSeconds + window_length ? Math.min(that.vars.recordingLengthInSeconds, windowStartTime) : windowStartTime):
         (windowStartTime > -window_length ? Math.max(0, windowStartTime) : windowStartTime)
@@ -3862,6 +3861,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
       that.vars.chart.redraw();
+
+
+      that._addChangePointLabelFixed();
+      // see http://jsfiddle.net/ajxyuax2/1/ 
     }
 
     // updates the data that will be displayed in the chart
@@ -3918,7 +3921,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateBookmarkCurrentPageButton();
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
   
-
+    that._updateChangePointLabelFixed();
   },
 
   //checks if an object is empty
@@ -6247,6 +6250,50 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
+  _addChangePointLabelFixed: function () {
+    var that = this;
+    let chart = that.vars.chart;
+
+    var annotations = that._getNonTrivialUniversalAnnotations();
+    // grab the previous annotation in sorted order
+    var index = that._getUniversalAnnotationIndexByXVal(that.vars.currentWindowStart);
+    var annotation = annotations[index];
+    var label;
+    if (annotation !== undefined) {
+      label = annotation.metadata.annotationLabel;
+    }
+    label = label || 'undefined';
+
+    const x = 0;
+    const y = 0;
+    const height = 26;
+    const width = 200 + that._getTextWidth(label, 12);
+    var content = `<div id="prevPageLatestLabel">Latest Change Point Previous Page: <b>` + label
+    + '</b></div>';
+
+    chart.renderer.html(content, x+7.5, y+17)
+      .attr({
+        zIndex: 5,
+        id: 'prevPageLatestLabel'
+      })
+      .css({                                 
+        'font-size': 12,
+        'color': 'white'
+      })
+      .add();
+
+
+    chart.renderer.rect(x, y, width, height, 0)
+      .attr({
+        'stroke-width': 0.5,
+        stroke: 'black',
+        fill: '#26a69a',
+        zIndex: 4,
+        id: 'prevPageLatestBox'
+      })
+      .add();
+  },
+
   _addChangePointLabelLeft: function (annotation) {
   // Adds the left label tag denoting the pervious state to the bottom of a change point annotation.
 
@@ -6369,6 +6416,34 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return w;
   },
   
+  _updateChangePointLabelFixed: function () {
+    var that = this;
+    let chart = that.vars.chart;
+
+    var annotations = that._getNonTrivialUniversalAnnotations();
+    // grab the previous annotation in sorted order
+    var index = that._getUniversalAnnotationIndexByXVal(that.vars.currentWindowStart);
+    var annotation = annotations[index];
+    var label;
+    if (annotation != undefined) {
+      label = annotation.metadata.annotationLabel;
+    }
+    label = label || 'undefined';
+
+    const x = 0;
+    const y = 0;
+    const height = 26;
+    const width = 200 + that._getTextWidth(label, 12);
+
+    var text = $(`#prevPageLatestLabel`);
+    var content = `Latest Change Point Previous Page: <b>` + label + '</b>';
+    text.html(content);
+
+    var box = $(`#prevPageLatestBox`);
+    box.attr({
+      width: width,
+    });
+  },
 
   _updateChangePointLabelLeft: function (annotation) {
     var that = this;
