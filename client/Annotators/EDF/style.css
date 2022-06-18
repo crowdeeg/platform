@@ -219,10 +219,6 @@
   margin: 0;
 }
 
-.timesync_panel .select_panel {
-  width: 210px;
-}
-
 .timesync_panel button {
   margin: 0 0 0 20px !important;
 }
@@ -238,6 +234,11 @@
 .navigation_panel, .examples_panel {
   float: right;
   display: inline;
+}
+
+.io_panel {
+  float: left;
+  display: block;
 }
 
 .bookmarkCurrentPage {
@@ -682,7 +683,9 @@
 
 .amplitude_adjustment_container{
   float: left;
-  margin-left: 1rem;
+  margin-left: 1em;
+  margin-right: 1em;
+  width: 100%;
 }
 
 .amplitude_adjustment_panel{

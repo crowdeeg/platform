@@ -684,21 +684,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                         <div class="amplitude_adjustment_container"> \
                             <div class="amplitude_adjustment_panel">\
                                 <p class=channel_name></p> \
-								<p class=time_sync></p> \
+								                <p class=time_sync></p> \
                                 <button id="increase" type="button" class="btn btn-default amplitude_adjustment_button" disabled>+</button> \
                                 <button id="decrease" type="button" class="btn btn-default amplitude_adjustment_button" disabled>-</button> \
                                 <button id="default" type="button" class="btn btn-default amplitude_adjustment_button" disabled>RESET ALL</button> \
-								<form id="scaleform" class="form-horizontal">\
-									<input type="text" class="form-control" id="scaleinput" placeholder="Custom scale (%)" disabled>\
-									<input type="submit" style="display: none" />\
-								</form>\
-								<button id="scaletoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE TO SCREEN</button> \
-								<button id="scalealltoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE  ALL TO SCREEN</button> \
-								<button id="reversepolarity" type="button" class="btn btn-default amplitude_adjustment_button" disabled>REVERSE POLARITY</button> \
-								<button id="moveup" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&uarr;</button> \
-								<button id="movedown" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&darr;</button> \
+                                <form id="scaleform" class="form-horizontal">\
+                                  <input type="text" class="form-control" id="scaleinput" placeholder="CUSTOM SCALE (%)" disabled>\
+                                  <input type="submit" style="display: none" />\
+                                </form>\
+                                <button id="scaletoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE TO SCREEN</button> \
+                                <button id="scalealltoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE  ALL TO SCREEN</button> \
+                                <button id="reversepolarity" type="button" class="btn btn-default amplitude_adjustment_button" disabled>REVERSE POLARITY</button> \
+                                <button id="moveup" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&uarr;</button> \
+                                <button id="movedown" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&darr;</button> \
                             </div>\
-                         </div> \
+                        </div> \
+                        <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
+                            <button type="button" class="btn btn-default fa fa-upload" ></button> \
+                            <button type="button" class="btn btn-default fa fa-download" ></button> \
+                            <button type="button" class="btn btn-default fa fa-save" ></button> \
+                        </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
                                     <span class="fa fa-bookmark" aria-hidden="true"></span> \
@@ -727,8 +732,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                                     <span class="fa fa-chevron-right" aria-hidden="true"></span> \
                                 </button> \
                                 <button type="button" class="btn btn-default keyboardShortcuts" data-html="true" data-container=".' +
-      that.vars.uniqueClass +
-      '" data-toggle="popover" data-placement="bottom" data-content="<p>Forward: Right Arrow, Page up, D</p> \
+                                that.vars.uniqueClass +
+                                '" data-toggle="popover" data-placement="bottom" data-content="<p>Forward: Right Arrow, Page up, D</p> \
                                                                     <p>Backward: Left Arrow, Page Down, A</p> \
                                                                     <p>Skip 5 Min: Up/Down Arrows</p> \
                                                                     <p>Back to Last Annotation: R</p> \
@@ -1442,6 +1447,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupArtifactPanel();
     that._setupSleepStagePanel();
     that._setupTimeSyncPanel();
+    that._setupIOPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
     that
@@ -2480,6 +2486,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // besides free scrolling by mouse wheel,
           // adding [+/-] hh:mm:ss option and [shift left/right] buttons
         }
+      });
+  },
+
+  _setupIOPanel: function () {
+    var that = this;
+
+    $(that.element)
+      .find(".fa-download")
+      .click(function () {
+        console.log("click activated!!!!!!!!!!!!!!!!!!!!!")
       });
   },
 
@@ -8481,73 +8497,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return _crosshair;
   },
 
-  // _setAnnotationCrosshair: function (point) {
-  //   var that = this;
-
-  //   if (!that._isInCrosshairSyncMode()) return;
-
-  //   if (
-  //     that.vars.crosshairPosition.length === 0 &&
-  //     !that._isFromPSG(point.dataId)
-  //   )
-  //     return;
-  //   let crosshairPosition = that.vars.crosshairPosition;
-  //   let sameRecording = false;
-  //   let index = undefined;
-  //   crosshairPosition.forEach((crosshair, i) => {
-  //     if (crosshair.dataId === point.dataId) {
-  //       sameRecording = true;
-  //       index = i;
-  //     }
-  //   });
-  //   if (sameRecording) {
-  //     crosshairPosition[index] = point;
-  //   } else {
-  //     if (crosshairPosition.length < 2) {
-  //       crosshairPosition.push(point);
-  //     }
-  //     // if (crosshairPosition.length > 2) {
-  //     //   crosshairPosition.shift();
-  //     // }
-  //   }
-  //   that.vars.crosshairPosition = crosshairPosition;
-  //   that._displayCrosshair(crosshairPosition);
-  //   that._renderAlignmentAlert();
-  // },
-
-  // _dropStartCrosshair(e) {
-  //   var that = this;
-
-
-  //   // let crosshairPosition = that.vars.annotationCrosshairPositions;
-  //   // let sameRecording = false;
-  //   // let index = undefined;
-  //   // crosshairPosition.forEach((crosshair, i) => {
-  //   //   if (crosshair.dataId === that.vars.annotationCrosshairCurrPosition.dataId) {
-  //   //     sameRecording = true;
-  //   //     index = i;
-  //   //   }
-  //   // });
-  //   // if (sameRecording) {
-  //   //   crosshairPosition[index] = that.vars.annotationCrosshairCurrPosition;
-  //   // } else {
-  //   //   if (crosshairPosition.length < 2) {
-  //   //     crosshairPosition.push(that.vars.annotationCrosshairCurrPosition);
-  //   //   }
-
-  //   // }
 
 
 
-  //   if (that.vars.annotationCrosshairs.length === 2 || that.vars.annotationCrosshairPositions === 2) {
-  //     (that.vars.annotationCrosshairs).forEach( c => c.destroy());
-  //     that.vars.annotationCrosshairs = [];
-  //     that.vars.annotationCrosshairPositions = [];
-  //   }
-  //   that.vars.annotationCrosshairPositions.push(that.vars.annotationCrosshairCurrPosition);
-  //   let crosshair = that._paintCrosshairGeneral(e, that.vars.annotationCrosshairPositions, 0, that.vars.chart.series.length);
-  //   that.vars.annotationCrosshairs.push(crosshair);
-    
-  // }
 
 });
