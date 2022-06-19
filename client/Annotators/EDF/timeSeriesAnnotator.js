@@ -2492,10 +2492,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _setupIOPanel: function () {
     var that = this;
 
-    $(that.element)
+    var element = $(that.element);
+
+    element
       .find(".fa-download")
       .click(function () {
-        console.log("click activated!!!!!!!!!!!!!!!!!!!!!")
+        that._downloadCSV();
+      });
+
+    element
+      .find(".fa-upload")
+      .click(function () {
+        console.log("upload function not yet implemented")
+      });
+    
+    element
+      .find(".fa-save")
+      .click(function () {
+        console.log("save function not yet implemented")
       });
   },
 
@@ -8496,6 +8510,57 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         });
       return _crosshair;
   },
+
+  _downloadCSV: function () {
+    var that = this;
+    var annotations = that._assembleCSV();
+    console.log(annotations);
+    const blob = new Blob(annotations, {type: "text/csv"});
+    const href = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"),
+      {
+        href,
+        style: "display:none",
+        download: "annotations.csv",
+      }
+    )
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(href);
+    a.remove();
+  },
+
+  _assembleCSV: function () {
+    var that = this;
+    var allAnnotations = that.vars.chart.annotations.allItems;
+    allAnnotations.sort((a, b) => {
+      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMaxFixed(b);
+    });
+
+    var rows = allAnnotations.map( (element, index) => {
+      var row = {
+        "": String(index),
+        "Time": String(element.options.xValue),
+        "Type": element.creationType,
+        "Annotation": element.metadata.annotationLabel,
+      };
+      return row;
+    }
+
+  );
+  console.log(rows);
+  return [that._objectsToCSV(rows)];
+
+  },
+
+  _objectsToCSV: function (arr) {
+    const array = [Object.keys(arr[0])].concat(arr)
+    return array.map(row => {
+        return Object.values(row).map(value => {
+            return typeof value === 'string' ? JSON.stringify(value) : value
+        }).toString()
+    }).join('\n')
+}
 
 
 
