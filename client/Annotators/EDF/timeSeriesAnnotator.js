@@ -5645,7 +5645,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     annotation.metadata = {
       id: annotationId,
-      featureType: featureType,
+      // featureType: featureType,
       channelIndices: channelIndices,
       comment: "",
     };
@@ -5814,7 +5814,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     annotation.metadata = {
       id: annotationId,
-      featureType: featureType,
+      // featureType: featureType,
       channelIndices: channelIndices,
       comment: "",
     };
@@ -6542,6 +6542,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
 
+    // annotation.metadata.duration = time_end - time_start;
+
     that._saveAnnotation(
       annotationId,
       that.vars.currentWindowRecording,
@@ -6642,31 +6644,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return annotations;
   },
 
-  // _saveAndSortUniversalChangePointAnnotations: function (annotation) {
-  //   // save and sort the universal change point annotation list for the purpose of displaying the previous changepoint state
-  //   var that = this;
-  //   var annotations = that.vars.universalChangePointAnnotations;
-  //   // var annotations = that.vars.chart.annotations.allItems.filter(a => a.creationType == 'ChangePointALl' && 
-  //   //   a.metadata.annotationLabel != "undefined" &&
-  //   //   a.metadata.annotationLabel != "(data missing)");
-  //   var XValue = that._getAnnotationXMinFixed(annotation);
-
-  //   if (annotation.metadata.annotationLabel != undefined && 
-  //     annotation.metadata.annotationLabel != "undefined" &&
-  //     annotation.metadata.annotationLabel != "(data missing)") {
-  //     if (!annotations.map(a => that._getAnnotationXMinFixed(a))
-  //       .includes(XValue)) {
-  //         annotations.push(annotation);
-  //         annotations.sort( (a, b) => {
-  //           return that._getAnnotationXMinFixed(b) - that._getAnnotationXMaxFixed(a);
-  //         }
-  //       );
-  //     } else {
-  //       annotations[that._getUniversalAnnotationIndexByXVal(XValue)] = annotation;
-  //     }
-  //    }
-  //   console.log(annotations);
-  // },
 
   _saveFullWindowLabel: function (annotationCategory, label, rationale) {
     var that = this;
@@ -8538,28 +8515,57 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     var rows = allAnnotations.map( (element, index) => {
+      var type;
+      var channel;
+      var duration = 'NA';
+      var annotation = element.metadata.annotationLabel;
+
+      if (element.creationType == 'ChangePointAll') {
+        type = "Stage change";
+        channel = "All";
+      } else {
+        type = "Event";
+        channel = (element.metadata.channelIndices.map((element) => {
+          return this.vars.currentWindowData.channels[element].name;
+        })).toString();
+        duration = element.options.shape.params.width;
+      
+      }
+
+
+      if (element.metadata.annotationLabel == "(unanalyzable)") {
+        type = 'Signal quality';
+      }
+
       var row = {
-        "": String(index),
+        "Index": String(index),
         "Time": String(element.options.xValue),
-        "Type": element.creationType,
-        "Annotation": element.metadata.annotationLabel,
+        "Type": type,
+        "Annotation": annotation,
+        "Channel": channel,
+        "Duration": duration,
+        "Comment": element.metadata.comment,
+        "User": Meteor.userId(),
       };
       return row;
     }
 
   );
-  console.log(rows);
-  return [that._objectsToCSV(rows)];
+  return that._objectsToCSV(rows);
 
   },
 
   _objectsToCSV: function (arr) {
-    const array = [Object.keys(arr[0])].concat(arr)
-    return array.map(row => {
-        return Object.values(row).map(value => {
-            return typeof value === 'string' ? JSON.stringify(value) : value
-        }).toString()
-    }).join('\n')
+    if (arr[0]) {
+      const array = [Object.keys(arr[0])].concat(arr)
+      return [array.map(row => {
+          return Object.values(row).map(value => {
+              return typeof value === 'string' ? JSON.stringify(value) : value
+          }).toString()
+      }).join('\n')]
+    }
+    else return [];
+    
 }
 
 
