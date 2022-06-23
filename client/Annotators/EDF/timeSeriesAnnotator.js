@@ -5268,10 +5268,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _getAnnotationLabelFromCreationType: function(annotation) {
-    if (annotation.creationType == 'ChangePointAll') {
+  _getAnnotationLabelFromdisplayType: function(annotation) {
+    if (annotation.metadata.displayType == 'ChangePointAll') {
       return [undefined, "Awake", "N1", "N2", "SWS", "REM", "(unanalyzable)"];
-    } else if (annotation.creationType == 'ChangePoint') {
+    } else if (annotation.metadata.displayType == 'ChangePoint') {
       return [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)", "(end previous state)"];
     } else { 
       return [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"]; 
@@ -5656,8 +5656,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.originalData = annotationData;
     // }
 
-    if (annotation.creationType === undefined) {
-      annotation.creationType = 'ChangePoint';
+    if (annotation.metadata.displayType === undefined) {
+      annotation.metadata.displayType = 'ChangePoint';
     }
 
 
@@ -5693,7 +5693,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       featureType,
       clickXTwoValue
     );
-    annotation.creationType = 'ChangePointAll';
+    annotation.metadata.displayType = 'ChangePointAll';
     that._addCommentFormToAnnotationBox(annotation);
     that._addChangePointLabelLeft(annotation);
 
@@ -6113,7 +6113,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets all the relevant labels based on annotation type
     // const channelLabels = that._addAnnotationType(annotation);
-    const channelLabels = that._getAnnotationLabelFromCreationType(annotation);
+    const channelLabels = that._getAnnotationLabelFromdisplayType(annotation);
 
     //create a select element using Jquery
     var annotationLabelSelector = $('<select class="form-control">')
@@ -6571,28 +6571,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       },
     );
     // var element = $(`#${annotation.metadata.id}Right`);
-    // if (annotation.creationType == 'ChangePoint' && 
+    // if (annotation.metadata.displayType == 'ChangePoint' && 
     // annotation.metadata.annotationLabel == "(end previous state)") {
     //   if (element.length) {
     //     element.hide();
     //   }
-    // } else if (annotation.creationType == 'ChangePoint' && 
+    // } else if (annotation.metadata.displayType == 'ChangePoint' && 
     // annotation.metadata.annotationLabel != "(end previous state)") {
     //   if (!(element.length)) {
     //     element.show();
     //   }
     // }
 
-    if (annotation.creationType === undefined) {
+    if (annotation.metadata.displayType === undefined) {
       that._addChangePointLabelRight(annotation);
-      annotation.creationType = "Box";
+      annotation.metadata.displayType = "Box";
       console.log(annotation.metadata.id);
     }
 
-    // if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
+    // if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
       that._updateChangePointLabelRight(annotation);
     // }
-    if (annotation.creationType == 'ChangePointAll') {
+    if (annotation.metadata.displayType == 'ChangePointAll') {
       that._updateChangePointLabelLeft(annotation);
 
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
@@ -6635,7 +6635,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return that._getAnnotationXMinFixed(a) - that._getAnnotationXMaxFixed(b);
     });
 
-    var annotations = that.vars.chart.annotations.allItems.filter(a => a.creationType == 'ChangePointAll' && 
+    var annotations = that.vars.chart.annotations.allItems.filter(a => a.metadata.displayType == 'ChangePointAll' && 
       a.metadata.annotationLabel !== undefined &&
       a.metadata.annotationLabel != "undefined" &&
       a.metadata.annotationLabel != "(data missing)");
@@ -6797,7 +6797,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMaxFixed: function (annotation) {
-    if (annotation.creationType == 'ChangePoint' || annotation.creationType == 'ChangePointAll') {
+    if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
       return parseFloat(annotation.options.xValue).toFixed(2);
     } else {
       return parseFloat(
@@ -8520,7 +8520,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var duration = 'NA';
       var annotation = element.metadata.annotationLabel;
 
-      if (element.creationType == 'ChangePointAll') {
+      if (element.metadata.displayType == 'ChangePointAll') {
         type = "Stage change";
         channel = "All";
       } else {
@@ -8528,8 +8528,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         channel = (element.metadata.channelIndices.map((element) => {
           return this.vars.currentWindowData.channels[element].name;
         })).toString();
-        duration = element.options.shape.params.width;
-      
+        if (element.metadata.displayType != 'ChangePoint') {
+          duration = element.options.shape.params.width;
+        }
       }
 
 
@@ -8544,8 +8545,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "Annotation": annotation,
         "Channel": channel,
         "Duration": duration,
-        "Comment": element.metadata.comment,
         "User": Meteor.userId(),
+        "Comment": element.metadata.comment,
+        // "DisplayType": element.metadata.displayType,
       };
       return row;
     }
