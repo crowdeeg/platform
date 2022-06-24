@@ -284,10 +284,12 @@
 
 .highcharts-annotation.saved .toolbar {
   display: none;
+  z-index: 10;
 }
 
 .highcharts-annotation.saved:hover .toolbar {
   display: inline;
+  z-index: 10;
 }
 
 .confidence-buttons input {
@@ -311,6 +313,7 @@
   width: 240px;
   height: auto;
   background-color: rgba(0, 0, 0, 0);
+  z-index: 10;
 }
 
 .highcharts-annotation .comment button {
@@ -321,6 +324,7 @@
   line-height: 0;
   padding: 0;
   border-radius: 0;
+  z-index: 10;
 }
 
 .highcharts-annotation .comment input {
@@ -329,7 +333,8 @@
   vertical-align: middle !important; */
   font-size: 13px !important; 
   background-color: #ffffff !important;
-  margin: 0 !important; 
+  margin: 0 !important;
+  z-index: 10;
 }
 
 .annotationTime {

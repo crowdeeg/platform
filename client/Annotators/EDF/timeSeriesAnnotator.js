@@ -4658,8 +4658,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       }
       
-
-///////////////////TODO: Change this to fix channel specific changepoint annotation
       function click(e) {
         // if (that.vars.annotationClicks.clickOne === null) {
         //   (clickXOne = e.pageX - container.offsetLeft),
@@ -5403,10 +5401,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     htmlContext
       .attr({
         width: `${annotation.group.element.getBBox().width}`,
-        height: `${annotation.group.element.getBBox().height}`,
+        height: `${annotation.metadata.channelIndices.length * that.options.graph.channelSpacing}`,
         // x: 0,
         // y: 20,
-        zIndex: 2,
+        zIndex: 10,
       })
       .mousedown(function (event) {
         event.stopPropagation();
@@ -5427,6 +5425,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .attr({
         width: "100px",
         height: "100px",
+        zIndex: 10,
       });
 
     // dont make form disappear when not hovering over
@@ -5441,7 +5440,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       display: "flex",
       width: "100px",
       height: "100%",
-      zIndex: 2,
+      zIndex: 10,
     });
 
     //gets all the relevant labels based on annotation type
@@ -5468,6 +5467,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     annotationLabelSelector.css({
       width: "100%",
       height: "50px",
+      zIndex: 10,
     });
 
     //TODO:Label is saving to annotation object, now need to handle labels in all other annotation related functions, specifically the save annotation one
@@ -5660,13 +5660,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.displayType = 'ChangePoint';
     }
 
-
-
-    
-
     that._saveFeatureAnnotation(annotation);
     that._addChangePointLabelRight(annotation);
-
 
     return annotation;
   },
@@ -6076,7 +6071,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // 	"width": "100%",
     // 	"height": "100%"
     // })
-    body.css({zIndex: 1});
+    body.css({zIndex: 10});
 
     $('.highcharts-annotation')  
       .mouseenter(function (event) {
@@ -6222,17 +6217,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
       var nextAnnotation = that.vars.universalChangePointAnnotationsCache[index];
       
-      annotations
-        .slice()
-        .reverse()
-        .filter((a) => a.metadata.id == annotation.metadata.id)
-        .forEach((a) => {
-          a.destroy();
-          that.vars.chart.selectedAnnotation = null;
-        });
-      that._deleteAnnotation(
-        annotation.metadata.id,
-      );
+      that._nukeAnnotation(annotation);
+
       that._getNonTrivialUniversalAnnotations();
       if (nextAnnotation !== undefined) {
         that._updateChangePointLabelLeft(nextAnnotation);
@@ -6344,7 +6330,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "100%",
       height: "100%",
       backgroundColor: "red",
-      zIndex: 10,
+      zIndex: 0,
       "white-space": "nowrap"
     });
 
@@ -6357,7 +6343,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .attr({
         width: width,
         height: height,
-        zIndex: 10,
+        zIndex: 0,
         y: annotationHeight - height,
         // y: `${annotation.group.element.getBBox().height-height}`,
         x: -width,
@@ -6403,7 +6389,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         width: "100%",
         height: "100%",
         backgroundColor: "red",
-        zIndex: 10,
+        zIndex: 0,
         "white-space": "nowrap"
       });
 
@@ -6418,7 +6404,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         .attr({
           width: width,
           height: height,
-          zIndex: 10,
+          zIndex: 0,
           // y: `${annotation.group.element.getBBox().height-height}`,
           y: annotationHeight - height,
           x: 2,
@@ -6426,7 +6412,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       
   
       var body = $("<body>").addClass("changePointLabelRight");
-      body.css({zIndex: 10});
+      body.css({zIndex: 0});
   
       body.append(textarea1);
       htmlContext.append(body);
@@ -6600,12 +6586,83 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (annotations[index] != undefined) {
         that._updateChangePointLabelLeft(annotations[index]);
       }
+    }
     
-    }    
+    // convert changepoint annotations to box annotations where neccesary.
+    if (annotation.metadata.annotationLabel == '(end previous state)') {
+      that._convertChangePointsToBox(annotation);
+    }
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     console.log(annotation);
     console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
 
+  },
+
+  _nukeAnnotation: function (annotation) {
+    // deletes the annotation as well as the rendering.
+    var that = this;
+    var annotations = that.vars.chart.annotations.allItems;
+    annotations
+        .slice()
+        .reverse()
+        .filter((a) => a.metadata.id == annotation.metadata.id)
+        .forEach((a) => {
+          a.destroy();
+          that.vars.chart.selectedAnnotation = null;
+        });
+      that._deleteAnnotation(
+        annotation.metadata.id,
+      );
+  },
+
+  _convertChangePointsToBox: function (annotation) {
+    var that = this;
+    var allAnnotations = that.vars.chart.annotations.allItems;
+    allAnnotations.sort((a, b) => {
+      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
+    });
+
+    allAnnotations.every( element => {
+        if (
+          element.metadata.displayType == 'ChangePoint' &&
+          that._getAnnotationXMinFixed(element) < that._getAnnotationXMinFixed(annotation) &&
+          element.metadata.annotationLabel != undefined && element.metadata.annotationLabel != '(end previous state)'
+        ) {
+
+          let newAnnotation = that._addAnnotationBox(
+            undefined,
+            element.options.xValue,
+            element.metadata.channelIndices,
+            undefined,
+            // undefined,
+            // element.metadata.comment || annotation.metadata.comment,
+            // annotation
+            );
+          
+          newAnnotation.update({
+            xValue: element.options.xValue,
+            yValue: element.options.yValue,
+            shape: {
+              params: {
+                width: annotation.options.xValue - element.options.xValue,
+                height: that.options.graph.channelSpacing,
+              },
+            },
+          })
+          let id = element.metadata.id;
+          newAnnotation.metadata.annotationLabel = element.metadata.annotationLabel;
+          that._nukeAnnotation(element);
+          newAnnotation.metadata.id = id;
+          that._saveFeatureAnnotation(newAnnotation);
+          // newAnnotation.metadata.displayType = 'Box';
+          // that._updateChangePointLabelRight(newAnnotation);
+      
+          return false;
+        }
+        return true;
+      }
+    )
+    that._nukeAnnotation(annotation);
   },
 
   _getUniversalAnnotationIndexByXVal: function (XVal) {
@@ -8317,8 +8374,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             return;
           }
           var annotationDocument = Annotations.findOne(annotationId);
-          annotationDocument.id = annotationDocument._id;
-          updateCache(annotationDocument);
+          if (annotationDocument) {
+            annotationDocument.id = annotationDocument._id;
+            updateCache(annotationDocument);
+          }
+          
         }
       );
       that._updateMarkAssignmentAsCompletedButtonState();
@@ -8511,7 +8571,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var allAnnotations = that.vars.chart.annotations.allItems;
     allAnnotations.sort((a, b) => {
-      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMaxFixed(b);
+      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
     });
 
     var rows = allAnnotations.map( (element, index) => {
@@ -8566,12 +8626,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }).toString()
       }).join('\n')]
     }
-    else return [];
-    
-}
-
-
-
-
-
+    else return [];  
+  }
 });
