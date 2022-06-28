@@ -238,7 +238,7 @@
 
 .io_panel {
   float: left;
-  display: block;
+  display: flex;
 }
 
 .bookmarkCurrentPage {

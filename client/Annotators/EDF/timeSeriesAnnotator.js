@@ -700,9 +700,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             </div>\
                         </div> \
                         <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
-                            <button type="button" class="btn btn-default fa fa-upload" ></button> \
+                            <button type="button" class="btn btn-default fa fa-save" ></button>\
                             <button type="button" class="btn btn-default fa fa-download" ></button> \
-                            <button type="button" class="btn btn-default fa fa-save" ></button> \
+                            <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
+                            <input type="file" accept=".csv" id="CSVFile">\
                         </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
@@ -2503,7 +2504,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     element
       .find(".fa-upload")
       .click(function () {
-        console.log("upload function not yet implemented")
+        that._parseCSV();
+        console.log("!!!!!!!!!!!");
       });
     
     element
@@ -8551,7 +8553,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _downloadCSV: function () {
     var that = this;
     var annotations = that._assembleCSV();
-    console.log(annotations);
+    // console.log(annotations);
     const blob = new Blob(annotations, {type: "text/csv"});
     const href = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement("a"),
@@ -8607,6 +8609,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "Duration": duration,
         "User": Meteor.userId(),
         "Comment": element.metadata.comment,
+        "ID": element.metadata.id,
         // "DisplayType": element.metadata.displayType,
       };
       return row;
@@ -8627,5 +8630,49 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }).join('\n')]
     }
     else return [];  
+  },
+
+
+  _parseCSV: function () {
+    var that = this;
+    const csvFile = document.getElementById("CSVFile");
+    const input = csvFile.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+      const text = e.target.result;
+      const data = that._csvToArray(text);
+      console.log(data)
+    };
+
+    reader.readAsText(input);
+    
+  },
+
+  _csvToArray: function(str, delimiter = ",") {
+    // slice from start of text to the first \n index
+    // use split to create an array from string by delimiter
+    const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
+  
+    // slice from \n index + 1 to the end of the text
+    // use split to create an array of each csv value row
+    const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+  
+    // Map the rows
+    // split values from each row into an array
+    // use headers.reduce to create an object
+    // object properties derived from headers:values
+    // the object passed as an element of the array
+    const arr = rows.map(function (row) {
+      const values = row.split(delimiter);
+      const el = headers.reduce(function (object, header, index) {
+        object[header] = values[index];
+        return object;
+      }, {});
+      return el;
+    });
+  
+    // return the array
+    return arr;
   }
 });
