@@ -8583,18 +8583,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var annotation = element.metadata.annotationLabel;
 
       if (element.metadata.displayType == 'ChangePointAll') {
-        type = "Stage change";
+        type = "Stage Change";
         channel = "All";
       } else {
         type = "Event";
         channel = (element.metadata.channelIndices.map((element) => {
-          return this.vars.currentWindowData.channels[element].name;
-        })).toString();
+          return that.vars.currentWindowData.channels[element].name;
+        })).join('/');
         if (element.metadata.displayType != 'ChangePoint') {
           duration = element.options.shape.params.width;
         }
       }
-
 
       if (element.metadata.annotationLabel == "(unanalyzable)") {
         type = 'Signal quality';
@@ -8605,7 +8604,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "Time": String(element.options.xValue),
         "Type": type,
         "Annotation": annotation,
-        "Channel": channel,
+        "Channels": channel,
         "Duration": duration,
         "User": Meteor.userId(),
         "Comment": element.metadata.comment,
@@ -8625,8 +8624,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       const array = [Object.keys(arr[0])].concat(arr)
       return [array.map(row => {
           return Object.values(row).map(value => {
-              return typeof value === 'string' ? JSON.stringify(value) : value
-          }).toString()
+              return value;
+              // return typeof value === 'string' ? JSON.stringify(value) : value
+          })
+          // .toString()
       }).join('\n')]
     }
     else return [];  
@@ -8641,7 +8642,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     reader.onload = function (e) {
       const text = e.target.result;
-      const data = that._csvToArray(text);
+      const data = that._CSVToArray(text);
       console.log(data)
     };
 
@@ -8649,7 +8650,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     
   },
 
-  _csvToArray: function(str, delimiter = ",") {
+  _CSVToArray: function(str, delimiter = ",") {
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
     const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
@@ -8665,8 +8666,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // the object passed as an element of the array
     const arr = rows.map(function (row) {
       const values = row.split(delimiter);
+      // console.log(values);
       const el = headers.reduce(function (object, header, index) {
-        object[header] = values[index];
+        object[header] = (
+          header === 'Time' || header === 'Duration' 
+        ) ? parseFloat(values[index]) : 
+        header === 'Index' ? parseInt(values[index]) : values[index];
         return object;
       }, {});
       return el;
@@ -8674,5 +8679,52 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   
     // return the array
     return arr;
+  },
+
+  _redrawAnnotationsFromObjects: function(obj) {
+    var that = this;
+    if (!that.vars.channelNameToIndex) {
+      that.vars.channelNameToIndex = {};
+      that.vars.currentWindowData.channels.forEach((element, index) => {
+        that.vars.channelNameToIndex[element.name] = index;
+      }
+    )}
+    /// some shit here
+  },
+
+  _redrawBoxAnnotationFromObject: function(obj) {
+    var that = this;
+
+    let channels = obj["Channels"].map((element) => {return that.vars.channelNameToIndex[element]})
+
+    let newAnnotation = that._addAnnotationBox(
+      undefined,
+      obj["Time"],
+      channels,
+      undefined,
+    );
+    
+
+
+    newAnnotation.update({
+      xValue: element.options.xValue,
+      yValue: element.options.yValue,
+      shape: {
+        params: {
+          width: annotation.options.xValue - element.options.xValue,
+          height: that.options.graph.channelSpacing,
+        },
+      },
+    })
+    let id = element.metadata.id;
+    newAnnotation.metadata.annotationLabel = element.metadata.annotationLabel;
+    newAnnotation.metadata.id = id;
+    that._saveFeatureAnnotation(newAnnotation);
+  },
+
+
+
+  _redrawChangePointAnnotationFromObject: function(obj) {
+
   }
 });
