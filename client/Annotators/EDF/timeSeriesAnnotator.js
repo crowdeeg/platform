@@ -8644,6 +8644,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       const text = e.target.result;
       const data = that._CSVToArray(text);
       console.log(data)
+      that._redrawAnnotationsFromObjects(data);
     };
 
     reader.readAsText(input);
@@ -8681,44 +8682,52 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return arr;
   },
 
-  _redrawAnnotationsFromObjects: function(obj) {
+  _redrawAnnotationsFromObjects: function(objArr) {
     var that = this;
     if (!that.vars.channelNameToIndex) {
       that.vars.channelNameToIndex = {};
       that.vars.currentWindowData.channels.forEach((element, index) => {
         that.vars.channelNameToIndex[element.name] = index;
+        console.log(that.vars.channelNameToIndex);
       }
     )}
-    /// some shit here
+
+    objArr.forEach((element) => {
+      that._redrawBoxAnnotationFromObject(element);
+    })
   },
 
   _redrawBoxAnnotationFromObject: function(obj) {
     var that = this;
 
-    let channels = obj["Channels"].map((element) => {return that.vars.channelNameToIndex[element]})
-
+    let channels = obj["Channels"] === "All" ? that.vars.allChannels :  
+      obj["Channels"].split("/").map((element) => {return that.vars.channelNameToIndex[element]});
+    console.log(obj["Channels"] === "All" ? that.vars.allChannels :  
+    obj["Channels"].split("/"));
+    let timeStart = obj["Time"];
+    var { height, yValue } =
+      that._getAnnotationBoxHeightAndYValueForChannelIndices(channels);
+    
     let newAnnotation = that._addAnnotationBox(
       undefined,
-      obj["Time"],
+      timeStart,
       channels,
       undefined,
     );
-    
-
 
     newAnnotation.update({
-      xValue: element.options.xValue,
-      yValue: element.options.yValue,
+      xValue: timeStart,
+      yValue: yValue,
       shape: {
         params: {
-          width: annotation.options.xValue - element.options.xValue,
-          height: that.options.graph.channelSpacing,
+          width: obj["Duration"],
+          height: height,
         },
       },
     })
-    let id = element.metadata.id;
-    newAnnotation.metadata.annotationLabel = element.metadata.annotationLabel;
-    newAnnotation.metadata.id = id;
+
+    newAnnotation.metadata.annotationLabel = obj["Annotation"];
+    newAnnotation.metadata.id = obj["ID"];
     that._saveFeatureAnnotation(newAnnotation);
   },
 
