@@ -700,8 +700,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             </div>\
                         </div> \
                         <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
-                            <button type="button" class="btn btn-default fa fa-save" ></button>\
-                            <button type="button" class="btn btn-default fa fa-download" ></button> \
+                            <button type="button" class="btn btn-default fa fa-save" ></button>&nbsp\
+                            <button type="button" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
                             <input type="file" accept=".csv" id="CSVFile">\
                         </div> \
@@ -1805,15 +1805,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //   value: "sne",
       // },
       {
-        name: "Change Point Annotation (All)",
+        name: "Stage Change",
         value: "cpointall",
       },
       {
-        name: "Change Point Annotation (Channel)",
+        name: "Event (Start & End Point)",
         value: "cpoint",
       },
       {
-        name: "Box Annotation",
+        name: "Event (Box)",
         value: "box",
       },
     );
@@ -5270,7 +5270,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _getAnnotationLabelFromdisplayType: function(annotation) {
     if (annotation.metadata.displayType == 'ChangePointAll') {
-      return [undefined, "Awake", "N1", "N2", "SWS", "REM", "(unanalyzable)"];
+      return [undefined, "Awake", "N1", "N2", "SWS", "REM"];
     } else if (annotation.metadata.displayType == 'ChangePoint') {
       return [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)", "(end previous state)"];
     } else { 
@@ -5668,11 +5668,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return annotation;
   },
 
-  _addAnnotationChangePointAll: function (clickX) {
+  _addAnnotationChangePointAll: function (clickX, fromObject=false) {
     var that = this;
 
-    const clickXOneValue = that._convertPixelsToValue(clickX, "x");
-    const clickXTwoValue = that._convertPixelsToValue(clickX, "x");
+    let clickXOneValue;
+    let clickXTwoValue;
+
+    if (fromObject) {
+      clickXOneValue = clickX;
+      clickXTwoValue = clickX;
+    } else {
+      clickXOneValue = that._convertPixelsToValue(clickX, "x");
+      clickXTwoValue = that._convertPixelsToValue(clickX, "x");
+    }
+
+    
 
     const channelIndicies = [];
 
@@ -6530,7 +6540,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
 
-    // annotation.metadata.duration = time_end - time_start;
+    annotation.metadata.creator = Meteor.userId();
 
     that._saveAnnotation(
       annotationId,
@@ -8576,7 +8586,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
     });
 
-    var rows = allAnnotations.map( (element, index) => {
+    var rows = allAnnotations.filter(element => element.metadata.displayType!="ChangePoint").map( (element, index) => {
       var type;
       var channel;
       var duration = 'NA';
@@ -8588,7 +8598,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else {
         type = "Event";
         channel = (element.metadata.channelIndices.map((element) => {
-          return that.vars.currentWindowData.channels[element].name;
+          return `(${element})` + that.vars.currentWindowData.channels[element].name;
         })).join('/');
         if (element.metadata.displayType != 'ChangePoint') {
           duration = element.options.shape.params.width;
@@ -8596,7 +8606,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
 
       if (element.metadata.annotationLabel == "(unanalyzable)") {
-        type = 'Signal quality';
+        type = 'Signal Quality';
       }
 
       var row = {
@@ -8606,9 +8616,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "Annotation": annotation,
         "Channels": channel,
         "Duration": duration,
-        "User": Meteor.userId(),
+        "User": element.metadata.creator,
         "Comment": element.metadata.comment,
-        "ID": element.metadata.id,
+        // "ID": element.metadata.id,
         // "DisplayType": element.metadata.displayType,
       };
       return row;
@@ -8638,16 +8648,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     const csvFile = document.getElementById("CSVFile");
     const input = csvFile.files[0];
-    const reader = new FileReader();
 
-    reader.onload = function (e) {
-      const text = e.target.result;
-      const data = that._CSVToArray(text);
-      console.log(data)
-      that._redrawAnnotationsFromObjects(data);
-    };
+    if (input) {
+      const reader = new FileReader();
 
-    reader.readAsText(input);
+      reader.onload = function (e) {
+        const text = e.target.result;
+        const data = that._CSVToArray(text);
+        console.log(data)
+        that._redrawAnnotationsFromObjects(data);
+      };
+
+      reader.readAsText(input);
+
+    }
     
   },
 
@@ -8684,56 +8698,72 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _redrawAnnotationsFromObjects: function(objArr) {
     var that = this;
-    if (!that.vars.channelNameToIndex) {
-      that.vars.channelNameToIndex = {};
-      that.vars.currentWindowData.channels.forEach((element, index) => {
-        that.vars.channelNameToIndex[element.name] = index;
-        console.log(that.vars.channelNameToIndex);
-      }
-    )}
 
+    let set = new Set();
+    that.vars.chart.annotations.allItems.forEach((element) => {
+      set.add(String(element.options.xValue)+element.metadata.annotationLabel);
+    })
     objArr.forEach((element) => {
-      that._redrawBoxAnnotationFromObject(element);
+      if (!set.has(String(element["Time"])+element["Annotation"])) {
+        if (element["Type"] != "Stage Change") {
+          that._redrawEventAnnotationFromObject(element);
+        } else {
+          that._redrawChangePointAnnotationFromObject(element);
+        }
+      }
     })
   },
 
-  _redrawBoxAnnotationFromObject: function(obj) {
+  _redrawEventAnnotationFromObject: function(obj) {
     var that = this;
 
     let channels = obj["Channels"] === "All" ? that.vars.allChannels :  
-      obj["Channels"].split("/").map((element) => {return that.vars.channelNameToIndex[element]});
+      obj["Channels"].split("/").map((element) => 
+      {return parseInt(element.split(")")[0].substring(1))});
     console.log(obj["Channels"] === "All" ? that.vars.allChannels :  
     obj["Channels"].split("/"));
     let timeStart = obj["Time"];
     var { height, yValue } =
       that._getAnnotationBoxHeightAndYValueForChannelIndices(channels);
     
-    let newAnnotation = that._addAnnotationBox(
-      undefined,
-      timeStart,
-      channels,
-      undefined,
-    );
+      let newAnnotation = that._addAnnotationBox(
+        undefined,
+        timeStart,
+        channels,
+        undefined,
+      );
 
-    newAnnotation.update({
-      xValue: timeStart,
-      yValue: yValue,
-      shape: {
-        params: {
-          width: obj["Duration"],
-          height: height,
+      newAnnotation.update({
+        xValue: timeStart,
+        yValue: yValue,
+        shape: {
+          params: {
+            width: obj["Duration"],
+            height: height,
+          },
         },
-      },
-    })
+      })
 
-    newAnnotation.metadata.annotationLabel = obj["Annotation"];
-    newAnnotation.metadata.id = obj["ID"];
-    that._saveFeatureAnnotation(newAnnotation);
+      newAnnotation.metadata.annotationLabel = obj["Annotation"];
+      // newAnnotation.metadata.id = obj["ID"];
+      newAnnotation.metadata.comment = obj["Comment"];
+      that._saveFeatureAnnotation(newAnnotation);
+      that._updateChangePointLabelRight(newAnnotation);
   },
 
 
 
   _redrawChangePointAnnotationFromObject: function(obj) {
+    var that = this;    
 
-  }
+    console.log(obj["Time"]);
+    let newAnnotation = that._addAnnotationChangePointAll(obj["Time"], fromObject=true);
+    newAnnotation.metadata.annotationLabel = obj["Annotation"];
+    newAnnotation.metadata.comment = obj["Comment"];
+    that._saveFeatureAnnotation(newAnnotation);
+    that._updateChangePointLabelRight(newAnnotation);
+    that._updateChangePointLabelLeft(newAnnotation);
+
+  },
+  
 });
