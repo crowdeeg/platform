@@ -8617,7 +8617,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "Channels": channel,
         "Duration": duration,
         "User": element.metadata.creator,
-        "Comment": element.metadata.comment,
+        "Comment": element.metadata.comment.replaceAll(',', '-').replaceAll(';', '--'),
         // "ID": element.metadata.id,
         // "DisplayType": element.metadata.displayType,
       };
