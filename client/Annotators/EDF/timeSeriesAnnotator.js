@@ -5724,6 +5724,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // gets all the annotations
     var annotations = that.vars.chart.annotations.allItems;
 
+
     // makes the channelIndicies an array
     if (!Array.isArray(channelIndices)) {
       channelIndices = [channelIndices];
@@ -6501,13 +6502,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _updateChangePointLabelRight: function (annotation) {
     var that = this;
     var label = annotation.metadata.annotationLabel;
+    const height = 26;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
     // console.log(label);
     var element = $(`#${annotation.metadata.id}Right`);
     element.val(label);
     element.css({backgroundColor: that._getChangePointColor(label)});
     console.log(element);
     var width = that._getTextWidth(label, element.css('font'));
-    element.parent().parent().attr({width: width});
+    element.parent().parent()
+    .attr({width: width,
+           y: annotationHeight - height,
+      });
 
     // move label to the left if it is "(end previous state)"
     if (label == "(end previous state)") {
@@ -6587,6 +6593,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(annotation.metadata.id);
     }
 
+    if (annotation.metadata.displayType === "Box" && 
+    annotation.metadata.annotationLabel != undefined &&
+    annotation.metadata.annotationLabel != "undefined" &&
+    annotation.metadata.annotationLabel != "(unanalyzable)") {
+      annotation.metadata.channelIndices = that.vars.allChannels.map((element, index) => index);
+      annotation.update({
+        xValue: annotation.options.xValue,
+        yValue: that._getBorderTopForChannelIndex(0),
+        shape: {
+          params: {
+            width: annotation.options.shape.params.width,
+            height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
+          },
+        },
+      })
+    }
+
     // if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
       that._updateChangePointLabelRight(annotation);
     // }
@@ -6640,11 +6663,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that._getAnnotationXMinFixed(element) < that._getAnnotationXMinFixed(annotation) &&
           element.metadata.annotationLabel != undefined && element.metadata.annotationLabel != '(end previous state)'
         ) {
+          let channels = 
+          // element.metadata.annotationLabel == "(unanalyzable)" || element.metadata.annotationLabel == undefined || annotation.metadata.annotationLabel == "undefined" ? 
+          element.metadata.channelIndices;
+          // : that.vars.allChannels.map((element, index) => index);
+
+          let yValue = 
+          // element.metadata.annotationLabel == "(unanalyzable)" || element.metadata.annotationLabel == undefined || annotation.metadata.annotationLabel == "undefined" ? 
+          element.options.yValue;
+          // : that._getBorderTopForChannelIndex(0);
+
+          console.log(channels);
 
           let newAnnotation = that._addAnnotationBox(
             undefined,
             element.options.xValue,
-            element.metadata.channelIndices,
+            channels,
             undefined,
             // undefined,
             // element.metadata.comment || annotation.metadata.comment,
@@ -6653,11 +6687,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           
           newAnnotation.update({
             xValue: element.options.xValue,
-            yValue: element.options.yValue,
+            yValue: yValue,
             shape: {
               params: {
                 width: annotation.options.xValue - element.options.xValue,
-                height: that.options.graph.channelSpacing,
+                height: that.options.graph.channelSpacing * channels.length,
               },
             },
           })
@@ -8597,7 +8631,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         channel = "All";
       } else {
         type = "Event";
-        channel = (element.metadata.channelIndices.map((element) => {
+        channel = element.metadata.channelIndices.length === that.vars.allChannels.length ? "All" :
+        (element.metadata.channelIndices.map((element) => {
           return `(${element})` + that.vars.currentWindowData.channels[element].name;
         })).join('/');
         if (element.metadata.displayType != 'ChangePoint') {
