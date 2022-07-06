@@ -6508,7 +6508,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var element = $(`#${annotation.metadata.id}Right`);
     element.val(label);
     element.css({backgroundColor: that._getChangePointColor(label)});
-    console.log(element);
+    // console.log(element);
     var width = that._getTextWidth(label, element.css('font'));
     element.parent().parent()
     .attr({width: width,
@@ -6593,6 +6593,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(annotation.metadata.id);
     }
 
+    console.log(annotation);
+    console.log("11111111111111111111111111111");
+
+    // convert changepoint annotations to box annotations where neccesary.
+    if (annotation.metadata.annotationLabel == '(end previous state)') {
+      that._convertChangePointsToBox(annotation);
+    }
+
     if (annotation.metadata.displayType === "Box" && 
     annotation.metadata.annotationLabel != undefined &&
     annotation.metadata.annotationLabel != "undefined" &&
@@ -6623,13 +6631,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
     
-    // convert changepoint annotations to box annotations where neccesary.
-    if (annotation.metadata.annotationLabel == '(end previous state)') {
-      that._convertChangePointsToBox(annotation);
-    }
+    
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     console.log(annotation);
-    console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
+    // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
 
   },
 
@@ -6654,51 +6659,47 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var allAnnotations = that.vars.chart.annotations.allItems;
     allAnnotations.sort((a, b) => {
-      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
+      return a.options.xValue - b.options.xValue;
     });
 
     allAnnotations.every( element => {
+
+        console.log(element);
+        console.log(element.metadata.displayType == 'ChangePoint');
+        console.log(element.options.xValue < annotation.options.xValue);
+        console.log(element.metadata.annotationLabel != undefined && element.metadata.annotationLabel != '(end previous state)');
         if (
           element.metadata.displayType == 'ChangePoint' &&
-          that._getAnnotationXMinFixed(element) < that._getAnnotationXMinFixed(annotation) &&
+          element.options.xValue < annotation.options.xValue &&
           element.metadata.annotationLabel != undefined && element.metadata.annotationLabel != '(end previous state)'
         ) {
-          let channels = 
-          // element.metadata.annotationLabel == "(unanalyzable)" || element.metadata.annotationLabel == undefined || annotation.metadata.annotationLabel == "undefined" ? 
-          element.metadata.channelIndices;
-          // : that.vars.allChannels.map((element, index) => index);
-
-          let yValue = 
-          // element.metadata.annotationLabel == "(unanalyzable)" || element.metadata.annotationLabel == undefined || annotation.metadata.annotationLabel == "undefined" ? 
-          element.options.yValue;
-          // : that._getBorderTopForChannelIndex(0);
-
-          console.log(channels);
 
           let newAnnotation = that._addAnnotationBox(
             undefined,
             element.options.xValue,
-            channels,
+            element.metadata.channelIndices,
             undefined,
             // undefined,
             // element.metadata.comment || annotation.metadata.comment,
             // annotation
             );
+
+          console.log(newAnnotation);
           
           newAnnotation.update({
             xValue: element.options.xValue,
-            yValue: yValue,
+            yValue: element.options.yValue,
             shape: {
               params: {
                 width: annotation.options.xValue - element.options.xValue,
-                height: that.options.graph.channelSpacing * channels.length,
+                height: that.options.graph.channelSpacing * element.metadata.channelIndices.length,
               },
             },
           })
-          let id = element.metadata.id;
+          // let id = element.metadata.id;
           newAnnotation.metadata.annotationLabel = element.metadata.annotationLabel;
           that._nukeAnnotation(element);
-          newAnnotation.metadata.id = id;
+          // newAnnotation.metadata.id = id;
           that._saveFeatureAnnotation(newAnnotation);
           // newAnnotation.metadata.displayType = 'Box';
           // that._updateChangePointLabelRight(newAnnotation);
@@ -8786,8 +8787,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._updateChangePointLabelRight(newAnnotation);
   },
 
-
-
   _redrawChangePointAnnotationFromObject: function(obj) {
     var that = this;    
 
@@ -8798,7 +8797,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
     that._updateChangePointLabelLeft(newAnnotation);
-
   },
+
+ _stringToColour: function(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    var colour = '#';
+    for (var i = 0; i < 3; i++) {
+        var value = (hash >> (i * 8)) & 0xFF;
+        colour += ('00' + value.toString(16)).substr(-2);
+    }
+    return colour;
+}
   
 });
