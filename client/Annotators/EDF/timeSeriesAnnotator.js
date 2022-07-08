@@ -5563,7 +5563,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     shapeParams.width = 2;
     shapeParams.strokeWidth = 2;
-    shapeParams.fill = that._stringToColour("aaaaaaaa");
+    shapeParams.fill = "rgba(255, 0, 0, 1)";
     shapeParams.stroke = "solid";
 
     // shapeParams.fill = "rgba(255,255,255,0.2)";
@@ -5763,9 +5763,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // if there is a timeEnd value
     // if (preliminary) {
       shapeParams.width = 0;
-      shapeParams.fill = "transparent";
-
-      shapeParams.fill = that._stringToColour("aaaaaaaaaaaaaa")+"50";
+      shapeParams.fill = "rgba(255, 0, 0, 0.5)";
 
       // shapeParams.stroke = that._getFeatureColor(
       //   featureType,
@@ -6631,6 +6629,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._updateChangePointLabelLeft(annotations[index]);
       }
     }
+
+    if (annotation.metadata.creator !== Meteor.userId()) {
+      let fillColor = annotation.metadata.displayType == "Box" ? that._stringToColour(annotation.metadata.creator)+"50" :
+      that._stringToColour(annotation.metadata.creator);
+      annotation.update({
+        shape: { 
+          params: {
+            fill: fillColor
+          }
+        }
+      })
+    }
+    
     
     
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
@@ -8813,8 +8824,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         colour += ('00' + value.toString(16)).substr(-2);
     }
     console.log(colour);
-    console.log(this._newColorShade(colour,-50));
-    return this._newColorShade(colour,-50);
+    console.log(this._newColorShade(colour,-150));
+    return colour;
 },
 
 _newColorShade: function(colorCode, amount)  {
