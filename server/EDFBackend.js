@@ -1,11 +1,30 @@
 import { dsvFormat } from "d3-dsv";
 import { Data, Assignments } from "/collections";
 
+
+
+
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
 		return $1.toUpperCase();
 	}).replace(/\s/g, "");
 };
+
+// Database configuration
+const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost:27017/test');
+
+const annotation = new mongoose.Schema({
+  Index: Number,
+  Time: Number,
+  Type: String,
+  Annotation: String,
+  Channels: String,
+  Duration: Number,
+  User: String,
+  Comment: String
+  
+});
 
 // This should stay Float32Array, as this is required for the use of
 // WebAudio features for digital signal processing in the frontend,
@@ -986,5 +1005,9 @@ Meteor.methods({
         targetDownsamplingRate,
       });
     });
+  },
+
+  saveAnnotationToDB(annotations) {
+    // Saves the annotation to the local database.
   },
 });

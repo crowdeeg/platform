@@ -14,11 +14,11 @@
     "highcharts-boost": "^0.1.7",
     "meteor-node-stubs": "^0.4.1",
     "moment": "^2.29.3",
+    "mongoose": "^6.4.3",
     "papaparse": "^4.5.0",
     "seedrandom": "^3.0.5",
     "sweetalert2": "^7.33.1"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

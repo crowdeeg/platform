@@ -2511,7 +2511,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     element
       .find(".fa-save")
       .click(function () {
-        console.log("save function not yet implemented")
+        window.alert("Save function not yet implemented!")
       });
   },
 
@@ -4693,7 +4693,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       function clickAll(e) {
         clickX = e.pageX - container.offsetLeft;
 
-        var annotation = that._addAnnotationChangePointAll(clickX);
+        var annotation = that._addAnnotationChangePointAll(clickX, );
 
       }
       
@@ -5516,7 +5516,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     timeEnd,
     confidence,
     comment,
-    annotationData
+    annotationData,
   ) {
     var that = this;
     // //console.log("anotater");
@@ -5563,7 +5563,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     shapeParams.width = 2;
     shapeParams.strokeWidth = 2;
-    shapeParams.fill = "rgba(255,0,0,1)";
+    shapeParams.fill = that._stringToColour("aaaaaaaa");
     shapeParams.stroke = "solid";
 
     // shapeParams.fill = "rgba(255,255,255,0.2)";
@@ -5698,7 +5698,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       clickXOneValue,
       channelIndicies,
       featureType,
-      clickXTwoValue
+      clickXTwoValue,
     );
     annotation.metadata.displayType = 'ChangePointAll';
     that._addCommentFormToAnnotationBox(annotation);
@@ -5718,11 +5718,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     timeEnd,
     confidence,
     comment,
-    annotationData
+    annotationData,
   ) {
     var that = this;
     // gets all the annotations
     var annotations = that.vars.chart.annotations.allItems;
+
 
 
     // makes the channelIndicies an array
@@ -5760,11 +5761,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     };
 
     // if there is a timeEnd value
-    if (preliminary) {
+    // if (preliminary) {
       shapeParams.width = 0;
       shapeParams.fill = "transparent";
 
-      shapeParams.fill = "rgba(255,0,0,0.5)";
+      shapeParams.fill = that._stringToColour("aaaaaaaaaaaaaa")+"50";
 
       // shapeParams.stroke = that._getFeatureColor(
       //   featureType,
@@ -5772,17 +5773,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // );
 
       shapeParams.strokeWidth = 10;
-    } else {
-      shapeParams.width = timeEnd - timeStart;
-      // shapeParams.fill = that._getFeatureColor(
-      //   featureType,
-      //   annotationData.is_answer,
-      //   confidence
-      // );
-      shapeParams.fill = "rgba(255,0,0,1)";
-      shapeParams.stroke = "transparent";
-      shapeParams.strokeWidth = 0;
-    }
+    // } else {
+    //   shapeParams.width = timeEnd - timeStart;
+    //   // shapeParams.fill = that._getFeatureColor(
+    //   //   featureType,
+    //   //   annotationData.is_answer,
+    //   //   confidence
+    //   // );
+    //   shapeParams.fill = "rgba(255,0,0,1)";
+    //   shapeParams.stroke = "transparent";
+    //   shapeParams.strokeWidth = 0;
+    // }
 
     //adds the annotation box to the chart
     that.vars.chart.addAnnotation({
@@ -6545,8 +6546,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         metadata.projectUUID = that.options.projectUUID;
       }
     }
-
-    annotation.metadata.creator = Meteor.userId();
+    if (annotation.metadata.creator===undefined) {
+      annotation.metadata.creator = Meteor.userId();
+    }
+    
 
     that._saveAnnotation(
       annotationId,
@@ -6593,8 +6596,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(annotation.metadata.id);
     }
 
-    console.log(annotation);
-    console.log("11111111111111111111111111111");
 
     // convert changepoint annotations to box annotations where neccesary.
     if (annotation.metadata.annotationLabel == '(end previous state)') {
@@ -8742,6 +8743,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     objArr.forEach((element) => {
       if (!set.has(String(element["Time"])+element["Annotation"])) {
         if (element["Type"] != "Stage Change") {
+          console.log(element)
           that._redrawEventAnnotationFromObject(element);
         } else {
           that._redrawChangePointAnnotationFromObject(element);
@@ -8752,12 +8754,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _redrawEventAnnotationFromObject: function(obj) {
     var that = this;
-
-    let channels = obj["Channels"] === "All" ? that.vars.allChannels :  
+    console.log(obj["Channels"]);
+    let channels = obj["Channels"] === "All" ? that.vars.allChannels.map((element, index)=>index) :  
       obj["Channels"].split("/").map((element) => 
       {return parseInt(element.split(")")[0].substring(1))});
-    console.log(obj["Channels"] === "All" ? that.vars.allChannels :  
-    obj["Channels"].split("/"));
+    
     let timeStart = obj["Time"];
     var { height, yValue } =
       that._getAnnotationBoxHeightAndYValueForChannelIndices(channels);
@@ -8783,6 +8784,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       newAnnotation.metadata.annotationLabel = obj["Annotation"];
       // newAnnotation.metadata.id = obj["ID"];
       newAnnotation.metadata.comment = obj["Comment"];
+      newAnnotation.metadata.creator = obj["User"];
       that._saveFeatureAnnotation(newAnnotation);
       that._updateChangePointLabelRight(newAnnotation);
   },
@@ -8794,6 +8796,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let newAnnotation = that._addAnnotationChangePointAll(obj["Time"], fromObject=true);
     newAnnotation.metadata.annotationLabel = obj["Annotation"];
     newAnnotation.metadata.comment = obj["Comment"];
+    newAnnotation.metadata.creator = obj["User"];
     that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
     that._updateChangePointLabelLeft(newAnnotation);
@@ -8809,7 +8812,47 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var value = (hash >> (i * 8)) & 0xFF;
         colour += ('00' + value.toString(16)).substr(-2);
     }
-    return colour;
+    console.log(colour);
+    console.log(this._newColorShade(colour,-50));
+    return this._newColorShade(colour,-50);
+},
+
+_newColorShade: function(colorCode, amount)  {
+  var usePound = false;
+ 
+    if (colorCode[0] == "#") {
+        colorCode = colorCode.slice(1);
+        usePound = true;
+    }
+ 
+    var num = parseInt(colorCode, 16);
+ 
+    var r = (num >> 16) + amount;
+ 
+    if (r > 255) {
+        r = 255;
+    } else if (r < 0) {
+        r = 0;
+    }
+ 
+    var b = ((num >> 8) & 0x00FF) + amount;
+ 
+    if (b > 255) {
+        b = 255;
+    } else if (b < 0) {
+        b = 0;
+    }
+ 
+    var g = (num & 0x0000FF) + amount;
+ 
+    if (g > 255) {
+        g = 255;
+    } else if (g < 0) {
+        g = 0;
+    }
+ 
+    return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16);
+
 }
   
 });
