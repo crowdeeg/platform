@@ -2505,13 +2505,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .find(".fa-upload")
       .click(function () {
         that._parseCSV();
-        console.log("!!!!!!!!!!!");
       });
     
     element
       .find(".fa-save")
       .click(function () {
-        window.alert("Save function not yet implemented!")
+        that._saveAnnotationsToDB();
+        // Meteor.call("saveAnnotationsToDB", that._assembleAnnotationObject());
+        window.alert("All completed annotations now saved to local database!");
+        // that._getAnnotationsFromDB();
       });
   },
 
@@ -3948,7 +3950,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // use the chart start/end so that data and annotations can never
     // get out of synch
-    that._refreshAnnotations();
+    // that._refreshAnnotations();
+    console.log("?????????????????????????????");
     that._renderChannelSelection();
     that._updateBookmarkCurrentPageButton();
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
@@ -4143,6 +4146,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           events: {
             load: function (event) {
               that._setupLabelHighlighting();
+              // that._refreshAnnotations();
             },
             redraw: function (event) {
               that._setupLabelHighlighting();
@@ -5347,11 +5351,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const clickYValue = that._convertPixelsToValue(clickY, "y");
 
     const channelIndex = that._getChannelIndexFromY(clickYValue);
-    console.log(that.vars.allChannels[channelIndex].name);
+    // console.log(that.vars.allChannels[channelIndex].name);
     const featureType = that.vars.activeFeatureType;
 
-    console.log("channel selected: " + channelIndex);
-    console.log("feature type: " + featureType);
+    // console.log("channel selected: " + channelIndex);
+    // console.log("feature type: " + featureType);
 
     const annotationId = undefined;
 
@@ -6676,10 +6680,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     allAnnotations.every( element => {
 
-        console.log(element);
-        console.log(element.metadata.displayType == 'ChangePoint');
-        console.log(element.options.xValue < annotation.options.xValue);
-        console.log(element.metadata.annotationLabel != undefined && element.metadata.annotationLabel != '(end previous state)');
+        // console.log(element);
+        // console.log(element.metadata.displayType == 'ChangePoint');
+        // console.log(element.options.xValue < annotation.options.xValue);
+        // console.log(element.metadata.annotationLabel != undefined && element.metadata.annotationLabel != '(end previous state)');
         if (
           element.metadata.displayType == 'ChangePoint' &&
           element.options.xValue < annotation.options.xValue &&
@@ -6696,7 +6700,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             // annotation
             );
 
-          console.log(newAnnotation);
+          // console.log(newAnnotation);
           
           newAnnotation.update({
             xValue: element.options.xValue,
@@ -6813,6 +6817,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.currentWindowStart,
       that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
     );
+    
+
   },
 
   _saveArtifactAnnotation: function (type) {
@@ -7848,8 +7854,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     correctAnswers
   ) {
     var that = this;
-    if (!that.options.features.showUserAnnotations) return;
-    if (that.options.features.showAllBoxAnnotations == "none") return;
+    // if (!that.options.features.showUserAnnotations) return;
+    // if (that.options.features.showAllBoxAnnotations == "none") return;
 
     var cacheKey = that._getAnnotationsCacheKey(
       recording_name,
@@ -7857,7 +7863,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end,
       correctAnswers
     );
-    if (that.vars.annotationsLoaded || that.vars.annotationsCache[cacheKey]) {
+    console.log(that.vars.annotationsLoaded);
+    console.log(that.vars.annotationsCache[cacheKey]);
+    if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
       var data = that.vars.annotationsCache[cacheKey] || {
         annotations: [],
       };
@@ -7887,7 +7895,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // //console.log(that.options.context.assignment._id);
         annotations = Annotations.find(
           {
-            assignment: that.options.context.assignment._id,
+              assignment: that.options.context.assignment._id,
             dataFiles: that.options.context.dataset.map((data) => data._id),
             type: "SIGNAL_ANNOTATION",
           },
@@ -7978,14 +7986,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_start,
       window_end
     );
+    console.log(annotations);
     that._displayAnnotations(annotations);
   },
 
   _getVisibleAnnotations: function (annotations) {
     var that = this;
     var visibleAnnotations = annotations.filter(function (annotation) {
-      var isVisibleFeature =
-        that.options.features.order.indexOf(annotation.label) > -1;
+      var isVisibleFeature = true;
+        // that.options.features.order.indexOf(annotation.label) > -1;
       var isVisibleChannel = false;
       var annotationChannels = annotation.position.channels;
       if (annotationChannels) {
@@ -7993,10 +8002,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           annotationChannels = [annotationChannels];
         }
         for (var c = 0; c < annotationChannels.length; ++c) {
-          var channel =
-            annotation.metadata.channels_displayed[annotationChannels[c]];
-          if (that._getChannelsDisplayed().indexOf(channel) > -1) {
-            isVisibleChannel = true;
+          var channelArray = [];
+          // annotation.metadata.channels_displayed.values().forEach(element => channelArray.push(...element));
+          for (const property in displayedChannels) {
+            channelArray.push(...annotation.metadata.channels_displayed[property]);
+          }
+          var channel = channelArray[annotationChannels[c]];
+
+          // console.log(channel);
+          // console.log(annotation.metadata.channels_displayed);
+          var displayedChannels = (that._getChannelsDisplayed());
+          var displayedChannelsArray = []
+          for (const property in displayedChannels) {
+            displayedChannelsArray.push(...displayedChannels[property]);
+          }
+          if (displayedChannelsArray.indexOf(channel) > -1) {
+            isVisibleChannel = true
             break;
           }
         }
@@ -8239,9 +8260,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     annotations.forEach((annotation) => {
       var type = annotation.label;
 
-      if (that.options.features.order.indexOf(type) < 0) {
-        return;
-      }
+      // if (that.options.features.order.indexOf(type) < 0) {
+      //   return;
+      // }
       var annotationId = annotation.id;
       var start_time = annotation.position.start;
       var end_time = annotation.position.end;
@@ -8257,15 +8278,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
       var channelIndicesMapped = [];
       channelIndices.forEach((channelIndex) => {
-        var channelIndexRecording =
-          annotation.metadata.channels_displayed[channelIndex];
-        var channelIndexMapped = that
-          ._getChannelsDisplayed()
+        var channelIndexRecording = that._collapseObjectToArray(
+          annotation.metadata.channels_displayed)[channelIndex];
+
+        // console.log(that._collapseObjectToArray(that
+        //   ._getChannelsDisplayed()));
+
+        var channelIndexMapped = that._collapseObjectToArray(that
+          ._getChannelsDisplayed())
           .indexOf(channelIndexRecording);
         while (channelIndexMapped > -1) {
           channelIndicesMapped.push(channelIndexMapped);
-          channelIndexMapped = that
-            ._getChannelsDisplayed()
+          channelIndexMapped = that._collapseObjectToArray(that
+            ._getChannelsDisplayed())
             .indexOf(channelIndexRecording, channelIndexMapped + 1);
         }
       });
@@ -8345,7 +8370,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const context = that.options.context;
 
     if (!annotationId || !Annotations.findOne(annotationId)) {
-      // //console.log("nZ");
+      
       var graph = $(".graph");
       var annotationDocument = {
         assignment: that.options.context.assignment._id,
@@ -8393,6 +8418,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         }
       );
+
       that._updateMarkAssignmentAsCompletedButtonState();
       updateCache(annotationDocument);
     } else {
@@ -8609,7 +8635,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _downloadCSV: function () {
     var that = this;
-    var annotations = that._assembleCSV();
+    var annotations = that._objectsToCSV(that._assembleAnnotationObject());
     // console.log(annotations);
     const blob = new Blob(annotations, {type: "text/csv"});
     const href = URL.createObjectURL(blob);
@@ -8626,7 +8652,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     a.remove();
   },
 
-  _assembleCSV: function () {
+  _assembleAnnotationObject: function () {
     var that = this;
     var allAnnotations = that.vars.chart.annotations.allItems;
     allAnnotations.sort((a, b) => {
@@ -8658,8 +8684,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
 
       var row = {
-        "Index": String(index),
-        "Time": String(element.options.xValue),
+        "Index": index,
+        "Time": element.options.xValue,
         "Type": type,
         "Annotation": annotation,
         "Channels": channel,
@@ -8673,7 +8699,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
   );
-  return that._objectsToCSV(rows);
+  return rows;
 
   },
 
@@ -8813,57 +8839,48 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateChangePointLabelLeft(newAnnotation);
   },
 
- _stringToColour: function(str) {
-    var hash = 0;
-    for (var i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    var colour = '#';
-    for (var i = 0; i < 3; i++) {
-        var value = (hash >> (i * 8)) & 0xFF;
-        colour += ('00' + value.toString(16)).substr(-2);
-    }
-    console.log(colour);
-    console.log(this._newColorShade(colour,-150));
-    return colour;
-},
+  _stringToColour: function(str) {
+      var hash = 0;
+      for (var i = 0; i < str.length; i++) {
+          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      var colour = '#';
+      for (var i = 0; i < 3; i++) {
+          var value = (hash >> (i * 8)) & 0xFF;
+          colour += ('00' + value.toString(16)).substr(-2);
+      }
+      console.log(colour);
+      console.log(this._newColorShade(colour,-150));
+      return colour;
+  },
 
-_newColorShade: function(colorCode, amount)  {
-  var usePound = false;
- 
-    if (colorCode[0] == "#") {
-        colorCode = colorCode.slice(1);
-        usePound = true;
-    }
- 
-    var num = parseInt(colorCode, 16);
- 
-    var r = (num >> 16) + amount;
- 
-    if (r > 255) {
-        r = 255;
-    } else if (r < 0) {
-        r = 0;
-    }
- 
-    var b = ((num >> 8) & 0x00FF) + amount;
- 
-    if (b > 255) {
-        b = 255;
-    } else if (b < 0) {
-        b = 0;
-    }
- 
-    var g = (num & 0x0000FF) + amount;
- 
-    if (g > 255) {
-        g = 255;
-    } else if (g < 0) {
-        g = 0;
-    }
- 
-    return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16);
+  _getAnnotationsFromDB: async function()  {
 
-}
+    let query = await Meteor.call("readAnnotationsFromDB");
+    console.log(query);
+
+  },
+
+  _saveAnnotationsToDB: function() {
+    var that = this;
+    var allAnnotations = that.vars.chart.annotations.allItems;
+    allAnnotations.sort((a, b) => {
+      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
+    });
+    allAnnotations.forEach(element => {
+      Annotations.insert(element);
+    })
+
+  },
+
+  _collapseObjectToArray: function(object) {
+    var array = [];
+    for (const property in object) {
+      array.push(...object[property]);
+    }
+    return array;
+  }
+
+
   
 });

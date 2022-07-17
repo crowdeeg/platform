@@ -1,8 +1,6 @@
 import { dsvFormat } from "d3-dsv";
+import { Mongo } from "meteor/mongo";
 import { Data, Assignments } from "/collections";
-
-
-
 
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
@@ -11,20 +9,33 @@ String.prototype.toPascalCase = function () {
 };
 
 // Database configuration
-const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/test');
 
-const annotation = new mongoose.Schema({
-  Index: Number,
-  Time: Number,
-  Type: String,
-  Annotation: String,
-  Channels: String,
-  Duration: Number,
-  User: String,
-  Comment: String
-  
-});
+const SavePoints = new Mongo.Collection("SavePoints");
+
+// const mongoose = require('mongoose');
+// mongoose.connect('mongodb://localhost:27017/crowdEEG');
+
+// // This represents a single annotation
+// const annotationSchema = new mongoose.Schema({
+//   Index: Number,
+//   Time: Number,
+//   Type: String,
+//   Annotation: String,
+//   Channels: String,
+//   Duration: Number,
+//   User: String,
+//   Comment: String
+// });
+
+// // THis represents a save point that consists of an array of annotations. 
+// const savePointSchema = new mongoose.Schema({
+//   Date: Date,
+//   Annotations: [annotationSchema]
+// })
+
+// const Annotation = mongoose.model("Annotation", annotationSchema);
+// const SavePoint = mongoose.model("SavePoint", savePointSchema);
+
 
 // This should stay Float32Array, as this is required for the use of
 // WebAudio features for digital signal processing in the frontend,
@@ -248,7 +259,7 @@ let WFDB = {
       let downSamplingFactor = 0;
 
       if (options.targetSamplingRate > 0) {
-        console.log("here")
+        // console.log("here")
         downSamplingFactor = Math.round(
           samplingRateRaw / options.targetSamplingRate
         );
@@ -1007,7 +1018,24 @@ Meteor.methods({
     });
   },
 
-  saveAnnotationToDB(annotations) {
-    // Saves the annotation to the local database.
+  async "saveAnnotationsToDB"(annotations) {
+    // Saves the annotation to the database.
+    
+    let savePoint = {
+      Date: Date.now(),
+      Annotations: [],
+    }
+  
+    annotations.forEach( (element) => {
+      savePoint["Annotations"].push(element);
+    })
+    
+    SavePoints.insert(savePoint);
   },
+
+  "readAnnotationsFromDB"() {
+    let query = SavePoints.find();
+    console.log(query);
+    return query;
+  }
 });
