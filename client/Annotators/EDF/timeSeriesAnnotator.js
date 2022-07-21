@@ -1782,7 +1782,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         that._removeAnnotationBox();
 
-        that._refreshAnnotations();
+        // that._refreshAnnotations();
       });
       select.change();
     });
@@ -2510,10 +2510,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     element
       .find(".fa-save")
       .click(function () {
-        that._saveAnnotationsToDB();
         // Meteor.call("saveAnnotationsToDB", that._assembleAnnotationObject());
-        window.alert("All completed annotations now saved to local database!");
-        // that._getAnnotationsFromDB();
+        // window.alert("All completed annotations now saved to local database!");
+        that._refreshAnnotations();
       });
   },
 
@@ -3950,8 +3949,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // use the chart start/end so that data and annotations can never
     // get out of synch
-    // that._refreshAnnotations();
-    console.log("?????????????????????????????");
+    that._refreshAnnotations();
     that._renderChannelSelection();
     that._updateBookmarkCurrentPageButton();
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
@@ -5688,10 +5686,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     
 
-    const channelIndicies = [];
+    const channelIndices = [];
 
     for (let i = 0; i < that.vars.allChannels.length; i++) {
-      channelIndicies.push(i);
+      channelIndices.push(i);
     }
 
     const featureType = that.vars.activeFeatureType;
@@ -5700,7 +5698,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var annotation = that._addAnnotationBoxChangePoint(
       annotationId,
       clickXOneValue,
-      channelIndicies,
+      channelIndices,
       featureType,
       clickXTwoValue,
     );
@@ -6645,8 +6643,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       })
     }
-    
-    
     
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     console.log(annotation);
@@ -7863,8 +7859,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end,
       correctAnswers
     );
+    
     console.log(that.vars.annotationsLoaded);
     console.log(that.vars.annotationsCache[cacheKey]);
+
+
     if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
       var data = that.vars.annotationsCache[cacheKey] || {
         annotations: [],
@@ -7944,7 +7943,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       ).fetch();
     }
-
+    
     that.vars.annotationsLoaded = true;
 
     annotations = annotations.map(function (annotation) {
@@ -7986,8 +7985,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_start,
       window_end
     );
-    console.log(annotations);
     that._displayAnnotations(annotations);
+
+    console.log(annotations);
+      // let annotationArray = that._parseAnnotationDocuments(annotations);
+      // that._redrawAnnotationsFromObjects(annotationArray);
+
   },
 
   _getVisibleAnnotations: function (annotations) {
@@ -8252,11 +8255,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _displayAnnotations: function (annotations) {
+    console.log(annotations);
     var that = this;
+
+      
     var chart = that.vars.chart;
     if (chart === undefined) {
       return;
     }
+
     annotations.forEach((annotation) => {
       var type = annotation.label;
 
@@ -8268,6 +8275,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var end_time = annotation.position.end;
       var confidence = annotation.confidence;
       var comment = annotation.metadata.comment;
+      var featureType = undefined;
+      var annotationLabel = annotation.metadata.annotationLabel;
 
       var channelIndices = annotation.position.channels;
       if (channelIndices === undefined) {
@@ -8276,61 +8285,110 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (!Array.isArray(channelIndices)) {
         channelIndices = [channelIndices];
       }
-      var channelIndicesMapped = [];
-      channelIndices.forEach((channelIndex) => {
-        var channelIndexRecording = that._collapseObjectToArray(
-          annotation.metadata.channels_displayed)[channelIndex];
+      if (start_time === end_time) {
+        newAnnotation = that._addAnnotationBoxChangePoint(
+          annotationId,
+          start_time,
+          channelIndices,
+          featureType,
+          end_time,
+        );
+        newAnnotation.metadata.displayType = 'ChangePointAll';
+        newAnnotation.metadata.annotationLabel = annotationLabel;
+        that._addChangePointLabelLeft(newAnnotation);
+        // solve label bugs with another
+        that._addCommentFormToAnnotationBox(newAnnotation);
+        that._updateChangePointLabelLeft(newAnnotation);
+        that._updateChangePointLabelRight(newAnnotation);
 
-        // console.log(that._collapseObjectToArray(that
-        //   ._getChannelsDisplayed()));
 
-        var channelIndexMapped = that._collapseObjectToArray(that
-          ._getChannelsDisplayed())
-          .indexOf(channelIndexRecording);
-        while (channelIndexMapped > -1) {
-          channelIndicesMapped.push(channelIndexMapped);
-          channelIndexMapped = that._collapseObjectToArray(that
-            ._getChannelsDisplayed())
-            .indexOf(channelIndexRecording, channelIndexMapped + 1);
-        }
-      });
+      } else {
+        //annotation = that._addAnnotationBox(annotationId, start_time, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], that.vars.activeFeatureType);
+        let newAnnotation = that._addAnnotationBox(
+          annotationId,
+          start_time,
+          channelIndices,
+          type,
+          end_time,
+          confidence,
+          comment,
+          annotation
+        );
 
-      channelIndicesMapped
-        .sort()
-        .reverse()
-        .forEach((channelIndexMapped) => {
-          // //console.log("inside thids")
-          ////console.log(channelIndexMapped);
+      var { height, yValue } =
+        that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
 
-          if (!end_time) {
-            annotation = that._addAnnotationChangePoint(
-              annotationId,
-              start_time,
-              [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-              that.vars.activeFeatureType
-            );
-            annotation.update({
-              shape: {
-                params: {
-                  width: 0.01,
-                  height: 8000,
-                },
-              },
-            });
-          } else {
-            //annotation = that._addAnnotationBox(annotationId, start_time, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], that.vars.activeFeatureType);
-            that._addAnnotationBox(
-              annotationId,
-              start_time,
-              channelIndexMapped,
-              type,
-              end_time,
-              confidence,
-              comment,
-              annotation
-            );
-          }
-        });
+        newAnnotation.update({
+          xValue: start_time,
+          yValue: yValue,
+          shape: {
+            params: {
+              width: end_time - start_time,
+              height: height,
+            },
+          },
+        })
+
+        that._updateChangePointLabelRight(newAnnotation);
+
+      }
+
+
+      // var channelIndicesMapped = [];
+      // channelIndices.forEach((channelIndex) => {
+      //   var channelIndexRecording = that._collapseObjectToArray(
+      //     annotation.metadata.channels_displayed)[channelIndex];
+
+      //   // console.log(that._collapseObjectToArray(that
+      //   //   ._getChannelsDisplayed()));
+
+      //   var channelIndexMapped = that._collapseObjectToArray(that
+      //     ._getChannelsDisplayed())
+      //     .indexOf(channelIndexRecording);
+      //   while (channelIndexMapped > -1) {
+      //     channelIndicesMapped.push(channelIndexMapped);
+      //     channelIndexMapped = that._collapseObjectToArray(that
+      //       ._getChannelsDisplayed())
+      //       .indexOf(channelIndexRecording, channelIndexMapped + 1);
+      //   }
+      // });
+
+      // channelIndicesMapped
+      //   .sort()
+      //   .reverse()
+      //   .forEach((channelIndexMapped) => {
+      //     // //console.log("inside thids")
+      //     ////console.log(channelIndexMapped);
+      //     console.log(end_time);
+      //     if (!end_time) {
+      //       annotation = that._addAnnotationChangePointAll(
+      //         annotationId,
+      //         start_time,
+      //         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+      //         that.vars.activeFeatureType
+      //       );
+      //       annotation.update({
+      //         shape: {
+      //           params: {
+      //             width: 0.01,
+      //             height: 8000,
+      //           },
+      //         },
+      //       });
+      //     } else {
+      //       //annotation = that._addAnnotationBox(annotationId, start_time, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], that.vars.activeFeatureType);
+      //       that._addAnnotationBox(
+      //         annotationId,
+      //         start_time,
+      //         channelIndexMapped,
+      //         type,
+      //         end_time,
+      //         confidence,
+      //         comment,
+      //         annotation
+      //       );
+      //     }
+      //   });
     });
   },
 
@@ -8441,6 +8499,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "value.label": type,
         "value.confidence": confidence,
         "value.metadata.comment": comment,
+        "value.position.channels": channels,
+        "value.position.start": start,
+        "value.position.end": end,
         rationale: rationale,
       };
       that._addArbitrationInformationToObject(annotationModifier);
@@ -8854,24 +8915,43 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return colour;
   },
 
-  _getAnnotationsFromDB: async function()  {
-
-    let query = await Meteor.call("readAnnotationsFromDB");
-    console.log(query);
-
-  },
-
-  _saveAnnotationsToDB: function() {
+  _parseAnnotationDocuments: function(documents) {
+    // Parse annotation documents into object format to be redrawn
     var that = this;
-    var allAnnotations = that.vars.chart.annotations.allItems;
-    allAnnotations.sort((a, b) => {
-      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
-    });
-    allAnnotations.forEach(element => {
-      Annotations.insert(element);
+    var annotations = [];
+    documents.forEach( element => {
+
+      let channels = element.position.channels;
+      let duration = element.position.end - element.position.start;
+
+      let type;
+      if (duration === 0) {
+        if (channels.length < that.vars.allChannels.length) {
+          return;
+        }
+        type = "Stage Change";
+      }
+
+      let time = element.position.start;
+      let annotationLabel = element.metadata.annotationLabel;
+      let user = "aaa";
+      let comment = element.metadata.comment;
+
+      var annotation = {
+        "Time": time,
+        "Type": type,
+        "Annotation": annotationLabel,
+        "Channels": channels,
+        "Duration": duration,
+        "User": user,
+        "Comment": comment,
+        // "ID": element.metadata.id,
+        // "DisplayType": element.metadata.displayType,
+      };
     })
 
   },
+
 
   _collapseObjectToArray: function(object) {
     var array = [];
