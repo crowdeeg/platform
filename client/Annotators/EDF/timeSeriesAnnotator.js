@@ -2512,7 +2512,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .click(function () {
         // Meteor.call("saveAnnotationsToDB", that._assembleAnnotationObject());
         // window.alert("All completed annotations now saved to local database!");
-        that._refreshAnnotations();
+        that.vars.chart.annotations.allItems.forEach(annotation => that._saveFeatureAnnotation(annotation));
+
       });
   },
 
@@ -5596,11 +5597,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       events: {
         mouseup: function (event) {
-          $(this.group.element)
+          var element = $(this.group.element);
+          var annotation = this;
+
+          
+          
+          element.mouseout(event => {
+            that._saveFeatureAnnotation(annotation);
+            element.off('mouseout');
+            element.off('mouseup');
+          });
+
+          element
             .find('rect[shape-rendering="crispEdges"]')
             .last()
             .remove();
         },
+
+        // mouseout: function (event) {
+        //   that._saveFeatureAnnotation(this);
+        // }
 
         // dblclick: function (event) {
         //   // deletes the annotation on db click
@@ -5801,16 +5817,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       },
       events: {
         mouseup: function (event) {
-          $(this.group.element)
+          var element = $(this.group.element);
+          var annotation = this;
+          
+          element.mouseout(event => {
+            that._saveFeatureAnnotation(annotation);
+            element.off('mouseout');
+            element.off('mouseup');
+          });
+
+          element
             .find('rect[shape-rendering="crispEdges"]')
             .last()
-            .remove();
-          // that._saveFeatureAnnotation(annotation);
+            .remove()
+          
+          },
 
-        },
+        // click: function (event) {
+        //   that._saveFeatureAnnotation(this);
+        // }
+          
+
       },
     });
-
     // gets the last annotaion
     var annotation = annotations[annotations.length - 1];
     if (!preliminary) {
@@ -6524,10 +6553,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _saveFeatureAnnotation: function (annotation) {
     var that = this;
+
+    console.log(annotation);
+
+
+    
     var annotationId = annotation.metadata.id;
     var type = annotation.metadata.featureType;
     var time_start = that._getAnnotationXMinFixed(annotation);
     var time_end = that._getAnnotationXMaxFixed(annotation);
+    // console.log(time_start);
+    // console.log(time_end);
     var channel = annotation.metadata.channelIndices;
     var confidence = annotation.metadata.confidence;
     var comment = annotation.metadata.comment;
@@ -6602,22 +6638,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._convertChangePointsToBox(annotation);
     }
 
-    if (annotation.metadata.displayType === "Box" && 
-    annotation.metadata.annotationLabel != undefined &&
-    annotation.metadata.annotationLabel != "undefined" &&
-    annotation.metadata.annotationLabel != "(unanalyzable)") {
-      annotation.metadata.channelIndices = that.vars.allChannels.map((element, index) => index);
-      annotation.update({
-        xValue: annotation.options.xValue,
-        yValue: that._getBorderTopForChannelIndex(0),
-        shape: {
-          params: {
-            width: annotation.options.shape.params.width,
-            height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
-          },
-        },
-      })
-    }
 
     // if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
       that._updateChangePointLabelRight(annotation);
@@ -6642,6 +6662,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         }
       })
+    }
+
+    if (annotation.metadata.displayType === "Box" && 
+    annotation.metadata.annotationLabel != undefined &&
+    annotation.metadata.annotationLabel != "undefined" &&
+    annotation.metadata.annotationLabel != "(unanalyzable)" &&
+    annotation.metadata.channelIndices.length != that.vars.allChannels.length) {
+      annotation.metadata.channelIndices = that.vars.allChannels.map((element, index) => index);
+      annotation.update({
+        xValue: annotation.options.xValue,
+        yValue: that._getBorderTopForChannelIndex(0),
+        shape: {
+          params: {
+            width: annotation.options.shape.params.width,
+            height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
+          },
+        },
+      })
+      that._saveFeatureAnnotation(annotation);
     }
     
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
@@ -6915,9 +6954,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMaxFixed: function (annotation) {
-    if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
+    if (annotation.metadata.displayType === 'ChangePoint' || annotation.metadata.displayType === 'ChangePointAll') {
       return parseFloat(annotation.options.xValue).toFixed(2);
     } else {
+      // console.log(annotation.options.xValue);
+      // console.log(annotation.options.shape.params.width);
+      // console.log(annotation.options.shape.params.width + annotation.options.xValue);
       return parseFloat(
         annotation.options.xValue + annotation.options.shape.params.width
       ).toFixed(2);
@@ -7949,6 +7991,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     annotations = annotations.map(function (annotation) {
       var annotationFormatted = annotation.value;
       annotationFormatted.id = annotation._id;
+      annotationFormatted.user = annotation.user;
       annotationFormatted.arbitration = annotation.arbitration;
       annotationFormatted.arbitrationRoundNumber =
         annotation.arbitrationRoundNumber;
@@ -8258,25 +8301,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(annotations);
     var that = this;
 
-      
     var chart = that.vars.chart;
     if (chart === undefined) {
       return;
     }
 
-    annotations.forEach((annotation) => {
+    annotations
+    .sort((a, b) => {
+      return a.position.start - b.position.start})
+    .forEach((annotation) => {
       var type = annotation.label;
 
       // if (that.options.features.order.indexOf(type) < 0) {
       //   return;
       // }
       var annotationId = annotation.id;
-      var start_time = annotation.position.start;
-      var end_time = annotation.position.end;
+      var start_time = parseFloat(annotation.position.start);
+      var end_time = parseFloat(annotation.position.end);
       var confidence = annotation.confidence;
       var comment = annotation.metadata.comment;
       var featureType = undefined;
       var annotationLabel = annotation.metadata.annotationLabel;
+      var user = annotation.user;
+      // var user = annotation.
 
       var channelIndices = annotation.position.channels;
       if (channelIndices === undefined) {
@@ -8293,11 +8340,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           featureType,
           end_time,
         );
-        newAnnotation.metadata.displayType = 'ChangePointAll';
+        newAnnotation.metadata.displayType = channelIndices.length == that.vars.allChannels.length ? 'ChangePointAll' : 'ChangePoint';
         newAnnotation.metadata.annotationLabel = annotationLabel;
-        that._addChangePointLabelLeft(newAnnotation);
+        newAnnotation.metadata.creator = user;
+        newAnnotation.metadata.comment = comment;
         // solve label bugs with another
         that._addCommentFormToAnnotationBox(newAnnotation);
+        that._addChangePointLabelLeft(newAnnotation);
+
         that._updateChangePointLabelLeft(newAnnotation);
         that._updateChangePointLabelRight(newAnnotation);
 
@@ -8309,14 +8359,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           start_time,
           channelIndices,
           type,
-          end_time,
+          undefined,
           confidence,
           comment,
           annotation
         );
+      
+        newAnnotation.metadata.displayType = 'Box';
+        newAnnotation.metadata.annotationLabel = annotationLabel;
+        newAnnotation.metadata.creator = user;
+        newAnnotation.metadata.comment = comment;
 
       var { height, yValue } =
         that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
+
 
         newAnnotation.update({
           xValue: start_time,
@@ -8328,7 +8384,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             },
           },
         })
-
+        
+        that._addCommentFormToAnnotationBox(newAnnotation);
+        that._addChangePointLabelRight(newAnnotation);
         that._updateChangePointLabelRight(newAnnotation);
 
       }
@@ -8482,17 +8540,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     } else {
       // console.log("here");
 
-      // console.log("annotationId: " + annotationId);
-      // console.log("recording_name: " + recording_name);
-      // console.log("type: " + type);
-      // console.log("start: " + start);
-      // console.log("end: " + end);
-      // console.log("channels: " + channels);
-      // console.log("confidence: " + confidence);
-      // console.log("comment: " + comment);
-      // console.log("metadata: " + metadata);
-      // console.log("label: " + annotationLabel);
-      // console.log("rationale: " + rationale);
+      console.log("annotationId: " + annotationId);
+      console.log("recording_name: " + recording_name);
+      console.log("type: " + type);
+      console.log("start: " + start);
+      console.log("end: " + end);
+      console.log("channels: " + channels);
+      console.log("confidence: " + confidence);
+      console.log("comment: " + comment);
+      console.log("metadata: " + metadata);
+      console.log("label: " + annotationLabel);
+      console.log("rationale: " + rationale);
 
       const annotationModifier = {
         "value.metadata.annotationLabel": annotationLabel,
@@ -8752,7 +8810,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "Channels": channel,
         "Duration": duration,
         "User": element.metadata.creator,
-        "Comment": element.metadata.comment.replaceAll(',', '-').replaceAll(';', '--'),
+        "Comment": 
+        // element.metadata.comment.replaceAll(',', '-').replaceAll(';', '--') || 
+        "",
         // "ID": element.metadata.id,
         // "DisplayType": element.metadata.displayType,
       };
@@ -8915,42 +8975,42 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return colour;
   },
 
-  _parseAnnotationDocuments: function(documents) {
-    // Parse annotation documents into object format to be redrawn
-    var that = this;
-    var annotations = [];
-    documents.forEach( element => {
+  // _parseAnnotationDocuments: function(documents) {
+  //   // Parse annotation documents into object format to be redrawn
+  //   var that = this;
+  //   var annotations = [];
+  //   documents.forEach( element => {
 
-      let channels = element.position.channels;
-      let duration = element.position.end - element.position.start;
+  //     let channels = element.position.channels;
+  //     let duration = element.position.end - element.position.start;
 
-      let type;
-      if (duration === 0) {
-        if (channels.length < that.vars.allChannels.length) {
-          return;
-        }
-        type = "Stage Change";
-      }
+  //     let type;
+  //     if (duration === 0) {
+  //       if (channels.length < that.vars.allChannels.length) {
+  //         return;
+  //       }
+  //       type = "Stage Change";
+  //     }
 
-      let time = element.position.start;
-      let annotationLabel = element.metadata.annotationLabel;
-      let user = "aaa";
-      let comment = element.metadata.comment;
+  //     let time = element.position.start;
+  //     let annotationLabel = element.metadata.annotationLabel;
+  //     let user = "aaa";
+  //     let comment = element.metadata.comment;
 
-      var annotation = {
-        "Time": time,
-        "Type": type,
-        "Annotation": annotationLabel,
-        "Channels": channels,
-        "Duration": duration,
-        "User": user,
-        "Comment": comment,
-        // "ID": element.metadata.id,
-        // "DisplayType": element.metadata.displayType,
-      };
-    })
+  //     var annotation = {
+  //       "Time": time,
+  //       "Type": type,
+  //       "Annotation": annotationLabel,
+  //       "Channels": channels,
+  //       "Duration": duration,
+  //       "User": user,
+  //       "Comment": comment,
+  //       // "ID": element.metadata.id,
+  //       // "DisplayType": element.metadata.displayType,
+  //     };
+  //   })
 
-  },
+  // },
 
 
   _collapseObjectToArray: function(object) {
