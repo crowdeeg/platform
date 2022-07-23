@@ -565,6 +565,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // annotationCrosshairCount: 0,
       annotationCrosshairs: [],
       annotationMode: undefined,
+      selectedAnnotation: undefined,
     };
     if (that._getMontages()) {
       that.vars.currentMontage =
@@ -2770,6 +2771,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._jumpToClosestDisagreementWindow(-1);
     } else if (keyCode == 68) {
       that._jumpToClosestDisagreementWindow(1);
+    } else if (keyCode >= 48 && keyCode <= 57) {
+      e.preventDefault();
+      annotation = that.vars.selectedAnnotation;
+
+      if (annotation) {1
+        featureList = that._getAnnotationLabelFromdisplayType(annotation);
+        if (keyCode != 48) {
+          feature = featureList[keyCode - 48];
+        } else {
+          feature = featureList[featureList.length - 2];
+        }
+        if (!feature) {
+          return;
+        }
+        annotation.metadata.annotationLabel = feature;
+        that._saveFeatureAnnotation(annotation);
+      }
+      
+      // var featureClassButton = $(that.element)
+      //   .find(".feature")
+      //   .eq(keyCode - 49);
+      // if (featureClassButton) {
+      //   that._selectFeatureClass(featureClassButton);
+      // }
+      return;
+      // separate case for the numpad keys, because javascript is a stupid language
+    } else if (keyCode >= 97 && keyCode <= 105) {
+      e.preventDefault();
+      var featureClassButton = $(that.element)
+        .find(".feature")
+        .eq(keyCode - 97);
+      if (featureClassButton) {
+        that._selectFeatureClass(featureClassButton);
+      }
+      return;
     } else if (that.options.showSleepStageButtons) {
       var sleepStageShortCutPressed = false;
       $(that.element)
@@ -2800,25 +2836,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         return;
       }
       // make it possible to choose feature classificaiton using number keys
-    } else if (keyCode >= 49 && keyCode <= 57) {
-      e.preventDefault();
-      var featureClassButton = $(that.element)
-        .find(".feature")
-        .eq(keyCode - 49);
-      if (featureClassButton) {
-        that._selectFeatureClass(featureClassButton);
-      }
-      return;
-      // separate case for the numpad keys, because javascript is a stupid language
-    } else if (keyCode >= 97 && keyCode <= 105) {
-      e.preventDefault();
-      var featureClassButton = $(that.element)
-        .find(".feature")
-        .eq(keyCode - 97);
-      if (featureClassButton) {
-        that._selectFeatureClass(featureClassButton);
-      }
-      return;
     }
   },
 
@@ -5594,14 +5611,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       labels: [{
         text: 'Max value'
     }],
+      
 
       events: {
         mouseup: function (event) {
           var element = $(this.group.element);
           var annotation = this;
-
-          
-          
           element.mouseout(event => {
             that._saveFeatureAnnotation(annotation);
             element.off('mouseout');
@@ -5613,6 +5628,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             .last()
             .remove();
         },
+
+        mouseover: function (event) {
+          that.vars.selectedAnnotation = this;
+        },
+
+        mouseleave: function (event) {
+          that.vars.selectedAnnotation = undefined;
+        }
 
         // mouseout: function (event) {
         //   that._saveFeatureAnnotation(this);
@@ -5816,6 +5839,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         params: shapeParams,
       },
       events: {
+
+        mouseover: function (event) {
+          that.vars.selectedAnnotation = this;
+        },
+
+        mouseleave: function (event) {
+          that.vars.selectedAnnotation = undefined;
+        },
+
         mouseup: function (event) {
           var element = $(this.group.element);
           var annotation = this;
@@ -6553,10 +6585,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _saveFeatureAnnotation: function (annotation) {
     var that = this;
-
-    console.log(annotation);
-
-
     
     var annotationId = annotation.metadata.id;
     var type = annotation.metadata.featureType;
@@ -6686,7 +6714,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     console.log(annotation);
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
-
   },
 
   _nukeAnnotation: function (annotation) {
