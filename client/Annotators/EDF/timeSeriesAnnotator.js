@@ -565,7 +565,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // annotationCrosshairCount: 0,
       annotationCrosshairs: [],
       annotationMode: undefined,
+      // For selection of annotations to be changed by the hot key
       selectedAnnotation: undefined,
+
+      // A hash set of all the annotation ids in that have been rendered, used to prevent repeated rendering
+      annotationIDSet: new Set(),
     };
     if (that._getMontages()) {
       that.vars.currentMontage =
@@ -1783,7 +1787,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         that._removeAnnotationBox();
 
-        // that._refreshAnnotations();
       });
       select.change();
     });
@@ -5539,6 +5542,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     annotationData,
   ) {
     var that = this;
+
+    that.vars.annotationIDSet.add(annotationId);
     // //console.log("anotater");
     // gets all the annotations
     var annotations = that.vars.chart.annotations.allItems;
@@ -5548,18 +5553,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (!Array.isArray(channelIndices)) {
       channelIndices = [channelIndices];
     }
-    if (
-      annotations.some(
-        // checks if the annotation already exists
-        (a) =>
-          a.metadata.id == annotationId &&
-          (a.metadata.channelIndices == channelIndices ||
-            (channelIndices.length == 1 &&
-              a.metadata.channelIndices.indexOf(channelIndices[0]) > -1))
-      )
-    ) {
-      return;
-    }
+    // if (
+    //   annotations.some(
+    //     // checks if the annotation already exists
+    //     (a) =>
+    //       a.metadata.id == annotationId &&
+    //       (a.metadata.channelIndices == channelIndices ||
+    //         (channelIndices.length == 1 &&
+    //           a.metadata.channelIndices.indexOf(channelIndices[0]) > -1))
+    //   )
+    // ) {
+    //   return;
+    // }
 
     // // sets timeEnd to the end time if it is defined
     // var timeEnd = timeEnd !== undefined ? timeEnd : false;
@@ -5765,24 +5770,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // gets all the annotations
     var annotations = that.vars.chart.annotations.allItems;
 
-
+    that.vars.annotationIDSet.add(annotationId);
 
     // makes the channelIndicies an array
     if (!Array.isArray(channelIndices)) {
       channelIndices = [channelIndices];
     }
-    if (
-      annotations.some(
-        // checks if the annotation already exists
-        (a) =>
-          a.metadata.id == annotationId &&
-          (a.metadata.channelIndices == channelIndices ||
-            (channelIndices.length == 1 &&
-              a.metadata.channelIndices.indexOf(channelIndices[0]) > -1))
-      )
-    ) {
-      return;
-    }
+    // if (
+    //   annotations.some(
+    //     // checks if the annotation already exists
+    //     (a) =>
+    //       a.metadata.id == annotationId &&
+    //       (a.metadata.channelIndices == channelIndices ||
+    //         (channelIndices.length == 1 &&
+    //           a.metadata.channelIndices.indexOf(channelIndices[0]) > -1))
+    //   )
+    // ) {
+    //   return;
+    // }
 
     // sets timeEnd to the end time if it is defined
     var timeEnd = timeEnd !== undefined ? timeEnd : false;
@@ -6359,7 +6364,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const y = 0;
     const height = 26;
     const width = 200 + that._getTextWidth(label, 12);
-    var content = `<div id="prevPageLatestLabel">Latest Change Point Previous Page: <b>` + label
+    var content = `<div id="prevPageLatestLabel">Latest Stage Change Previous Page: <b>` + label
     + '</b></div>';
 
     chart.renderer.html(content, x+7.5, y+17)
@@ -6879,8 +6884,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.currentWindowStart,
       that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
     );
-    
-
   },
 
   _saveArtifactAnnotation: function (type) {
@@ -7929,7 +7932,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       correctAnswers
     );
     
-    console.log(that.vars.annotationsLoaded);
     console.log(that.vars.annotationsCache[cacheKey]);
 
 
@@ -8058,8 +8060,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._displayAnnotations(annotations);
 
     console.log(annotations);
-      // let annotationArray = that._parseAnnotationDocuments(annotations);
-      // that._redrawAnnotationsFromObjects(annotationArray);
 
   },
 
@@ -8343,6 +8343,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //   return;
       // }
       var annotationId = annotation.id;
+
+      if (that.vars.annotationIDSet.has(annotationId)) {
+        return;
+      }
+
       var start_time = parseFloat(annotation.position.start);
       var end_time = parseFloat(annotation.position.end);
       var confidence = annotation.confidence;
@@ -8561,23 +8566,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         }
       );
+      // that.vars.annotationIDSet.add(annotationDocument.id);
 
       that._updateMarkAssignmentAsCompletedButtonState();
       updateCache(annotationDocument);
     } else {
       // console.log("here");
 
-      console.log("annotationId: " + annotationId);
-      console.log("recording_name: " + recording_name);
-      console.log("type: " + type);
-      console.log("start: " + start);
-      console.log("end: " + end);
-      console.log("channels: " + channels);
-      console.log("confidence: " + confidence);
-      console.log("comment: " + comment);
-      console.log("metadata: " + metadata);
-      console.log("label: " + annotationLabel);
-      console.log("rationale: " + rationale);
+      // console.log("annotationId: " + annotationId);
+      // console.log("recording_name: " + recording_name);
+      // console.log("type: " + type);
+      // console.log("start: " + start);
+      // console.log("end: " + end);
+      // console.log("channels: " + channels);
+      // console.log("confidence: " + confidence);
+      // console.log("comment: " + comment);
+      // console.log("metadata: " + metadata);
+      // console.log("label: " + annotationLabel);
+      // console.log("rationale: " + rationale);
+
+      // that.vars.annotationIDSet.add(annotationId);
 
       const annotationModifier = {
         "value.metadata.annotationLabel": annotationLabel,
