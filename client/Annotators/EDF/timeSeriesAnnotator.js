@@ -2747,7 +2747,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // left arrow, a, page down
       // backward
       e.preventDefault();
-      that._shiftChart(-1);
+      that._shiftChart(-1/5);
       return;
     } else if (
       (keyCode == 39 /* || keyCode == 68 */ || keyCode == 33) &&
@@ -2756,19 +2756,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // right arrow, d, page up
       // forward
       e.preventDefault();
-      that._shiftChart(1);
+      that._shiftChart(1/5);
       return;
     } else if (keyCode == 38) {
       // up arrow
       // fast foward
       e.preventDefault();
-      that._updateChannelGain("step_increase");
+      // that._updateChannelGain("step_increase");
+      that._shiftChart(1);
       return;
     } else if (keyCode == 40) {
       // down arrow
       // fast backward
       e.preventDefault();
-      that._updateChannelGain("step_decrease");
+      // that._updateChannelGain("step_decrease");
+      that._shiftChart(-1);
       return;
     } else if (keyCode == 65) {
       that._jumpToClosestDisagreementWindow(-1);
