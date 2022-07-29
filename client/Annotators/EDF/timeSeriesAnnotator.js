@@ -3918,7 +3918,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._scaleAllToScreen();
       that.vars.chart.redraw();
 
-
       that._addChangePointLabelFixed();
       // see http://jsfiddle.net/ajxyuax2/1/ 
     }
@@ -3978,6 +3977,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
   
     that._updateChangePointLabelFixed();
+    that.vars.chart.annotations.allItems.forEach(annotation => {that._updateControlPoint(annotation)});
   },
 
   //checks if an object is empty
@@ -5831,6 +5831,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //   shapeParams.strokeWidth = 0;
     // }
 
+
+
     //adds the annotation box to the chart
     that.vars.chart.addAnnotation({
       xValue: timeStart,
@@ -5839,6 +5841,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       allowDragY: false,
       anchorX: "left",
       anchorY: "top",
+
+      
 
       shape: {
         type: "rect",
@@ -5914,6 +5918,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     // that._addCommentFormToAnnotationBox(annotation);
     // console.log(annotation);
+
+    
+
     return annotation;
   },
 
@@ -6464,8 +6471,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // htmlContext.hide();
 
       
-      var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Right>`);
-      textarea1.css({
+      var textarea = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}Right>`);
+      textarea.css({
         position: "relative",
         display: "table",
         width: "100%",
@@ -6475,7 +6482,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         "white-space": "nowrap"
       });
 
-      textarea1.val(annotation.metadata.annotationLabel);
+      textarea.val(annotation.metadata.annotationLabel);
       
       var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
 
@@ -6496,8 +6503,159 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var body = $("<body>").addClass("changePointLabelRight");
       body.css({zIndex: 0});
   
+      body.append(textarea);
+      htmlContext.append(body);
+  },
+
+  _getTextWidth: function (text, font) {
+    var f = font || '12px arial',
+      o = $('<div></div>')
+            .text(text)
+            .css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden', 'font': f})
+            .appendTo($('body')),
+      w = o.width();
+    o.remove();
+
+    if (w != 0) {w+=6;}
+
+    return w;
+  },
+
+  _addBoxControlPoint: function (annotation) {
+    // Adds the right label tag denoting the new state to the bottom of a change point annotation.
+  
+      var that = this;
+      // var annotations = that.vars.chart.annotations.allItems;
+  
+      var annotationElement = $(annotation.group.element);
+  
+      var htmlContext = $(
+        document.createElementNS("http://www.w3.org/2000/svg", "foreignObject")
+      );
+
+      var textarea1 = $(`<textarea rows="1" cols="20" id=${annotation.metadata.id}ControlPoint>`);
+      textarea1.css({
+        position: "relative",
+        display: "table",
+        width: "100%",
+        height: "100%",
+        backgroundColor: "white",
+        zIndex: 10,
+        cursor: "grab",
+        "white-space": "nowrap",
+        "border-width": "thin"
+      });
+
+      // drag function for box annotations.
+      var chart = that.vars.chart;
+      var doc = $(document);
+
+      // the container that the chart is in
+      var container = chart.container;
+      function drag(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        //links the mousemove event with the step function defined later on
+        // Highcharts.addEvent(document, "mousemove", step);
+        doc.mousemove( function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          annotation.update(getAnnotationAttributes(e));
+          that._updateControlPoint(annotation);
+        });
+
+        doc.mouseup(function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          doc.off('mousemove');
+          doc.off('mouseup');
+          
+          var x = e.clientX - container.offsetLeft;
+
+          if (annotation) {
+            annotation.update(getAnnotationAttributes(e));
+            that._updateControlPoint(annotation);
+          }
+          annotation.outsideClickHandler = function () {};
+          $("html").on("mousedown", annotation.outsideClickHandler);
+        });
+        
+
+        // gets relevant annotation information about the annotation
+        function getAnnotationAttributes(e) {
+          var x = e.clientX - container.offsetLeft,
+          width = that._convertPixelsToValue(parseFloat(x), "x")- annotation.options.xValue;
+
+          if (width < 0) {
+            width = 0.001;
+          }
+
+          return {
+            shape: {
+              xValue: annotation.options.xValue,
+              params: {
+                width: width,
+                height: annotation.options.shape.params.height,
+              },
+            },
+          };
+        }
+
+        // updates the annotation box with relevant channel indicies that it's selecting
+      }
+
+      textarea1.mouseover(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        textarea1.mousedown(function(e){
+          drag(e);
+        }) ;
+
+      });
+      annotationElement.append(htmlContext);
+
+      var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+
+      const height = 10;
+      const width = 10;
+
+      htmlContext
+        .attr({
+          width: width,
+          height: height,
+          zIndex: 0,
+          // y: `${annotation.group.element.getBBox().height-height}`,
+          y: annotationHeight / 2 - height,
+          x: that._convertValueToPixelsLength(annotation.options.shape.params.width, "x") - width/2,
+        });
+      
+  
+      var body = $("<body>").addClass("controlPoint");
+      body.css({zIndex: 0});
+  
       body.append(textarea1);
       htmlContext.append(body);
+      annotation.metadata.controlPointAdded = true;
+  },
+
+  _updateControlPoint: function (annotation) {
+    var that = this;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+
+    const height = 10;
+    const width = 10;
+
+    var element = $(`#${annotation.metadata.id}ControlPoint`);
+    element.parent().parent().attr(
+        {
+          width: width,
+          height: height,
+          zIndex: 0,
+          y: annotationHeight / 2 - height,
+          x: that._convertValueToPixelsLength(annotation.options.shape.params.width, "x") - width/2,
+        }
+    )
+
   },
 
   _getTextWidth: function (text, font) {
@@ -6667,6 +6825,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(annotation.metadata.id);
     }
 
+    if (annotation.metadata.displayType === "Box") {
+      if (!annotation.metadata.controlPointAdded) {
+        that._addBoxControlPoint(annotation);
+      }
+      that._updateControlPoint(annotation);
+    }
+
 
     // convert changepoint annotations to box annotations where neccesary.
     if (annotation.metadata.annotationLabel == '(end previous state)') {
@@ -6717,7 +6882,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       that._saveFeatureAnnotation(annotation);
     }
-    
+
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     console.log(annotation);
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
@@ -8422,6 +8587,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._addCommentFormToAnnotationBox(newAnnotation);
         that._addChangePointLabelRight(newAnnotation);
         that._updateChangePointLabelRight(newAnnotation);
+        if (!newAnnotation.metadata.controlPointAdded) {
+          that._addBoxControlPoint(newAnnotation);
+        }        
+
 
       }
 
@@ -8587,7 +8756,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // console.log("label: " + annotationLabel);
       // console.log("rationale: " + rationale);
 
-      // that.vars.annotationIDSet.add(annotationId);
+      that.vars.annotationIDSet.add(annotationId);
 
       const annotationModifier = {
         "value.metadata.annotationLabel": annotationLabel,
