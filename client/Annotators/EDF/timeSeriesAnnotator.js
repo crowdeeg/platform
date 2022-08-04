@@ -708,7 +708,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             <button type="button" class="btn btn-default fa fa-save" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
-                            <input type="file" accept=".csv, .json" multiple id="CSVFile">\
+                            <input type="file" accept=".csv, .json" multiple id="File">\
                         </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
@@ -2377,13 +2377,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 
   _performCrosshairSync: function (diff) {
+    // If we provide a diff parameter, use this parameter as the alignment time difference offset.
     var that = this;
     let crosshairPosition = that.vars.crosshairPosition;
     let ids = crosshairPosition.map((rec) => rec.dataId);
     let currentDiff = ids.map((id) => that.vars.channelTimeshift[id]);
-    if (crosshairPosition.length === 2) {
+    if (crosshairPosition.length === 2 || diff) {
       // calculate the difference between two recordings after adding the current difference
-      if (!diff) { let diff =
+      if (!diff) { diff =
         crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds; }
       that.vars.currentTimeDiff += diff;
       console.log("=======" + diff + "======");
@@ -2520,7 +2521,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     element
       .find(".fa-upload")
       .click(function () {
-        that._parseCSV();
+        that._parseFile();
       });
     
     element
@@ -9076,29 +9077,46 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
 
-  _parseCSV: function () {
+  _parseFile: function () {
     var that = this;
-    const csvFile = document.getElementById("CSVFile");
+    const csvFile = document.getElementById("File");
     console.log(csvFile.files);
 
-    Array.prototype.forEach.call(
-    csvFile.files, function(input) {
+    var alignmentLoaded = false;
+    
+    for (let i = 0; i < csvFile.files.length; i++) {
+
+      const input = csvFile.files[i];
 
       if (input) {
         const reader = new FileReader();
   
         reader.onload = function (e) {
           const text = e.target.result;
-          const data = that._CSVToArray(text);
-          console.log(data)
-          that._redrawAnnotationsFromObjects(data);
+          console.log(text);
+
+
+          if (input.type === "text/csv") {
+            const data = that._CSVToArray(text);
+            that._redrawAnnotationsFromObjects(data);
+          } else if (input.type === "application/json" && !alignmentLoaded) {
+            console.log(text);
+            const data = JSON.parse(text);
+            diff = data[Object.keys(data)[0]];
+            that._performOffsetSync();
+            that._performCrosshairSync(diff);
+            alignmentLoaded = true;           
+          }
         };
   
         reader.readAsText(input);
   
       }
 
-    });
+
+    }
+
+    
 
     
     
@@ -9143,7 +9161,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       set.add(String(element.options.xValue)+element.metadata.annotationLabel);
     })
     objArr.forEach((element) => {
-      if (!set.has(String(element["Time"])+element["Annotation"])) {
+      if (!set.has(String(element["Time"].toFixed(2))+element["Annotation"])) {
         if (element["Type"] != "Stage Change") {
           console.log(element)
           that._redrawEventAnnotationFromObject(element);
