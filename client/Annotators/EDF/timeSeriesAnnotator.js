@@ -708,7 +708,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             <button type="button" class="btn btn-default fa fa-save" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
-                            <input type="file" accept=".csv" id="CSVFile">\
+                            <input type="file" accept=".csv, .json" multiple id="CSVFile">\
                         </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
@@ -2365,18 +2365,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _performCrosshairSync: function () {
+  _assembleTimeAlignmentObject: function () {
+    // Prepares the JSON object for export of time alignment information as a JSON file
+
+    return {
+      User: "user",
+      Files: "files",
+      TimeDifference: 0
+    }
+  },
+
+
+  _performCrosshairSync: function (diff) {
     var that = this;
     let crosshairPosition = that.vars.crosshairPosition;
     let ids = crosshairPosition.map((rec) => rec.dataId);
     let currentDiff = ids.map((id) => that.vars.channelTimeshift[id]);
     if (crosshairPosition.length === 2) {
       // calculate the difference between two recordings after adding the current difference
-      let diff =
-        crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
+      if (!diff) { let diff =
+        crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds; }
       that.vars.currentTimeDiff += diff;
       console.log("=======" + diff + "======");
-      $(".time_sync").text("Time Difference: " + that.vars.currentTimeDiff);
+      $(".time_sync").text("Time Difference: " + that.vars.currentTimeDiff + " s");
       if (diff > 0) {
         if (currentDiff[1]) {
           let remainder = diff - currentDiff[1];
@@ -2503,6 +2514,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .find(".fa-download")
       .click(function () {
         that._downloadCSV();
+        that._downloadJSON();
       });
 
     element
@@ -8034,12 +8046,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _loadChannelTimeshiftFromPreference: function () {
+    console.log("getting preference");
     var that = this;
     let timeshiftFromPreference =
       that.options.context.preferences.annotatorConfig.channelTimeshift;
     that.vars.channelTimeshift = timeshiftFromPreference
       ? timeshiftFromPreference
       : {};
+    console.log(timeshiftFromPreference);
+    if (timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]]) {
+      $(".time_sync").text("Time Difference: " + timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]] + " s");
+    }
+    
   },
 
   _getCurrAssignment() {
@@ -8977,6 +8995,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     a.remove();
   },
 
+  _downloadJSON: function () {
+    var that = this;
+    // console.log(annotations);
+    var obj = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
+    var downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href",     dataStr);
+    downloadAnchorNode.setAttribute("download", "alignment.json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  },
+
   _assembleAnnotationObject: function () {
     var that = this;
     var allAnnotations = that.vars.chart.annotations.allItems;
@@ -9048,21 +9079,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _parseCSV: function () {
     var that = this;
     const csvFile = document.getElementById("CSVFile");
-    const input = csvFile.files[0];
+    console.log(csvFile.files);
 
-    if (input) {
-      const reader = new FileReader();
+    Array.prototype.forEach.call(
+    csvFile.files, function(input) {
 
-      reader.onload = function (e) {
-        const text = e.target.result;
-        const data = that._CSVToArray(text);
-        console.log(data)
-        that._redrawAnnotationsFromObjects(data);
-      };
+      if (input) {
+        const reader = new FileReader();
+  
+        reader.onload = function (e) {
+          const text = e.target.result;
+          const data = that._CSVToArray(text);
+          console.log(data)
+          that._redrawAnnotationsFromObjects(data);
+        };
+  
+        reader.readAsText(input);
+  
+      }
 
-      reader.readAsText(input);
+    });
 
-    }
+    
     
   },
 
