@@ -2469,6 +2469,17 @@ AdminConfig = {
     },
 };
 
+// File upload schema initializations
+const EDFFile =  new FilesCollection({
+    debug: true,
+    collectionName: 'EDFFile',
+    allowClientCode: false, // Disallow remove files from Client
+    storagePath: 'assets/app/uploads'
+  }
+);
+exports.EDFFile = EDFFile;
+
+
 Meteor.startup(() => {
     AdminTables.Users.options.columns.splice(1, 0, { title: 'Username', data: 'username' });
     AdminTables.Users.options.columns.splice(3, 0, { title: 'Online', data: 'status.online' });

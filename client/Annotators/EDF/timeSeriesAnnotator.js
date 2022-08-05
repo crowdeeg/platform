@@ -1,5 +1,5 @@
 import { ReactiveVar } from "meteor/reactive-var";
-import { Annotations, Preferences, Assignments, Data } from "/collections";
+import { Annotations, Preferences, Assignments, Data, EDFFile } from "/collections";
 import swal from "sweetalert2";
 
 var Highcharts = require("highcharts/highstock");
@@ -708,7 +708,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             <button type="button" class="btn btn-default fa fa-save" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
-                            <input type="file" accept=".csv, .json" multiple id="File">\
+                            <input type="file" accept=".csv, .json, .edf" multiple id="File">\
                         </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
@@ -9106,6 +9106,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that._performOffsetSync();
             that._performCrosshairSync(diff);
             alignmentLoaded = true;           
+          } else {
+            console.log("initiating file upload");
+
+            var uploadInstance = EDFFile.insert({
+              file: input,
+              chunkSize: 'dynamic'
+            }, false);
+    
+
+    
+            uploadInstance.on('end', function(error, fileObj) {
+              if (error) {
+                window.alert('Error during upload: ' + error.reason);
+              } else {
+                window.alert('File "' + fileObj.name + '" successfully uploaded');
+              }
+            });
+    
+            uploadInstance.start();
+          
           }
         };
   

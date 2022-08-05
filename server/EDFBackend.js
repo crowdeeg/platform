@@ -8,33 +8,7 @@ String.prototype.toPascalCase = function () {
 	}).replace(/\s/g, "");
 };
 
-// Database configuration
 
-const SavePoints = new Mongo.Collection("SavePoints");
-
-// const mongoose = require('mongoose');
-// mongoose.connect('mongodb://localhost:27017/crowdEEG');
-
-// // This represents a single annotation
-// const annotationSchema = new mongoose.Schema({
-//   Index: Number,
-//   Time: Number,
-//   Type: String,
-//   Annotation: String,
-//   Channels: String,
-//   Duration: Number,
-//   User: String,
-//   Comment: String
-// });
-
-// // THis represents a save point that consists of an array of annotations. 
-// const savePointSchema = new mongoose.Schema({
-//   Date: Date,
-//   Annotations: [annotationSchema]
-// })
-
-// const Annotation = mongoose.model("Annotation", annotationSchema);
-// const SavePoint = mongoose.model("SavePoint", savePointSchema);
 
 
 // This should stay Float32Array, as this is required for the use of
@@ -1018,24 +992,24 @@ Meteor.methods({
     });
   },
 
-  async "saveAnnotationsToDB"(annotations) {
-    // Saves the annotation to the database.
+  // async "saveAnnotationsToDB"(annotations) {
+  //   // Saves the annotation to the database.
     
-    let savePoint = {
-      Date: Date.now(),
-      Annotations: [],
-    }
+  //   let savePoint = {
+  //     Date: Date.now(),
+  //     Annotations: [],
+  //   }
   
-    annotations.forEach( (element) => {
-      savePoint["Annotations"].push(element);
-    })
+  //   annotations.forEach( (element) => {
+  //     savePoint["Annotations"].push(element);
+  //   })
     
-    SavePoints.insert(savePoint);
-  },
+  //   SavePoints.insert(savePoint);
+  // },
 
-  "readAnnotationsFromDB"() {
-    let query = SavePoints.find();
-    console.log(query);
-    return query;
-  }
+  // "readAnnotationsFromDB"() {
+  //   let query = SavePoints.find();
+  //   console.log(query);
+  //   return query;
+  // }
 });

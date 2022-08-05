@@ -7,6 +7,9 @@ import {
 	Preferences,
 } from "/collections";
 
+import { FilesCollection } from 'meteor/ostrio:files';
+
+
 const userAccounts = {
 	ADMIN: {
 		username: "Admin User",
@@ -27,6 +30,10 @@ const userAccounts = {
 };
 const rootUser = userAccounts["ADMIN"];
 const testUser = userAccounts["TEST"];
+
+
+
+
 
 const recordingPaths = [
   // { path: "/physionet/edfx/SC4001E0-PSG.edf", source: "PSG" },
