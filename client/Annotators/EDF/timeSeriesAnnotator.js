@@ -6,6 +6,7 @@ var Highcharts = require("highcharts/highstock");
 require("highcharts-annotations")(Highcharts);
 require("highcharts-boost")(Highcharts);
 
+
 $.widget("crowdeeg.TimeSeriesAnnotator", {
   // initial options when the widget is created
   options: {
@@ -9092,14 +9093,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         const reader = new FileReader();
   
         reader.onload = function (e) {
-          const text = e.target.result;
-          console.log(text);
-
-
           if (input.type === "text/csv") {
+            const text = e.target.result;
+            console.log(text);
             const data = that._CSVToArray(text);
             that._redrawAnnotationsFromObjects(data);
           } else if (input.type === "application/json" && !alignmentLoaded) {
+            const text = e.target.result;
             console.log(text);
             const data = JSON.parse(text);
             diff = data[Object.keys(data)[0]];
@@ -9128,18 +9128,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           
           }
         };
-  
         reader.readAsText(input);
-  
       }
-
-
     }
-
-    
-
-    
-    
   },
 
   _CSVToArray: function(str, delimiter = ",") {
