@@ -709,7 +709,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             <button type="button" class="btn btn-default fa fa-save" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
-                            <input type="file" accept=".csv, .json, .edf" multiple id="File">\
+                            <input type="file" accept=".csv, .json" multiple id="File">\
                         </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
                                 <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
@@ -1721,7 +1721,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       assign = Assignments.find(
         {
           task: that.options.context.task._id,
-          dataFiles: that.options.context.dataset.map((data) => data._id),
+          // dataFiles: that.options.context.dataset.map((data) => data._id),
         },
         {
           sort: { updatedAt: -1 },
@@ -2528,8 +2528,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     element
       .find(".fa-save")
       .click(function () {
-        // Meteor.call("saveAnnotationsToDB", that._assembleAnnotationObject());
-        // window.alert("All completed annotations now saved to local database!");
+        console.log(that.vars.chart.annotations.allItems);
         that.vars.chart.annotations.allItems.forEach(annotation => that._saveFeatureAnnotation(annotation));
 
       });
@@ -8056,7 +8055,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       ? timeshiftFromPreference
       : {};
     console.log(timeshiftFromPreference);
-    if (timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]]) {
+    if (timeshiftFromPreference && timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]]) {
       $(".time_sync").text("Time Difference: " + timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]] + " s");
     }
     
@@ -8145,22 +8144,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var annotations;
 
     if (Roles.userIsInRole(Meteor.userId(), "admin")) {
-      if (that.options.features.showAllBoxAnnotations == "all") {
-        //     //console.log("inside annotate");
-        //grab annotations from all users
-        ////console.log(that.options.context.data._id);
-        // //console.log(that.options.context.assignment._id);
-        annotations = Annotations.find(
-          {
-              assignment: that.options.context.assignment._id,
-            dataFiles: that.options.context.dataset.map((data) => data._id),
-            type: "SIGNAL_ANNOTATION",
-          },
-          {
-            sort: { updatedAt: -1 },
-          }
-        ).fetch();
-      } else if (that.options.features.showAllBoxAnnotations == "my") {
+      // Devil's bargin quick fix: assume the user only wants his own annotations
+
+      // if (that.options.features.showAllBoxAnnotations == "all") {
+      //   //     //console.log("inside annotate");
+      //   //grab annotations from all users
+      //   ////console.log(that.options.context.data._id);
+      //   // //console.log(that.options.context.assignment._id);
+      //   annotations = Annotations.find(
+      //     {
+      //         assignment: that.options.context.assignment._id,
+      //       dataFiles: that.options.context.dataset.map((data) => data._id),
+      //       type: "SIGNAL_ANNOTATION",
+      //     },
+      //     {
+      //       sort: { updatedAt: -1 },
+      //     }
+      //   ).fetch();
+      // } else if (that.options.features.showAllBoxAnnotations == "my") {
         //grab annotations from this current admin user
         annotations = Annotations.find(
           {
@@ -8173,20 +8174,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             sort: { updatedAt: -1 },
           }
         ).fetch();
-      } else if (that.options.features.showAllBoxAnnotations != "") {
-        //grab annotations from the selected user
-        annotations = Annotations.find(
-          {
-            assignment: that.options.context.assignment._id,
-            dataFiles: that.options.context.dataset.map((data) => data._id),
-            user: that.options.features.showAllBoxAnnotations,
-            type: "SIGNAL_ANNOTATION",
-          },
-          {
-            sort: { updatedAt: -1 },
-          }
-        ).fetch();
-      }
+      // } 
+      // else if (that.options.features.showAllBoxAnnotations != "") {
+      //   //grab annotations from the selected user
+      //   annotations = Annotations.find(
+      //     {
+      //       assignment: that.options.context.assignment._id,
+      //       dataFiles: that.options.context.dataset.map((data) => data._id),
+      //       user: that.options.features.showAllBoxAnnotations,
+      //       type: "SIGNAL_ANNOTATION",
+      //     },
+      //     {
+      //       sort: { updatedAt: -1 },
+      //     }
+      //   ).fetch();
+      //   console.log(8189);
+      //   console.log(annotations);
+
+      // }
     } else {
       //grab annotations from this current non-admin user
       annotations = Annotations.find(
@@ -9106,27 +9111,51 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that._performOffsetSync();
             that._performCrosshairSync(diff);
             alignmentLoaded = true;           
-          } else {
-            console.log("initiating file upload");
+          } 
+          // else {
+          //   console.log("initiating file upload");
 
-            var uploadInstance = EDFFile.insert({
-              file: input,
-              chunkSize: 'dynamic'
-            }, false);
+          //   var uploadInstance = EDFFile.insert({
+          //     file: input,
+          //     chunkSize: 'dynamic'
+          //   }, false);
     
+          //   uploadInstance.on('end', function(error, fileObj) {
+          //     if (error) {
+          //       window.alert('Error during upload: ' + error.reason);
+          //     } else {
+          //       window.alert('File "' + fileObj.name + '" successfully uploaded');
+          //       console.log(uploadInstance.config.fileId);
 
+          //       const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
+
+          //       // const metadataEDF = Meteor.call("get.edf.metadata", recordingPath);
+          //       // const metadata = {
+          //       //   wfdbdesc: metadataEDF,
+          //       // };
+          //       // console.log(metadata);
+                
+          //       let fileObjSplit = fileObj.name.split("-");
+
+          //       console.log(fileObjSplit[0]);
+
+          //       var dataDocument = {
+          //         name: fileObj.name,
+          //         type: "EDF",
+          //         source: fileObjSplit[1].split(".")[0].toUpperCase(),
+          //         patient: fileObjSplit[0],
+          //         path: recordingPath,
+          //         // metadata: metadata,
+          //       }
+
+          //       var dataId = Data.insert(dataDocument);
+          //       console.log(dataId);
+          //     }
+          //   });
     
-            uploadInstance.on('end', function(error, fileObj) {
-              if (error) {
-                window.alert('Error during upload: ' + error.reason);
-              } else {
-                window.alert('File "' + fileObj.name + '" successfully uploaded');
-              }
-            });
-    
-            uploadInstance.start();
+          //   uploadInstance.start();
           
-          }
+          // }
         };
         reader.readAsText(input);
       }

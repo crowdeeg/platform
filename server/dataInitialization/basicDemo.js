@@ -395,8 +395,8 @@ Meteor.startup(() => {
           startTime: 0,
           windowSizeInSeconds: wsize,
           preloadEntireRecording: false,
-          showReferenceLines: true,
-          showSleepStageButtons: true,
+          showReferenceLines: false,
+          showSleepStageButtons: false,
           showChannelGainAdjustmentButtons: false,
           showBackToLastActiveWindowButton: false,
           showInputPanelContainer: false,
@@ -447,7 +447,7 @@ Meteor.startup(() => {
         status: "Pending",
         channelsDelayed: "",
       });
-      //console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
+      console.log('Created Assignment for Task "' + task.name + '", User "' + testUser.email + '" and Data "' + dataNames +'" (' + assignmentId + ')');
     }
   };
 
@@ -496,6 +496,7 @@ Meteor.startup(() => {
     if (anneFilePath) {
       addTask(recordingFileFolder, "ANNE", [anneFilePath]);
     }
+
   });
 });
 

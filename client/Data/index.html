@@ -18,7 +18,11 @@
             </div>
         </div>
         <div class="col s12 data">{{> reactiveTable settings=settings}}</div>
-        <div class="col s12 text-center"><button class="btn download">Download Visible Rows To CSV</button></div>
+        <div class="col s12 text-center">
+            <button class="btn download">Download Visible Rows To CSV</button>
+            <button class="btn upload">Upload Chosen Recordings</button>
+            <input type="file" accept=".edf" multiple id="File">
+        </div>
     </div>
     <div class="row">
         <div class="col s12 m4"></div>

@@ -171,6 +171,7 @@ const SchemaHelpers = {
             'GENEActiv',
             'AX3',
             'Actical',
+            'Other'
         ],
     },
     annotator: {
@@ -255,6 +256,7 @@ const SchemaHelpers = {
                                 break;
                             case 'data':
                                 label = doc.pathAndLengthFormatted();
+                                // label = {};
                                 break;
                             case 'assignments':
                                 label = doc.userNames() + ' - ' + doc.taskDoc().name + ' for ' + doc.dataDoc().path;
@@ -370,9 +372,13 @@ Schemas.Data = new SimpleSchema({
     },
     type: SchemaHelpers.dataType,
     source: SchemaHelpers.dataSource,
-    patient: SchemaHelpers.fromCollection(Patients, {
-        optional: true,
-    }),
+    patient: {
+        type: String,
+        label: 'Name',
+    },
+    // SchemaHelpers.fromCollection(Patients, {
+    //     optional: true,
+    // }),
     path: {
         type: String,
         label: 'Path',
@@ -409,6 +415,7 @@ Data.helpers({
         if (lengthFormatted == '') {
             return this.path;
         }
+        console.log(this.path + ' (' + lengthFormatted + ')');
         return this.path + ' (' + lengthFormatted + ')';
     },
     pathLengthAndPatientInfoFormatted() {
@@ -471,6 +478,8 @@ Data.helpers({
 });
 Data.attachSchema(Schemas.Data);
 Data.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
+Data.permit(['insert']);
+
 Data.attachCollectionRevisions();
 exports.Data = Data;
 
@@ -2373,6 +2382,7 @@ exports.Arbitrations = Arbitrations;
 Meteor.users.attachCollectionRevisions();
 
 // Documentation: https://github.com/yogiben/meteor-admin
+// The admin management page
 AdminConfig = {
     name: 'crowdEEG',
     skin: 'blue',
@@ -2403,8 +2413,8 @@ AdminConfig = {
                 { label: 'Path', name: 'path' },
             ],
             omitFields: [ 'metadata' ],
-            showEditColumn: false,
-            showDelColumn: false,
+            showEditColumn: true,
+            showDelColumn: true,
         },
         Tasks: {
             icon: 'cog',
@@ -2413,32 +2423,32 @@ AdminConfig = {
                 { label: 'Name', name: 'name' },
                 { label: 'Annotator', name: 'annotator' },
             ],
-            omitFields: [ 'annotatorConfig' ],
-            showEditColumn: false,
-            showDelColumn: false,
+            // omitFields: [ 'annotatorConfig' ],
+            showEditColumn: true,
+            showDelColumn: true,
         },
-        Guidelines: {
-            icon: 'list-ul',
-            collectionObject: Guidelines,
-            tableColumns: [
-                { label: 'Name', name: 'name' },
-                { label: 'Version', name: 'version' },
-            ],
-        },
-        Instructions: {
-            icon: 'sticky-note',
-            collectionObject: Instructions,
-            tableColumns: [
-                { label: 'Text', name: 'text' },
-            ],
-        },
-        Propositions: {
-            icon: 'question-circle',
-            collectionObject: Propositions,
-            tableColumns: [
-                { label: 'Description', name: 'description' },
-            ],
-        },
+        // Guidelines: {
+        //     icon: 'list-ul',
+        //     collectionObject: Guidelines,
+        //     tableColumns: [
+        //         { label: 'Name', name: 'name' },
+        //         { label: 'Version', name: 'version' },
+        //     ],
+        // },
+        // Instructions: {
+        //     icon: 'sticky-note',
+        //     collectionObject: Instructions,
+        //     tableColumns: [
+        //         { label: 'Text', name: 'text' },
+        //     ],
+        // },
+        // Propositions: {
+        //     icon: 'question-circle',
+        //     collectionObject: Propositions,
+        //     tableColumns: [
+        //         { label: 'Description', name: 'description' },
+        //     ],
+        // },
         Assignments: {
             icon: 'tasks',
             collectionObject: Assignments,
@@ -2453,19 +2463,19 @@ AdminConfig = {
                 { label: 'Annotations Imported', name: 'annotationsImported' },
             ],
         },
-        Arbitrations: {
-            icon: 'gavel',
-            collectionObject: Arbitrations,
-            tableColumns: [
-                { label: 'Data ID', name: 'data' },
-                { label: 'Data Path', name: 'dataPath()' },
-                { label: 'Task ID', name: 'task' },
-                { label: 'Task Name', name: 'taskName()' },
-                { label: 'Status', name: 'status' },
-                { label: 'Current Round Number', name: 'currentRoundNumber' },
-                { label: 'Max Num Rounds', name: 'maxNumRounds' },
-            ],
-        },
+        // Arbitrations: {
+        //     icon: 'gavel',
+        //     collectionObject: Arbitrations,
+        //     tableColumns: [
+        //         { label: 'Data ID', name: 'data' },
+        //         { label: 'Data Path', name: 'dataPath()' },
+        //         { label: 'Task ID', name: 'task' },
+        //         { label: 'Task Name', name: 'taskName()' },
+        //         { label: 'Status', name: 'status' },
+        //         { label: 'Current Round Number', name: 'currentRoundNumber' },
+        //         { label: 'Max Num Rounds', name: 'maxNumRounds' },
+        //     ],
+        // },
     },
 };
 
@@ -2474,7 +2484,7 @@ const EDFFile =  new FilesCollection({
     debug: true,
     collectionName: 'EDFFile',
     allowClientCode: false, // Disallow remove files from Client
-    storagePath: 'assets/app/uploads'
+    storagePath: '/mnt/Common/Projects/sunnybrook/crowdeeg/platform/galaxy-app/edf/uploaded/'
   }
 );
 exports.EDFFile = EDFFile;

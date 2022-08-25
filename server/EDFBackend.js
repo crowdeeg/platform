@@ -687,7 +687,7 @@ Meteor.methods({
       }
       allMetadata[recording._id] = metadata;
     });
-    //console.log(allMetadata, lengthInSeconds);
+    console.log(allMetadata, lengthInSeconds);
     return {
       allMetadata,
       lengthInSeconds,
