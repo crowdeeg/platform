@@ -539,20 +539,26 @@ Template.Data.events({
             selectedData[dataId] = data;
             
             let signalNameString = dataDictionary[dataId];
-            console.log(signalNameString);
-            console.log(dataDictionary);
-            console.log(dataId);
+            // console.log(signalNameString);
+            // console.log(dataDictionary);
+            // console.log(dataId);
             if (signalNameString) {
                 let taskId = taskDictionary[signalNameString];
-                console.log(taskId);
-                console.log(taskDictionary);
+                // console.log(taskId);
+                // console.log(taskDictionary);
                 if (taskId) {
                     const task = Tasks.findOne(taskId);
-                    console.log(task);
+                    // console.log(task);
                     template.selectedTask.set(task);
                 }
             }
+            let user = Meteor.user();
 
+            console.log(user);
+
+            let selectedAssignees = template.selectedAssignees.get();
+            selectedAssignees[user._id] = user;
+            template.selectedAssignees.set(selectedAssignees);
 
         }
         else {

@@ -17,3 +17,8 @@ galaxy-app/edf/physionet/edfx/*
 # VSCode Files
 .vscode/*
 jsconfig.json
+galaxy-app/edf/uploaded/.fuse_hidden0000815a00000002
+galaxy-app/edf/uploaded/.fuse_hidden0000815b00000001
+*.edf
+*.dat
+*.hea
