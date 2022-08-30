@@ -2484,6 +2484,7 @@ const EDFFile =  new FilesCollection({
     debug: true,
     collectionName: 'EDFFile',
     allowClientCode: false, // Disallow remove files from Client
+    // This path is hard coded just for single user usecases, when we deploy, we will use environment variables.
     storagePath: '/mnt/Common/Projects/sunnybrook/crowdeeg/platform/galaxy-app/edf/uploaded/'
   }
 );
