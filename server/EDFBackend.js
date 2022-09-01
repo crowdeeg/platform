@@ -673,6 +673,10 @@ function indexOfChannel(channelArray, index, dataId) {
 }
 
 Meteor.methods({
+
+  "get.environment.edf_dir"(){
+    return (process.env.EDFDir);
+  },
   "get.edf.metadata"(recordingName) {
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
   },
@@ -992,6 +996,8 @@ Meteor.methods({
     });
   },
 
+
+
   // async "saveAnnotationsToDB"(annotations) {
   //   // Saves the annotation to the database.
     
@@ -1013,3 +1019,6 @@ Meteor.methods({
   //   return query;
   // }
 });
+
+
+console.log(process.env.EDF_DIR);

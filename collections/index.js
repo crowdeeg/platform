@@ -1,7 +1,8 @@
 import { Match } from 'meteor/check'
-import moment from 'moment'
+import moment, { relativeTimeRounding } from 'moment'
 import swal from 'sweetalert2'
 import seedrandom from 'seedrandom'
+
 
 function formatDurationInSeconds(durationInSeconds) {
     return moment('1970-01-01').startOf('day').seconds(durationInSeconds).format('H:mm:ss');
@@ -2479,15 +2480,37 @@ AdminConfig = {
     },
 };
 
+//function to read .environment file from platforma and return the string in i 
 // File upload schema initializations
+var edf_dir;
+
+env_p = new Promise ((resolve,reject)=>{
+    Meteor.call("get.environment.edf_dir",(error,results) => {
+        if (error){
+            throw new Error("Could not get environment edf_dir because of " + error);
+    
+        }
+    
+        return resolve(results);
+    })
+})
+
+env_p.then(result =>{
+    console.log(result);
+    edf_dir = result;
+})
+
+
+console.log(edf_dir);
 const EDFFile =  new FilesCollection({
     debug: true,
     collectionName: 'EDFFile',
     allowClientCode: false, // Disallow remove files from Client
-    storagePath: '/mnt/Common/Projects/sunnybrook/crowdeeg/platform/galaxy-app/edf/uploaded/'
+    storagePath:edf_dir + '/uploaded/'//'/home/youngjae/platform/galaxy-app/edf/uploaded/'
   }
 );
 exports.EDFFile = EDFFile;
+
 
 
 Meteor.startup(() => {
