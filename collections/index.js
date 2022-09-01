@@ -2495,6 +2495,8 @@ env_p = new Promise ((resolve,reject)=>{
     })
 })
 
+var edf_dir;
+
 env_p.then(result =>{
     console.log(result);
     edf_dir = result;
