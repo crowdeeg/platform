@@ -1,6 +1,7 @@
-import { Data, Tasks, Assignments, EDFFile, Patients } from '/collections';
+import { Data, Tasks, Assignments, Patients } from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
+import {EDFFile} from '/collections';
 
 // double dictionary for task inference
 let taskDictionary = {};
@@ -167,96 +168,100 @@ Template.Data.events({
                 reader.onload = function (e) {
                 
                     console.log("initiating file upload");
-        
-                    var uploadInstance = EDFFile.insert({
-                    file: input,
-                    chunkSize: 'dynamic',
-                    fileName: input.name,
-                    fileId: input.name.split('.')[0].replace(/\W/g, ''),
-                    }, false);
-            
-                    uploadInstance.on('end', function(error, fileObj) {
-                    
-                    console.log(fileObj);
-                    if (error) {
-        
-                        window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
-                        filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
-                        uploadsEnded ++;
-                        if (uploadsEnded === allFiles.length) {
-                            window.alert(`${allFiles.length-filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
-                        }
-                    } else {
-                        // window.alert('File "' + fileObj.name + '" successfully uploaded');
-                        console.log(uploadInstance.config.fileId);
-        
-                        const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
+                    console.log(EDFFile);
 
-                        let promise = new Promise((resolve, reject) => {
-                            Meteor.call("get.edf.metadata", recordingPath,
-                                (error, results) => {
-                                    if (error) {
-                                    throw new Error("Cannot get recording metadata\n" + error);
+                    // Since EDFFile is a promise, we need to handle it as such
+                    EDFFile.then(result => {
+                        var uploadInstance = result.insert({
+                            file: input,
+                            chunkSize: 'dynamic',
+                            fileName: input.name,
+                            fileId: input.name.split('.')[0].replace(/\W/g, ''),
+                            }, false);
+                    
+                            uploadInstance.on('end', function(error, fileObj) {
+                            
+                            console.log(fileObj);
+                            if (error) {
+                
+                                window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
+                                filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
+                                uploadsEnded ++;
+                                if (uploadsEnded === allFiles.length) {
+                                    window.alert(`${allFiles.length-filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
+                                }
+                            } else {
+                                // window.alert('File "' + fileObj.name + '" successfully uploaded');
+                                console.log(uploadInstance.config.fileId);
+                
+                                const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
+        
+                                let promise = new Promise((resolve, reject) => {
+                                    Meteor.call("get.edf.metadata", recordingPath,
+                                        (error, results) => {
+                                            if (error) {
+                                            throw new Error("Cannot get recording metadata\n" + error);
+                                            }
+                                            
+                                            return resolve(results);
+                                        }
+                                    );
+                                });
+        
+                                promise.then(result => {
+                                    console.log(result);
+                                    patientId = Patients.insert({
+                                        id: "Unspecified Patient - " + fileObj.name,
+                                    });
+                                    // Data object creation
+                                    var dataDocument = {
+                                        name: fileObj.name,
+                                        type: "EDF",
+                                        source: "Other",
+                                        patient: patientId,
+                                        path: recordingPath,
+                                        metadata: {wfdbdesc: result},
+                                    }
+                    
+                                    var dataId = Data.insert(dataDocument);
+                                    console.log(dataId);
+        
+                                    let signalNameSet = getSignalNameSet(result);
+                                    let signalNameString = [...signalNameSet].join(' ');
+        
+                                    dataDictionary[dataId] = signalNameString;
+        
+                                    let temp = taskDictionary[signalNameString];
+        
+                                    if (!temp) {
+                                        let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
+                                        console.log(taskDocument);
+                                        let taskID = Tasks.insert(taskDocument);
+                                        console.log(taskID);
+        
+                                        taskDictionary[signalNameString] = taskID
+                                    }
+                                    filesSuccessfullyUploaded ++;
+                                    filesSuccessfullyUploadedString += fileObj.name + "\n";
+                                    uploadsEnded ++;
+        
+                                    if (uploadsEnded === allFiles.length) {
+                                        window.alert(`${allFiles.length-filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
                                     }
                                     
-                                    return resolve(results);
-                                }
-                            );
+                                })
+        
+                                
+                            }
+        
+        
                         });
-
-                        promise.then(result => {
-                            console.log(result);
-                            patientId = Patients.insert({
-                                id: "Unspecified Patient - " + fileObj.name,
-                            });
-                            // Data object creation
-                            var dataDocument = {
-                                name: fileObj.name,
-                                type: "EDF",
-                                source: "Other",
-                                patient: patientId,
-                                path: recordingPath,
-                                metadata: {wfdbdesc: result},
-                            }
-            
-                            var dataId = Data.insert(dataDocument);
-                            console.log(dataId);
-
-                            let signalNameSet = getSignalNameSet(result);
-                            let signalNameString = [...signalNameSet].join(' ');
-
-                            dataDictionary[dataId] = signalNameString;
-
-                            let temp = taskDictionary[signalNameString];
-
-                            if (!temp) {
-                                let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
-                                console.log(taskDocument);
-                                let taskID = Tasks.insert(taskDocument);
-                                console.log(taskID);
-
-                                taskDictionary[signalNameString] = taskID
-                            }
-                            filesSuccessfullyUploaded ++;
-                            filesSuccessfullyUploadedString += fileObj.name + "\n";
-                            uploadsEnded ++;
-
-                            if (uploadsEnded === allFiles.length) {
-                                window.alert(`${allFiles.length-filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
-                            }
-                            
-                        })
-
-                        
-                    }
-
-
                     
-                    
-                    });
-            
-                    uploadInstance.start();
-                
+                        uploadInstance.start();
+                    }).catch( error => {
+                        console.log("Upload Process Failed")
+                    })
+        
                 
                 };
                 reader.readAsText(input);
