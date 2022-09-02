@@ -137,6 +137,11 @@ let assembleTaskObj = (signalNameSet, source, file) => {
 
 
 Template.Data.events({
+    //CODE FOR CLICKING ON THE DELETE BUTTON IN THE FILES REACTIVE TABLE
+    'click .delete-button':function(){
+        window.alert('ahahah');
+    },
+    //END OF CODE FOR CLICKING ON THE DELETE BUTTON IN THE FILES REACTIVE TABLE
     'click .btn.download': function() {
         $(Template.instance().find('table.reactive-table')).table2csv();
     },
@@ -482,6 +487,17 @@ Template.Data.helpers({
                 label: 'Last Updated',
                 hidden: true,
             },
+
+            //CODE FOR THE DELETE COLUMN IN FILES REACTIVE TABLE
+            {
+                key: 'DELETE',
+                label: 'DELETE',
+                fn: (value,object,key)=> {
+                    const inputId = 'delete-button-' + object._id; 
+                    return new Spacebars.SafeString('<button type = "button" class = "delete-button" id = ' + inputId + ' = >DELETE</button>');
+                }
+            },
+            //END OF CODE FOR THE DELETE COLUMN IN FILES REACTIVE TABLE
             {
                 key: 'selectFn',
                 label: 'Selected',
