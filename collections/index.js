@@ -2482,37 +2482,44 @@ AdminConfig = {
 
 //function to read .environment file from platforma and return the string in i 
 // File upload schema initializations
-var edf_dir;
 
 env_p = new Promise ((resolve,reject)=>{
-    Meteor.call("get.environment.edf_dir",(error,results) => {
-        if (error){
-            throw new Error("Could not get environment edf_dir because of " + error);
+    // Both the client and the server gets a copy of the collections file, so we need to handle both cases separately, as the backend cannot call another backend process through
+    // Meteor's websocket based API.
+    if (Meteor.isClient) {
+        Meteor.call("get.environment.edf.dir", null, (error, results) => {
+            if (error){
+                throw new Error("Could not get environment edf_dir because of " + error);
+            }
+            return resolve(results);
+        })
+        
+    } else {
+        return resolve(process.env.EDF_DIR);
+    }
+   
+})
+
+// We chain the then blocks, as we cannot instantiate EDFFile before we have edf_dir
+exports.EDFFile = env_p.then(result =>{
+        console.log(result);
+        var edf_dir = result;
     
-        }
-    
-        return resolve(results);
+        console.log(edf_dir);
+
+        const EDFFile = new FilesCollection({
+            debug: true,
+            collectionName: 'EDFFile',
+            allowClientCode: false, // Disallow remove files from Client
+            storagePath: edf_dir + '/uploaded'//'/home/youngjae/platform/galaxy-app/edf/uploaded/'
+        });
+
+        // console.log(EDFFile);
+
+        return EDFFile;
+        
     })
-})
-
-var edf_dir;
-
-env_p.then(result =>{
-    console.log(result);
-    edf_dir = result;
-})
-
-
-console.log(edf_dir);
-const EDFFile =  new FilesCollection({
-    debug: true,
-    collectionName: 'EDFFile',
-    allowClientCode: false, // Disallow remove files from Client
-    storagePath:edf_dir + '/uploaded/'//'/home/youngjae/platform/galaxy-app/edf/uploaded/'
-  }
-);
-exports.EDFFile = EDFFile;
-
+    .catch(error => console.log(error))
 
 
 Meteor.startup(() => {

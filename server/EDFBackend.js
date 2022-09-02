@@ -673,9 +673,8 @@ function indexOfChannel(channelArray, index, dataId) {
 }
 
 Meteor.methods({
-
-  "get.environment.edf_dir"(){
-    return (process.env.EDFDir);
+  "get.environment.edf.dir"(){
+    return (process.env.EDF_DIR);
   },
   "get.edf.metadata"(recordingName) {
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
@@ -996,29 +995,7 @@ Meteor.methods({
     });
   },
 
-
-
-  // async "saveAnnotationsToDB"(annotations) {
-  //   // Saves the annotation to the database.
-    
-  //   let savePoint = {
-  //     Date: Date.now(),
-  //     Annotations: [],
-  //   }
-  
-  //   annotations.forEach( (element) => {
-  //     savePoint["Annotations"].push(element);
-  //   })
-    
-  //   SavePoints.insert(savePoint);
-  // },
-
-  // "readAnnotationsFromDB"() {
-  //   let query = SavePoints.find();
-  //   console.log(query);
-  //   return query;
-  // }
 });
 
 
-console.log(process.env.EDF_DIR);
+// console.log(process.env.EDF_DIR);
