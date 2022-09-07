@@ -163,6 +163,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             value: 300,
           },
           {
+            name: "10 min/page",
+            value: 600,
+          },
+          {
             name: "1 hour/page",
             value: 3600,
           },
