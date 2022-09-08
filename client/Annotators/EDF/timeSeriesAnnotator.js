@@ -163,6 +163,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             value: 300,
           },
           {
+            name: "10 min/page",
+            value: 600,
+          },
+          {
             name: "1 hour/page",
             value: 3600,
           },
@@ -2809,6 +2813,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     if (keyCode == 72) {
       that._toggleClassificationSummary();
+    } else if (keyCode == 8 && that.vars.selectedAnnotation) {
+      that._nukeAnnotation(that.vars.selectedAnnotation)
     } else if (keyCode == 66 && that.options.showBookmarkCurrentPageButton) {
       that._toggleBookmarkCurrentPage();
       return;
@@ -2850,7 +2856,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._jumpToClosestDisagreementWindow(1);
     } else if (keyCode >= 48 && keyCode <= 57) {
       e.preventDefault();
-      annotation = that.vars.selectedAnnotation;
+      var annotation = that.vars.selectedAnnotation;
 
       if (annotation) {1
         featureList = that._getAnnotationLabelFromdisplayType(annotation);
