@@ -9189,11 +9189,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _CSVToArray: function(str, delimiter = ",") {
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
-    const headerRow = str.slice(0, str.lastIndexOf("}") + 1).split("\n");
-    const dataInfo = headerRow.map((file) => {
-      return JSON.parse(file)
-    })
-    const remainStr = str.slice(str.lastIndexOf("}") + 2);
+    var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
+    var index = 0;
+    var fileData = [];
+    while(headerRow.indexOf("{") !== -1) {
+      const file = headerRow.slice(headerRow.indexOf("{"), headerRow.indexOf("}") + 1);
+      headerRow = headerRow.slice(headerRow.indexOf('}') + 1);
+      try {
+        console.log(file)
+        fileData.push(JSON.parse(file));
+      } catch (err) {
+        
+      }
+    }
+  
+    console.log(fileData)
+    const remainStr = str.slice(str.indexOf("Index,Time"));
     const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
     // slice from \n index + 1 to the end of the text
     // use split to create an array of each csv value row
