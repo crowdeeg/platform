@@ -8991,9 +8991,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _downloadCSV: function () {
     var that = this;
+    var channels = {};
+
+    that.vars.currentWindowData.channels.forEach((channel) => {
+      (channels[channel.dataId] ? channels[channel.dataId].push(channel.name) : channels[channel.dataId] = [channel.name])
+    });
+
+    var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
+      return (JSON.stringify({
+        'filename': record.Record,
+        'fileId': key,
+        'startTime': record.StartingTime,
+        'channels': channels[key].join('/')
+      }) + ('\n'))
+    }))
+
     var annotations = that._objectsToCSV(that._assembleAnnotationObject());
     // console.log(annotations);
-    const blob = new Blob(annotations, {type: "text/csv"});
+    fileInfo.push(...annotations);
+    const blob = new Blob(fileInfo, { type: "text/csv" });
     const href = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement("a"),
       {
@@ -9171,11 +9187,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _CSVToArray: function(str, delimiter = ",") {
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
-    const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
-  
+    const headerRow = str.slice(0, str.lastIndexOf("}") + 1).split("\n");
+    const dataInfo = headerRow.map((file) => {
+      return JSON.parse(file)
+    })
+    const remainStr = str.slice(str.lastIndexOf("}") + 2);
+    const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
     // slice from \n index + 1 to the end of the text
     // use split to create an array of each csv value row
-    const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+    const rows = remainStr.slice(remainStr.indexOf("\n") + 1).split("\n");
   
     // Map the rows
     // split values from each row into an array
