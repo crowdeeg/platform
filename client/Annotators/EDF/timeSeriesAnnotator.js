@@ -8998,12 +8998,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
-      return (JSON.stringify({
+      return '"' + (JSON.stringify({
         'filename': record.Record,
         'fileId': key,
         'startTime': record.StartingTime,
         'channels': channels[key].join('/')
-      }) + ('\n'))
+      }) + ('",,,,,,,\n'))
     }))
 
     var annotations = that._objectsToCSV(that._assembleAnnotationObject());
