@@ -651,11 +651,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             <div class="graph_container"> \
                 <div class="graph"></div> \
                 <div class = "y-axis-options-container">\
-                <div style="margin-bottom: 10px" class= "ylimit_toggle">\
-                  <select id="toggle">\
-                      <option value="1">YLIMIT TOGGLE:OFF</option>\
-                      <option value="2">YLIMIT TOGGLE:ON</option>\
-                  </select>\
+                <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
+                  <button type = "button" class = "ylimit_btn">Limit Y-Axis</button>\
                 </div>\
                 <div style = "margin-bottom: 10px" class = "ylimit_lower">\
                   <select id="lower_limit_select">\
@@ -4004,25 +4001,43 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data);
     
-    for (let i = 0;i<that.vars.chart.series.length;i++){
-      let offset = that._getOffsetForChannelIndexPostScale(i);
-      var newyData = [];
-      var newXData = [];
-      const lower = document.querySelector('#lower_limit_select');
-      var lowerlimit = lower.selectedIndex * 10;
-      console.log(lowerlimit);
-      var upperlimit = document.querySelector('#upper_limit_select').selectedIndex*10;
-      console.log(upperlimit);
-      for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-        if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
-          console.log(that.vars.chart.series[i].yData[j] - offset);
-          newyData.push(that.vars.chart.series[i].yData[j]);
-          newXData.push(that.vars.chart.series[i].xData[j]);
+
+    $(that.element).find(".ylimit_btn").click(function(){
+      console.log('CLICKED THE BUTTON');
+      var oldyData = [];
+      var oldxData = [];
+      for (let i = 0;i<that.vars.chart.series.length;i++){
+        let offset = that._getOffsetForChannelIndexPostScale(i);
+        var newyData = [];
+        var newXData = [];
+        const lower = document.querySelector('#lower_limit_select');
+        var lowerlimit = lower.selectedIndex * 10;
+        var upperlimit = document.querySelector('#upper_limit_select').selectedIndex*10;
+        console.log(upperlimit);
+        oldyData[i] = [];
+        oldxData[i] = [];
+        for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+          if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
+            console.log(that.vars.chart.series[i].yData[j] - offset);
+            oldyData[i].push(that.vars.chart.series[i].yData[j]);
+            oldxData[i].push(that.vars.chart.series[i].xData[j]);
+            newyData.push(that.vars.chart.series[i].yData[j]);
+            newXData.push(that.vars.chart.series[i].xData[j]);
+          }
         }
+        that.vars.chart.series[i].yData = newyData;
+        that.vars.chart.series[i].xData = newXData;
       }
-      that.vars.chart.series[i].yData = newyData;
-      that.vars.chart.series[i].xData = newXData;
-    }
+
+      that.vars.chart.redraw();
+      
+      for(let i = 0;i<that.vars.chart.series.length;i++){
+        that.vars.chart.series[i].yData = oldyData[i];
+        that.vars.chart.series[i].xData = oldxData[i];
+      }
+
+    });
+    
     // sets the min and max values for the chart
     that.vars.chart.xAxis[0].setExtremes(
       that.vars.currentWindowStart,
