@@ -93,7 +93,25 @@
 .floating-panel .row {
   margin-bottom: 0;
 }
+.restore_btn {
+  text-decoration: none;
+    color: #fff;
+    background-color: #26a69a;
+    text-align: center;
+    letter-spacing: .5px;
+    transition: .2s ease-out;
+    cursor: pointer;
+}
 
+.ylimit_btn {
+  text-decoration: none;
+    color: #fff;
+    background-color: #26a69a;
+    text-align: center;
+    letter-spacing: .5px;
+    transition: .2s ease-out;
+    cursor: pointer;
+}
 .annotator-container {
   padding: 0;
   margin: 0;

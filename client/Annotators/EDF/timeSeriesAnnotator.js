@@ -652,7 +652,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <div class="graph"></div> \
                 <div class = "y-axis-options-container">\
                 <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
-                  <button type = "button" class = "ylimit_btn">Limit Y-Axis</button>\
+                  <button type = "button" class = "btn restore_btn">RESTORE Y-AXIS LIMITS</button>\
+                </div>\
+                <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
+                  <button type = "button" class = "btn ylimit_btn">Limit Y-Axis</button>\
                 </div>\
                 <div style = "margin-bottom: 10px" class = "ylimit_lower">\
                   <select id="lower_limit_select">\
@@ -4017,14 +4020,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         oldyData[i] = [];
         oldxData[i] = [];
         for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+          oldyData[i].push(that.vars.chart.series[i].yData[j]);
+          oldxData[i].push(that.vars.chart.series[i].xData[j]);
           if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
             console.log(that.vars.chart.series[i].yData[j] - offset);
-            oldyData[i].push(that.vars.chart.series[i].yData[j]);
-            oldxData[i].push(that.vars.chart.series[i].xData[j]);
+            
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
         }
+        console.log(oldyData[i]);
+        console.log(newyData);
         that.vars.chart.series[i].yData = newyData;
         that.vars.chart.series[i].xData = newXData;
       }
@@ -4036,6 +4042,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.series[i].xData = oldxData[i];
       }
 
+    });
+
+    $(that.element).find(".restore_btn").click(function(){
+      that.vars.chart.redraw();
     });
     
     // sets the min and max values for the chart
