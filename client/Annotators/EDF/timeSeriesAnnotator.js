@@ -9,8 +9,12 @@ require("highcharts-boost")(Highcharts);
 
 $.widget("crowdeeg.TimeSeriesAnnotator", {
   // initial options when the widget is created
+
   options: {
     optionsURLParameter: "annotatorOptions",
+    y_axis_limited: false,
+    y_limit_lower: undefined,
+    y_limit_upper: undefined,
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -4004,50 +4008,119 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data);
     
+    var oldyData = [];
+    var oldxData = [];
 
+    for (let i = 0;i<that.vars.chart.series.length;i++){
+      oldyData[i] = [];
+      oldxData[i] = [];
+      for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+        oldyData[i].push(that.vars.chart.series[i].yData[j]);
+        oldxData[i].push(that.vars.chart.series[i].xData[j]);
+      }
+    }
     $(that.element).find(".ylimit_btn").click(function(){
-      console.log('CLICKED THE BUTTON');
-      var oldyData = [];
-      var oldxData = [];
+      that.options.y_axis_limited = true;
       for (let i = 0;i<that.vars.chart.series.length;i++){
         let offset = that._getOffsetForChannelIndexPostScale(i);
         var newyData = [];
         var newXData = [];
         const lower = document.querySelector('#lower_limit_select');
         var lowerlimit = lower.selectedIndex * 10;
+        that.options.y_limit_lower = lower.selectedIndex*10;
         var upperlimit = document.querySelector('#upper_limit_select').selectedIndex*10;
-        console.log(upperlimit);
-        oldyData[i] = [];
-        oldxData[i] = [];
+        that.options.y_limit_upper = document.querySelector('#upper_limit_select').selectedIndex*10;
         for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-          oldyData[i].push(that.vars.chart.series[i].yData[j]);
-          oldxData[i].push(that.vars.chart.series[i].xData[j]);
           if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
-            console.log(that.vars.chart.series[i].yData[j] - offset);
             
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
         }
-        console.log(oldyData[i]);
-        console.log(newyData);
         that.vars.chart.series[i].yData = newyData;
         that.vars.chart.series[i].xData = newXData;
+
+        
       }
 
       that.vars.chart.redraw();
       
-      for(let i = 0;i<that.vars.chart.series.length;i++){
-        that.vars.chart.series[i].yData = oldyData[i];
-        that.vars.chart.series[i].xData = oldxData[i];
-      }
-
+      
     });
 
     $(that.element).find(".restore_btn").click(function(){
-      that.vars.chart.redraw();
+      that.options.y_axis_limited = false;
+      that._updateChannelDataInSeries(that.vars.chart.series, data);
+      that.vars.chart.xAxis[0].setExtremes(
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
+        false,
+        false
+      );
+  
+      that.vars.recordScalingFactors = false;
+      that.vars.recordPolarity = false;
+      that.vars.recordTranslation = false;
+  
+      // checks if the object is empty
+      if (!that._objectIsEmpty(that.vars.scalingFactors)) {
+        for (const index in that.vars.scalingFactors) {
+          that._customAmplitude(
+            index,
+            100 * (that.vars.scalingFactors[index] - 1)
+          );
+          // console.log("scaling after page change");
+          // console.log(that.vars.chart.series[index].yData);
+        }
+  
+      }
+  
+      if (!that._objectIsEmpty(that.vars.translation)) {
+        for (const index in that.vars.translation) {
+          that._customTranslation(index, that.vars.translation[index]);
+        }
+      }
+  
+      if (!that._objectIsEmpty(that.vars.polarity)) {
+        for (const index in that.vars.polarity) {
+          that._reversePolarity(index);
+        }
+      }
+  
+      that.vars.recordPolarity = true;
+      that.vars.recordScalingFactors = true;
+      that.vars.recordTranslation = true;
+  
+      that.vars.chart.redraw(); // efficiently redraw the entire window in one go
+  
+      // use the chart start/end so that data and annotations can never
+      // get out of synch
+      that._refreshAnnotations();
+      that._renderChannelSelection();
+      that._updateBookmarkCurrentPageButton();
+      that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
+    
+      that._updateChangePointLabelFixed();
+      that.vars.chart.annotations.allItems.forEach(annotation => {that._updateControlPoint(annotation)});
+      
     });
     
+    if(that.options.y_axis_limited){
+      for (let i = 0;i<that.vars.chart.series.length;i++){
+        let offset = that._getOffsetForChannelIndexPostScale(i);
+        var newyData = [];
+        var newXData = [];
+        for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+          if((that.vars.chart.series[i].yData[j] - offset) >= that.options.y_limit_lower && (that.vars.chart.series[i].yData[j] - offset) <= that.options.y_limit_upper){
+            
+            newyData.push(that.vars.chart.series[i].yData[j]);
+            newXData.push(that.vars.chart.series[i].xData[j]);
+          }
+        }
+        that.vars.chart.series[i].yData = newyData;
+        that.vars.chart.series[i].xData = newXData;
+      }
+    }
     // sets the min and max values for the chart
     that.vars.chart.xAxis[0].setExtremes(
       that.vars.currentWindowStart,
