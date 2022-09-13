@@ -178,6 +178,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             name: "8 hours/page",
             value: 28800,
           },
+          {
+            name: "1 day/page",
+            value: 86400,
+          },
+          {
+            name: "2 days/page",
+            value: 172800,
+          }
         ],
       },
     ],
