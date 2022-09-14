@@ -9186,50 +9186,89 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _CSVToArray: function(str, delimiter = ",") {
+  _CSVToArray: function (str, delimiter = ",") {
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
     var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
-    var index = 0;
     var fileData = [];
-    while(headerRow.indexOf("{") !== -1) {
+    while (headerRow.indexOf("{") !== -1) {
       const file = headerRow.slice(headerRow.indexOf("{"), headerRow.indexOf("}") + 1);
       headerRow = headerRow.slice(headerRow.indexOf('}') + 1);
       try {
         console.log(file)
         fileData.push(JSON.parse(file));
       } catch (err) {
-        
+
       }
     }
-  
+
     console.log(fileData)
-    const remainStr = str.slice(str.indexOf("Index,Time"));
-    const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
-    // slice from \n index + 1 to the end of the text
-    // use split to create an array of each csv value row
-    const rows = remainStr.slice(remainStr.indexOf("\n") + 1).split("\n");
-  
-    // Map the rows
-    // split values from each row into an array
-    // use headers.reduce to create an object
-    // object properties derived from headers:values
-    // the object passed as an element of the array
-    const arr = rows.map(function (row) {
-      const values = row.split(delimiter);
-      // console.log(values);
-      const el = headers.reduce(function (object, header, index) {
-        object[header] = (
-          header === 'Time' || header === 'Duration' 
-        ) ? parseFloat(values[index]) : 
-        header === 'Index' ? parseInt(values[index]) : values[index];
-        return object;
-      }, {});
-      return el;
-    });
-  
-    // return the array
-    return arr;
+    // that._detectCSVMetadataDiscrepancy(fileData).then(function (discrepancies) {
+    //   if (discrepancies.length > 0) {
+    //     console.log('1')
+    //   }
+    // });
+
+    var discrepancies = fileData.length === 0 ? ["No header row data read"] : that._detectCSVMetadataDiscrepancy(fileData);
+
+    const process = that._handleCSVMetadataDiscrepancy(discrepancies);
+    console.log(process)
+    if (process) {
+      const remainStr = str.slice(str.indexOf("Index,Time"));
+      const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
+      // slice from \n index + 1 to the end of the text
+      // use split to create an array of each csv value row
+      const rows = remainStr.slice(remainStr.indexOf("\n") + 1).split("\n");
+
+      // Map the rows
+      // split values from each row into an array
+      // use headers.reduce to create an object
+      // object properties derived from headers:values
+      // the object passed as an element of the array
+      const arr = rows.map(function (row) {
+        const values = row.split(delimiter);
+        // console.log(values);
+        const el = headers.reduce(function (object, header, index) {
+          object[header] = (
+            header === 'Time' || header === 'Duration'
+          ) ? parseFloat(values[index]) :
+            header === 'Index' ? parseInt(values[index]) : values[index];
+          return object;
+        }, {});
+        console.log(el)
+        return el;
+      });
+
+      if (fileData.length === 0) {
+        var currentDisplayChannels = {}
+        that.vars.currentWindowData.channels.forEach((channel) => {
+          (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
+        });
+        var channels = Object.values(currentDisplayChannels).flat();
+        channels.push('All');
+        channels.filter((channel, index) => {
+          return (channels.indexOf(channel) === index);
+        })
+        if (arr.every(function (row) {
+          console.log(row)
+          const fileChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("/").map((element) => { return element.slice(3) });
+
+          return fileChannels.every((channel) => {
+            return channels.includes(channel)
+          });
+        })) {
+          return arr;
+        } else {
+          const process = that._handleCSVMetadataDiscrepancy(["Current displaying channels do not include all channels in the uploaded file"]);
+          return process ? arr : [];
+        }
+      } else {
+        return arr;
+      }
+    } else {
+      return [];
+    }
+
   },
 
   _redrawAnnotationsFromObjects: function(objArr) {
@@ -9360,6 +9399,86 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       array.push(...object[property]);
     }
     return array;
+  },
+
+  _handleCSVMetadataDiscrepancy: function (discrepancies) {
+    if (discrepancies.length > 0) {
+      const message = "Files data are not match up:\n\n" + discrepancies.join('\n') + "\n\nAre you sure to execute this action?";
+      let isExecuted = confirm(message);
+      return isExecuted;
+    } else {
+      return true;
+    }
+  },
+
+  _detectCSVMetadataDiscrepancy: function (headerRowData) {
+    var that = this;
+
+    var discrepancies = [];
+    var currentDisplayChannels = {};
+
+    that.vars.currentWindowData.channels.forEach((channel) => {
+      (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
+    });
+
+    if (headerRowData.length === 0) {
+      var channels = Object.values(currentDisplayChannels).flat();
+      channels.filter((channel, index) => {
+        return (channels.indexOf(channel) === index)
+      })
+
+      console.log(channels)
+      // if (!headerRowData.every(function()))
+      // Object.keys(currentDisplayChannels).forEach((key) => {
+      //   headerRowData.forEach((fileData) => {
+      //     if(that._areArrayEqual(fileData.channels.split('/'), currentDisplayChannels[key]))
+      //       delete currentDisplayChannels[key];
+      //   })
+      // })
+      // if (Object.keys(currentDisplayChannels).length === 0) {
+      //   discrepancies.push('failed to read header rows of the uploading csv file, but the channels match up');
+      // } else {
+      //   discrepancies.push('failed to read header rows of the uploading csv file and the channels of the input data does not match up displaying channels');
+      // }
+      discrepancies.push('failed to read header rows of the uploading csv file and the channels of the input data does not match up displaying channels');
+      return discrepancies;
+    }
+
+
+    const currentFileKeys = Object.keys(that.vars.recordingMetadata);
+    headerRowData.forEach((fileData) => {
+      console.log(fileData)
+      if (!currentFileKeys.includes(fileData.fileId)) {
+        discrepancies.push(`EDF file Id: ${fileData.fileName} is not match any of edf file that's displaying`)
+      } else {
+        if (fileData.filename !== that.vars.recordingMetadata[fileData.fileId].Record)
+          discrepancies.push(`Filename ${fileData.filename} is different from the filename corrseponding to ${fileData.fileId}`);
+
+        if (fileData.startTime !== that.vars.recordingMetadata[fileData.fileId].StartingTime)
+          discrepancies.push(`The starting time for ${fileData.filename} are different`);
+
+        const channels = fileData.channels.split("/");
+
+        if (!that._areArrayEqual(channels, currentDisplayChannels[fileData.fileId]))
+          discrepancies.push(`The channels for ${fileData.filename} are different`);
+      }
+    })
+
+    return discrepancies;
+  },
+
+  _areArrayEqual(array1, array2) {
+    if (array1.length === array2.length) {
+      return array1.every(element => {
+        if (array2.includes(element)) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    return false;
   }
 
 
