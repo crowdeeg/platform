@@ -9187,6 +9187,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _CSVToArray: function (str, delimiter = ",") {
+    const that = this
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
     var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
