@@ -9186,13 +9186,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _CSVToArray: function (str, delimiter = ",") {
+  _CSVToArray: function(str, delimiter = ",") {
     const that = this
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
     var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
     var fileData = [];
-    while (headerRow.indexOf("{") !== -1) {
+    while(headerRow.indexOf("{") !== -1) {
       const file = headerRow.slice(headerRow.indexOf("{"), headerRow.indexOf("}") + 1);
       headerRow = headerRow.slice(headerRow.indexOf('}') + 1);
       try {
@@ -9202,13 +9202,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       }
     }
-
-    console.log(fileData)
-    // that._detectCSVMetadataDiscrepancy(fileData).then(function (discrepancies) {
-    //   if (discrepancies.length > 0) {
-    //     console.log('1')
-    //   }
-    // });
 
     var discrepancies = fileData.length === 0 ? ["No header row data read"] : that._detectCSVMetadataDiscrepancy(fileData);
 
@@ -9236,7 +9229,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             header === 'Index' ? parseInt(values[index]) : values[index];
           return object;
         }, {});
-        console.log(el)
         return el;
       });
 
@@ -9251,7 +9243,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           return (channels.indexOf(channel) === index);
         })
         if (arr.every(function (row) {
-          console.log(row)
           const fileChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("/").map((element) => { return element.slice(3) });
 
           return fileChannels.every((channel) => {
@@ -9421,30 +9412,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.currentWindowData.channels.forEach((channel) => {
       (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
     });
-
-    if (headerRowData.length === 0) {
-      var channels = Object.values(currentDisplayChannels).flat();
-      channels.filter((channel, index) => {
-        return (channels.indexOf(channel) === index)
-      })
-
-      console.log(channels)
-      // if (!headerRowData.every(function()))
-      // Object.keys(currentDisplayChannels).forEach((key) => {
-      //   headerRowData.forEach((fileData) => {
-      //     if(that._areArrayEqual(fileData.channels.split('/'), currentDisplayChannels[key]))
-      //       delete currentDisplayChannels[key];
-      //   })
-      // })
-      // if (Object.keys(currentDisplayChannels).length === 0) {
-      //   discrepancies.push('failed to read header rows of the uploading csv file, but the channels match up');
-      // } else {
-      //   discrepancies.push('failed to read header rows of the uploading csv file and the channels of the input data does not match up displaying channels');
-      // }
-      discrepancies.push('failed to read header rows of the uploading csv file and the channels of the input data does not match up displaying channels');
-      return discrepancies;
-    }
-
 
     const currentFileKeys = Object.keys(that.vars.recordingMetadata);
     headerRowData.forEach((fileData) => {
