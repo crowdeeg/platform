@@ -4008,18 +4008,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data);
     
-    var oldyData = [];
-    var oldxData = [];
-
-    for (let i = 0;i<that.vars.chart.series.length;i++){
-      oldyData[i] = [];
-      oldxData[i] = [];
-      for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-        oldyData[i].push(that.vars.chart.series[i].yData[j]);
-        oldxData[i].push(that.vars.chart.series[i].xData[j]);
-      }
-    }
-    $(that.element).find(".ylimit_btn").click(function(){
+    
+    $(that.element).find(".ylimit_btn").click(function(e){
+      e.preventDefault();
       that.options.y_axis_limited = true;
       for (let i = 0;i<that.vars.chart.series.length;i++){
         let offset = that._getOffsetForChannelIndexPostScale(i);
@@ -4032,7 +4023,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_upper = document.querySelector('#upper_limit_select').selectedIndex*10;
         for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
           if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
-            
+          
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
@@ -4042,6 +4033,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         
       }
+      $(that.element).find(".ylimit_btn").prop('disabled',true);
 
       that.vars.chart.redraw();
       
@@ -4050,6 +4042,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     $(that.element).find(".restore_btn").click(function(){
       that.options.y_axis_limited = false;
+      $(that.element).find(".ylimit_btn").prop('disabled',false);
       that._updateChannelDataInSeries(that.vars.chart.series, data);
       that.vars.chart.xAxis[0].setExtremes(
         that.vars.currentWindowStart,
@@ -4105,22 +4098,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       
     });
     
-    if(that.options.y_axis_limited){
-      for (let i = 0;i<that.vars.chart.series.length;i++){
-        let offset = that._getOffsetForChannelIndexPostScale(i);
-        var newyData = [];
-        var newXData = [];
-        for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-          if((that.vars.chart.series[i].yData[j] - offset) >= that.options.y_limit_lower && (that.vars.chart.series[i].yData[j] - offset) <= that.options.y_limit_upper){
-            
-            newyData.push(that.vars.chart.series[i].yData[j]);
-            newXData.push(that.vars.chart.series[i].xData[j]);
-          }
-        }
-        that.vars.chart.series[i].yData = newyData;
-        that.vars.chart.series[i].xData = newXData;
-      }
-    }
+    
     // sets the min and max values for the chart
     that.vars.chart.xAxis[0].setExtremes(
       that.vars.currentWindowStart,
@@ -4173,6 +4151,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   
     that._updateChangePointLabelFixed();
     that.vars.chart.annotations.allItems.forEach(annotation => {that._updateControlPoint(annotation)});
+
+    if(that.options.y_axis_limited){
+      for (let i = 0;i<that.vars.chart.series.length;i++){
+        let offset = that._getOffsetForChannelIndexPostScale(i);
+        var newyData = [];
+        var newXData = [];
+        for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+          if((that.vars.chart.series[i].yData[j] - offset) >= that.options.y_limit_lower && (that.vars.chart.series[i].yData[j] - offset) <= that.options.y_limit_upper){
+            
+            newyData.push(that.vars.chart.series[i].yData[j]);
+            newXData.push(that.vars.chart.series[i].xData[j]);
+          }
+        }
+        that.vars.chart.series[i].yData = newyData;
+        that.vars.chart.series[i].xData = newXData;
+      }
+      that.vars.chart.redraw();
+    }
   },
 
   //checks if an object is empty
