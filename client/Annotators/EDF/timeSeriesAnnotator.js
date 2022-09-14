@@ -9191,22 +9191,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // slice from start of text to the first \n index
     // use split to create an array from string by delimiter
     var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
-    var fileData = [];
-    while(headerRow.indexOf("{") !== -1) {
+    var headerStr = [];
+    while (headerRow.indexOf("{") !== -1) {
       const file = headerRow.slice(headerRow.indexOf("{"), headerRow.indexOf("}") + 1);
+      headerStr.push(file)
+      console.log(file)
       headerRow = headerRow.slice(headerRow.indexOf('}') + 1);
-      try {
-        console.log(file)
-        fileData.push(JSON.parse(file));
-      } catch (err) {
-
-      }
     }
-
-    var discrepancies = fileData.length === 0 ? ["No header row data read"] : that._detectCSVMetadataDiscrepancy(fileData);
+    
+    console.log(headerStr)
+    const headerData = headerStr.map((str) => {
+      console.log(str)
+      return JSON.parse(str);
+    })
+    console.log(headerData)
+    var discrepancies = headerData.length === 0 ? ["No header row data read"] : that._detectCSVMetadataDiscrepancy(headerData);
 
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
-    console.log(process)
     if (process) {
       const remainStr = str.slice(str.indexOf("Index,Time"));
       const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
@@ -9231,8 +9232,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }, {});
         return el;
       });
-
-      if (fileData.length === 0) {
+      console.log(headerData.length)
+      if (headerData.length === 0) {
         var currentDisplayChannels = {}
         that.vars.currentWindowData.channels.forEach((channel) => {
           (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
@@ -9414,21 +9415,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     const currentFileKeys = Object.keys(that.vars.recordingMetadata);
-    headerRowData.forEach((fileData) => {
-      console.log(fileData)
-      if (!currentFileKeys.includes(fileData.fileId)) {
-        discrepancies.push(`EDF file Id: ${fileData.fileName} is not match any of edf file that's displaying`)
+    headerRowData.forEach((headerData) => {
+      console.log(headerData)
+      if (!currentFileKeys.includes(headerData.fileId)) {
+        discrepancies.push(`EDF file Id: ${headerData.fileName} is not match any of edf file that's displaying`)
       } else {
-        if (fileData.filename !== that.vars.recordingMetadata[fileData.fileId].Record)
-          discrepancies.push(`Filename ${fileData.filename} is different from the filename corrseponding to ${fileData.fileId}`);
+        if (headerData.filename !== that.vars.recordingMetadata[headerData.fileId].Record)
+          discrepancies.push(`Filename ${headerData.filename} is different from the filename corrseponding to ${headerData.fileId}`);
 
-        if (fileData.startTime !== that.vars.recordingMetadata[fileData.fileId].StartingTime)
-          discrepancies.push(`The starting time for ${fileData.filename} are different`);
+        if (headerData.startTime !== that.vars.recordingMetadata[headerData.fileId].StartingTime)
+          discrepancies.push(`The starting time for ${headerData.filename} are different`);
 
-        const channels = fileData.channels.split("/");
-
-        if (!that._areArrayEqual(channels, currentDisplayChannels[fileData.fileId]))
-          discrepancies.push(`The channels for ${fileData.filename} are different`);
+        const channels = headerData.channels.split("/");
+        console.log(channels)
+        console.log(currentDisplayChannels[headerData.fileId])
+        if (!that._areArrayEqual(channels, currentDisplayChannels[headerData.fileId]))
+          discrepancies.push(`The channels for ${headerData.filename} are different`);
       }
     })
 
