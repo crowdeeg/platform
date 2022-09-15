@@ -9002,7 +9002,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         'filename': record.Record,
         'fileId': key,
         'startTime': record.StartingTime,
-        'channels': channels[key].join('/')
+        'channels': channels[key].join('//')
       }))
     })).join(',')
 
@@ -9244,7 +9244,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           return (channels.indexOf(channel) === index);
         })
         if (arr.every(function (row) {
-          const fileChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("/").map((element) => { return element.slice(3) });
+          const fileChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("//").map((element) => { return element.slice(3) });
 
           return fileChannels.every((channel) => {
             return channels.includes(channel)
@@ -9426,7 +9426,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         if (headerData.startTime !== that.vars.recordingMetadata[headerData.fileId].StartingTime)
           discrepancies.push(`The starting time for ${headerData.filename} are different`);
 
-        const channels = headerData.channels.split("/");
+        const channels = headerData.channels.split("//");
         console.log(channels)
         console.log(currentDisplayChannels[headerData.fileId])
         if (!that._areArrayEqual(channels, currentDisplayChannels[headerData.fileId]))
