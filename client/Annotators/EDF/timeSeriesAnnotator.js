@@ -663,32 +663,52 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 </div>\
                 <div style = "margin-bottom: 10px" class = "ylimit_lower">\
                   <select id="lower_limit_select">\
-                      <option value="1">Y-AXIS-LOWER-LIMIT:0</option>\
-                      <option value="2">Y-AXIS-LOWER-LIMIT:10</option>\
-                      <option value="3">Y-AXIS-LOWER-LIMIT:20</option>\
-                      <option value="4">Y-AXIS-LOWER-LIMIT:30</option>\
-                      <option value= "5">Y-AXIS-LOWER-LIMIT:40</option>\
-                      <option value="6">Y-AXIS-LOWER-LIMIT:50</option>\
-                      <option value="7">Y-AXIS-LOWER-LIMIT:60</option>\
-                      <option value="7">Y-AXIS-LOWER-LIMIT:70</option>\
-                      <option value="9">Y-AXIS-LOWER-LIMIT:80</option>\
-                      <option value= "10">Y-AXIS-LOWER-LIMIT:90</option>\
-                      <option value= "11">Y-AXIS-LOWER-LIMIT:100</option>\
+                    <option value="1">Y-AXIS-LOWER-LIMIT:-100</option>\
+                    <option value="2">Y-AXIS-LOWER-LIMIT:-90</option>\
+                    <option value="3">Y-AXIS-LOWER-LIMIT:-80</option>\
+                    <option value= "4">Y-AXIS-LOWER-LIMIT:-70</option>\
+                    <option value="5">Y-AXIS-LOWER-LIMIT:-60</option>\
+                    <option value="6">Y-AXIS-LOWER-LIMIT:-50</option>\
+                    <option value="7">Y-AXIS-LOWER-LIMIT:-40</option>\
+                    <option value="8">Y-AXIS-LOWER-LIMIT:-30</option>\
+                    <option value= "9">Y-AXIS-LOWER-LIMIT:-20</option>\
+                    <option value= "10">Y-AXIS-LOWER-LIMIT:-10</option>\
+                    <option value="11">Y-AXIS-LOWER-LIMIT:0</option>\
+                    <option value="12">Y-AXIS-LOWER-LIMIT:10</option>\
+                    <option value="13">Y-AXIS-LOWER-LIMIT:20</option>\
+                    <option value="14">Y-AXIS-LOWER-LIMIT:30</option>\
+                    <option value= "15">Y-AXIS-LOWER-LIMIT:40</option>\
+                    <option value="16">Y-AXIS-LOWER-LIMIT:50</option>\
+                    <option value="17">Y-AXIS-LOWER-LIMIT:60</option>\
+                    <option value="18">Y-AXIS-LOWER-LIMIT:70</option>\
+                    <option value="19">Y-AXIS-LOWER-LIMIT:80</option>\
+                    <option value= "20">Y-AXIS-LOWER-LIMIT:90</option>\
+                    <option value= "21">Y-AXIS-LOWER-LIMIT:100</option>\
                   </select>\
                 </div>\
                 <div style = "margin-bottom: 10px" class = "ylimit_upper">\
                   <select id="upper_limit_select">\
-                      <option value="1">Y-AXIS-UPPER-LIMIT:0</option>\
-                      <option value="2">Y-AXIS-UPPER-LIMIT:10</option>\
-                      <option value="3">Y-AXIS-UPPER-LIMIT:20</option>\
-                      <option value="4">Y-AXIS-UPPER-LIMIT:30</option>\
-                      <option value="5">Y-AXIS-UPPER-LIMIT:40</option>\
-                      <option value="6">Y-AXIS-UPPER-LIMIT:50</option>\
-                      <option value="7">Y-AXIS-UPPER-LIMIT:60</option>\
-                      <option value="8">Y-AXIS-UPPER-LIMIT:70</option>\
-                      <option value="9">Y-AXIS-UPPER-LIMIT:80</option>\
-                      <option value="10">Y-AXIS-UPPER-LIMIT:90</option>\
-                      <option value="11">Y-AXIS-UPPER-LIMIT:100</option>\
+                  <option value="1">Y-AXIS-UPPER-LIMIT:-100</option>\
+                  <option value="2">Y-AXIS-UPPER-LIMIT:-90</option>\
+                  <option value="3">Y-AXIS-UPPER-LIMIT:-80</option>\
+                  <option value= "4">Y-AXIS-UPPER-LIMIT:-70</option>\
+                  <option value="5">Y-AXIS-UPPER-LIMIT:-60</option>\
+                  <option value="6">Y-AXIS-UPPER-LIMIT:-50</option>\
+                  <option value="7">Y-AXIS-UPPER-LIMIT:-40</option>\
+                  <option value="8">Y-AXIS-UPPER-LIMIT:-30</option>\
+                  <option value= "9">Y-AXIS-UPPER-LIMIT:-20</option>\
+                  <option value= "10">Y-AXIS-UPPER-LIMIT:-10</option>\
+                  <option value="11">Y-AXIS-UPPER-LIMIT:0</option>\
+                  <option value="12">Y-AXIS-UPPER-LIMIT:10</option>\
+                  <option value="13">Y-AXIS-UPPER-LIMIT:20</option>\
+                  <option value="14">Y-AXIS-UPPER-LIMIT:30</option>\
+                  <option value= "15">Y-AXIS-UPPER-LIMIT:40</option>\
+                  <option value="16">Y-AXIS-UPPER-LIMIT:50</option>\
+                  <option value="17">Y-AXIS-UPPER-LIMIT:60</option>\
+                  <option value="18">Y-AXIS-UPPER-LIMIT:70</option>\
+                  <option value="19">Y-AXIS-UPPER-LIMIT:80</option>\
+                  <option value= "20">Y-AXIS-UPPER-LIMIT:90</option>\
+                  <option value= "21">Y-AXIS-UPPER-LIMIT:100</option>\
                   </select>\
                 </div>\
               </div>\
@@ -4008,7 +4028,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data);
     
-    
     $(that.element).find(".ylimit_btn").click(function(e){
       e.preventDefault();
       that.options.y_axis_limited = true;
@@ -4017,24 +4036,30 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var newyData = [];
         var newXData = [];
         const lower = document.querySelector('#lower_limit_select');
-        var lowerlimit = lower.selectedIndex * 10;
-        that.options.y_limit_lower = lower.selectedIndex*10;
-        var upperlimit = document.querySelector('#upper_limit_select').selectedIndex*10;
-        that.options.y_limit_upper = document.querySelector('#upper_limit_select').selectedIndex*10;
+        var lowerlimit = (lower.selectedIndex -10) * 10;
+        that.options.y_limit_lower = (lower.selectedIndex -10)*10;
+        var upperlimit = (document.querySelector('#upper_limit_select').selectedIndex-10)*10;
+        that.options.y_limit_upper = (document.querySelector('#upper_limit_select').selectedIndex-10)*10;
         for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
           if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
           
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
+          else{
+            newyData.push({y:that.vars.chart.series[i].yData[j],
+            color:'#FFFFFF'});
+            newXData.push(that.vars.chart.series[i].xData[j]);
+          }
         }
         that.vars.chart.series[i].yData = newyData;
         that.vars.chart.series[i].xData = newXData;
-
+        console.log('HAHA');
+        console.log(that.vars.chart.series[i].xData);
+        console.log(that.vars.chart.series[i].yData);
         
       }
       $(that.element).find(".ylimit_btn").prop('disabled',true);
-
       that.vars.chart.redraw();
       
       
@@ -4162,6 +4187,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
+          }
+          else{
+            newyData.push({y:that.vars.chart.series[i].yData[j],
+              color:'#FFFFFF'});
+              newXData.push(that.vars.chart.series[i].xData[j]);
           }
         }
         that.vars.chart.series[i].yData = newyData;
@@ -4409,6 +4439,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         annotations: null,
         plotOptions: {
           series: {
+            connectNulls: false,
             animation: false,
             turboThreshold: 0,
             boostThreshold: 1,
@@ -8296,9 +8327,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end,
       correctAnswers
     );
-    
-    console.log(that.vars.annotationsCache[cacheKey]);
-
+  
 
     if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
       var data = that.vars.annotationsCache[cacheKey] || {
@@ -8429,8 +8458,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end
     );
     that._displayAnnotations(annotations);
-
-    console.log(annotations);
 
   },
 
@@ -8696,7 +8723,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _displayAnnotations: function (annotations) {
-    console.log(annotations);
     var that = this;
 
     var chart = that.vars.chart;
