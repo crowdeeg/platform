@@ -93,13 +93,31 @@
 .floating-panel .row {
   margin-bottom: 0;
 }
+.restore_btn {
+  text-decoration: none;
+    color: #fff;
+    background-color: #26a69a;
+    text-align: center;
+    letter-spacing: .5px;
+    transition: .2s ease-out;
+    cursor: pointer;
+}
 
+.ylimit_btn {
+  text-decoration: none;
+    color: #fff;
+    background-color: #26a69a;
+    text-align: center;
+    letter-spacing: .5px;
+    transition: .2s ease-out;
+    cursor: pointer;
+}
 .annotator-container {
   padding: 0;
   margin: 0;
   position: absolute;
   width: 100%;
-  height: 100%;
+  height:100%;
 }
 
 .graph_container {
@@ -165,6 +183,27 @@
 
 .montage_panel {
   width: 270px;
+}
+
+.y-axis-options-container{
+  display:flex;
+  width:70%;
+}
+
+.y-axis-options-container div {
+  padding-left:10px;
+  padding-right:10px;
+}
+.ylimit_btn_container {
+  flex:1;
+}
+
+.ylimit_lower {
+  flex:1;
+}
+
+.ylimit_upper {
+  flex:1;
 }
 
 .frequency_filter_panel {
