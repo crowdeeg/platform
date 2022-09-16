@@ -4054,9 +4054,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
         that.vars.chart.series[i].yData = newyData;
         that.vars.chart.series[i].xData = newXData;
-        console.log('HAHA');
-        console.log(that.vars.chart.series[i].xData);
-        console.log(that.vars.chart.series[i].yData);
+      
         
       }
       $(that.element).find(".ylimit_btn").prop('disabled',true);
