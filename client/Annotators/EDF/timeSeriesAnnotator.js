@@ -2482,7 +2482,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // calculate the difference between two recordings after adding the current difference
       if (!diff) {
         diff =
-        crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
+          crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
       }
       that.vars.currentTimeDiff += diff;
       console.log("=======" + diff + "======");
@@ -4026,7 +4026,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
       that._updateChannelDataInSeries(that.vars.chart.series, data);
-      
+
       // console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
       that.vars.chart.redraw();
@@ -4038,45 +4038,47 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data);
-    
-    $(that.element).find(".ylimit_btn").click(function(e){
+
+    $(that.element).find(".ylimit_btn").click(function (e) {
       e.preventDefault();
       that.options.y_axis_limited = true;
-      for (let i = 0;i<that.vars.chart.series.length;i++){
+      for (let i = 0; i < that.vars.chart.series.length; i++) {
         let offset = that._getOffsetForChannelIndexPostScale(i);
         var newyData = [];
         var newXData = [];
         const lower = document.querySelector('#lower_limit_select');
-        var lowerlimit = (lower.selectedIndex -10) * 10;
-        that.options.y_limit_lower = (lower.selectedIndex -10)*10;
-        var upperlimit = (document.querySelector('#upper_limit_select').selectedIndex-10)*10;
-        that.options.y_limit_upper = (document.querySelector('#upper_limit_select').selectedIndex-10)*10;
-        for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-          if((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit){
-          
+        var lowerlimit = (lower.selectedIndex - 10) * 10;
+        that.options.y_limit_lower = (lower.selectedIndex - 10) * 10;
+        var upperlimit = (document.querySelector('#upper_limit_select').selectedIndex - 10) * 10;
+        that.options.y_limit_upper = (document.querySelector('#upper_limit_select').selectedIndex - 10) * 10;
+        for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
+          if ((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit) {
+
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
-          else{
-            newyData.push({y:that.vars.chart.series[i].yData[j],
-            color:'#FFFFFF'});
+          else {
+            newyData.push({
+              y: that.vars.chart.series[i].yData[j],
+              color: '#FFFFFF'
+            });
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
         }
         that.vars.chart.series[i].yData = newyData;
         that.vars.chart.series[i].xData = newXData;
-      
-        
+
+
       }
-      $(that.element).find(".ylimit_btn").prop('disabled',true);
+      $(that.element).find(".ylimit_btn").prop('disabled', true);
       that.vars.chart.redraw();
-      
-      
+
+
     });
 
-    $(that.element).find(".restore_btn").click(function(){
+    $(that.element).find(".restore_btn").click(function () {
       that.options.y_axis_limited = false;
-      $(that.element).find(".ylimit_btn").prop('disabled',false);
+      $(that.element).find(".ylimit_btn").prop('disabled', false);
       that._updateChannelDataInSeries(that.vars.chart.series, data);
       that.vars.chart.xAxis[0].setExtremes(
         that.vars.currentWindowStart,
@@ -4084,11 +4086,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         false,
         false
       );
-  
+
       that.vars.recordScalingFactors = false;
       that.vars.recordPolarity = false;
       that.vars.recordTranslation = false;
-  
+
       // checks if the object is empty
       if (!that._objectIsEmpty(that.vars.scalingFactors)) {
         for (const index in that.vars.scalingFactors) {
@@ -4099,40 +4101,40 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // console.log("scaling after page change");
           // console.log(that.vars.chart.series[index].yData);
         }
-  
+
       }
-  
+
       if (!that._objectIsEmpty(that.vars.translation)) {
         for (const index in that.vars.translation) {
           that._customTranslation(index, that.vars.translation[index]);
         }
       }
-  
+
       if (!that._objectIsEmpty(that.vars.polarity)) {
         for (const index in that.vars.polarity) {
           that._reversePolarity(index);
         }
       }
-  
+
       that.vars.recordPolarity = true;
       that.vars.recordScalingFactors = true;
       that.vars.recordTranslation = true;
-  
+
       that.vars.chart.redraw(); // efficiently redraw the entire window in one go
-  
+
       // use the chart start/end so that data and annotations can never
       // get out of synch
       that._refreshAnnotations();
       that._renderChannelSelection();
       that._updateBookmarkCurrentPageButton();
       that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
-    
+
       that._updateChangePointLabelFixed();
-      that.vars.chart.annotations.allItems.forEach(annotation => {that._updateControlPoint(annotation)});
-      
+      that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
+
     });
-    
-    
+
+
     // sets the min and max values for the chart
     that.vars.chart.xAxis[0].setExtremes(
       that.vars.currentWindowStart,
@@ -4184,23 +4186,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
 
     that._updateChangePointLabelFixed();
-    that.vars.chart.annotations.allItems.forEach(annotation => {that._updateControlPoint(annotation)});
+    that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
 
-    if(that.options.y_axis_limited){
-      for (let i = 0;i<that.vars.chart.series.length;i++){
+    if (that.options.y_axis_limited) {
+      for (let i = 0; i < that.vars.chart.series.length; i++) {
         let offset = that._getOffsetForChannelIndexPostScale(i);
         var newyData = [];
         var newXData = [];
-        for(let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-          if((that.vars.chart.series[i].yData[j] - offset) >= that.options.y_limit_lower && (that.vars.chart.series[i].yData[j] - offset) <= that.options.y_limit_upper){
-            
+        for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
+          if ((that.vars.chart.series[i].yData[j] - offset) >= that.options.y_limit_lower && (that.vars.chart.series[i].yData[j] - offset) <= that.options.y_limit_upper) {
+
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
           }
-          else{
-            newyData.push({y:that.vars.chart.series[i].yData[j],
-              color:'#FFFFFF'});
-              newXData.push(that.vars.chart.series[i].xData[j]);
+          else {
+            newyData.push({
+              y: that.vars.chart.series[i].yData[j],
+              color: '#FFFFFF'
+            });
+            newXData.push(that.vars.chart.series[i].xData[j]);
           }
         }
         that.vars.chart.series[i].yData = newyData;
@@ -8337,7 +8341,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end,
       correctAnswers
     );
-  
+
 
     if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
       var data = that.vars.annotationsCache[cacheKey] || {
@@ -8745,7 +8749,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       .forEach((annotation) => {
         var type = annotation.label;
-        
+
         // if (that.options.features.order.indexOf(type) < 0) {
         //   return;
         // }
@@ -9394,14 +9398,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
   },
-  
+
 
   _CSVToArray: function (str, delimiter = ",") {
     const that = this
     // slice from start of text to the first 'Index,Time' indexto get header row data
     var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
     var headerStr = [];
-    
+
     //split data from 
     while (headerRow.indexOf("{") !== -1) {
       const file = headerRow.slice(headerRow.indexOf("{"), headerRow.indexOf("}") + 1);
@@ -9414,11 +9418,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var data = JSON.parse(str)
         result.push(data)
       } catch (err) {
-        
+
       }
       return result
     }, [])
-    
+
     var discrepancies = headerData.length !== headerStr.length ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
 
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
@@ -9487,15 +9491,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.chart.annotations.allItems.forEach((element) => {
       set.add(String(element.options.xValue) + element.metadata.annotationLabel);
     })
+
+    var i = 0;
     objArr.forEach((element) => {
-      if (!set.has(String(element["Time"].toFixed(2)) + element["Annotation"])) {
-        if (element["Type"] != "Stage Change") {
-          that._redrawEventAnnotationFromObject(element);
-        } else {
-          that._redrawChangePointAnnotationFromObject(element);
-        }
-      }
+      (function (i) {
+        Meteor.setTimeout(function () {
+          if (!set.has(String(element["Time"].toFixed(2)) + element["Annotation"])) {
+            if (element["Type"] != "Stage Change") {
+              that._redrawEventAnnotationFromObject(element);
+            } else {
+              that._redrawChangePointAnnotationFromObject(element);
+            }
+          }
+        }, (i % 50 * 1000));
+      }(i));
+      i++;
     })
+
   },
 
   _redrawEventAnnotationFromObject: function (obj) {
