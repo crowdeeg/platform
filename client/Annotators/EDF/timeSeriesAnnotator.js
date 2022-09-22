@@ -9481,27 +9481,33 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         channels.filter((channel, index) => {
           return (channels.indexOf(channel) === index);
         })
-        if (arr.every(function (row) {
-          if (row["Channels"]) {
-            const fileChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("//").map((element) => { return element.slice(element.match('[a-zA-Z]').index) });
 
-            return fileChannels.every((channel) => {
-              return channels.includes(channel)
-            });
+        const properArr = arr.reduce((arr, row) => {
+          if (row["Channels"]) {
+            console.log('a')
+            const rowChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("//").map((element) => { return element.slice(element.match('[a-zA-Z]').index) });
+            if (rowChannels.every((channel) => {
+              return channels.includes(channel);
+            })) {
+              arr.push(row);
+            }
           }
-        })) {
           return arr;
-        } else {
-          alert(["Current displaying channels do not include all channels in the uploaded file, we can not futher process the file"]);
-          return [];
+        }, [])
+
+        const corruptRow = arr.length - properArr.length ;
+
+        if (corruptRow > 0) {
+          alert(`${corruptRow} rows of data doesn't format well, we couldn't process those rows.`)
         }
+        return properArr;
+
       } else {
         return arr;
       }
     } else {
       return [];
     }
-
   },
 
   _redrawAnnotationsFromObjects: function (objArr) {
