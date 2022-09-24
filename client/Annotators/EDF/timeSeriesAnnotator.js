@@ -9424,7 +9424,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }, [])
 
     var discrepancies = headerData.length !== headerStr.length ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
-
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
     if (process) {
       const remainStr = str.slice(str.indexOf("Index,Time"));
@@ -9438,20 +9437,44 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // use headers.reduce to create an object
       // object properties derived from headers:values
       // the object passed as an element of the array
-      const arr = rows.map(function (row) {
+      if (rows.length === 0 || headers.length === 0) {
+        that._handleCSVMetadataDiscrepancy(["No data was read"]);
+        return [];
+      }
+
+      const arr = rows.reduce(function (arr, row) {
         const values = row.split(delimiter);
         // console.log(values);
         const el = headers.reduce(function (object, header, index) {
-          object[header] = (
-            header === 'Time' || header === 'Duration'
-          ) ? parseFloat(values[index]) :
-            header === 'Index' ? parseInt(values[index]) : values[index];
-          return object;
+          if (header === 'Time' || header === 'Duration' || header === 'Index') {
+            if (isNaN(values[index])) {
+              return object;
+            } else {
+              object[header] = (
+                header === 'Time' || header === 'Duration'
+              ) ? parseFloat(values[index]) :
+                header === 'Index' ? parseInt(values[index]) : values[index];
+              return object;
+            }
+          } else {
+            object[header] = values[index]
+            return object;
+          }
         }, {});
-        return el;
-      });
+        if(el === {}) {
+          return arr;
+        } else {
+          arr.push(el)
+          return arr;
+        }
+      }, []);
 
-      if (headerData.length !== headerStr.length) {
+      if (Object.keys(arr).length < 1) {
+        that._handleCSVMetadataDiscrepancy(["No data was read"]);
+        return [];
+      }
+
+      if (headerData.length !== headerStr.length || headerData.length === 0) {
         var currentDisplayChannels = {}
         that.vars.currentWindowData.channels.forEach((channel) => {
           (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
@@ -9461,27 +9484,33 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         channels.filter((channel, index) => {
           return (channels.indexOf(channel) === index);
         })
-        if (arr.every(function (row) {
-          if (row["Channels"]) {
-            const fileChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("//").map((element) => { return element.slice(3) });
 
-            return fileChannels.every((channel) => {
-              return channels.includes(channel)
-            });
+        const properArr = arr.reduce((arr, row) => {
+          if (row["Channels"]) {
+            console.log('a')
+            const rowChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("//").map((element) => { return element.slice(element.match('[a-zA-Z]').index) });
+            if (rowChannels.every((channel) => {
+              return channels.includes(channel);
+            })) {
+              arr.push(row);
+            }
           }
-        })) {
           return arr;
-        } else {
-          const process = that._handleCSVMetadataDiscrepancy(["Current displaying channels do not include all channels in the uploaded file"]);
-          return process ? arr : [];
+        }, [])
+
+        const corruptRow = arr.length - properArr.length ;
+
+        if (corruptRow > 0) {
+          alert(`${corruptRow} rows of data doesn't format well, we couldn't process those rows.`)
         }
+        return properArr;
+
       } else {
         return arr;
       }
     } else {
       return [];
     }
-
   },
 
   _redrawAnnotationsFromObjects: function (objArr) {
@@ -9568,8 +9597,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var value = (hash >> (i * 8)) & 0xFF;
       colour += ('00' + value.toString(16)).substr(-2);
     }
-    console.log(colour);
-    console.log(this._newColorShade(colour, -150));
+    // console.log(colour);
+    // console.log(this._newColorShade(colour, -150));
     return colour;
   },
 
