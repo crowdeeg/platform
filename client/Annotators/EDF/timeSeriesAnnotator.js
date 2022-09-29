@@ -13,8 +13,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   options: {
     optionsURLParameter: "annotatorOptions",
     y_axis_limited: false,
-    y_limit_lower: undefined,
-    y_limit_upper: undefined,
+    y_limit_lower: -200,
+    y_limit_upper: -200,
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -670,54 +670,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <button type = "button" class = "btn ylimit_btn">Limit Y-Axis</button>\
                 </div>\
                 <div style = "margin-bottom: 10px" class = "ylimit_lower">\
-                  <select id="lower_limit_select">\
-                    <option value="1">Y-AXIS-LOWER-LIMIT:-100</option>\
-                    <option value="2">Y-AXIS-LOWER-LIMIT:-90</option>\
-                    <option value="3">Y-AXIS-LOWER-LIMIT:-80</option>\
-                    <option value= "4">Y-AXIS-LOWER-LIMIT:-70</option>\
-                    <option value="5">Y-AXIS-LOWER-LIMIT:-60</option>\
-                    <option value="6">Y-AXIS-LOWER-LIMIT:-50</option>\
-                    <option value="7">Y-AXIS-LOWER-LIMIT:-40</option>\
-                    <option value="8">Y-AXIS-LOWER-LIMIT:-30</option>\
-                    <option value= "9">Y-AXIS-LOWER-LIMIT:-20</option>\
-                    <option value= "10">Y-AXIS-LOWER-LIMIT:-10</option>\
-                    <option value="11">Y-AXIS-LOWER-LIMIT:0</option>\
-                    <option value="12">Y-AXIS-LOWER-LIMIT:10</option>\
-                    <option value="13">Y-AXIS-LOWER-LIMIT:20</option>\
-                    <option value="14">Y-AXIS-LOWER-LIMIT:30</option>\
-                    <option value= "15">Y-AXIS-LOWER-LIMIT:40</option>\
-                    <option value="16">Y-AXIS-LOWER-LIMIT:50</option>\
-                    <option value="17">Y-AXIS-LOWER-LIMIT:60</option>\
-                    <option value="18">Y-AXIS-LOWER-LIMIT:70</option>\
-                    <option value="19">Y-AXIS-LOWER-LIMIT:80</option>\
-                    <option value= "20">Y-AXIS-LOWER-LIMIT:90</option>\
-                    <option value= "21">Y-AXIS-LOWER-LIMIT:100</option>\
-                  </select>\
+                  <label for "ylimit_lower_input">Y-Axis Lower Limit:</label>\
+                  <input type = "number" id = "ylimit_lower_input" value = -200>\
                 </div>\
                 <div style = "margin-bottom: 10px" class = "ylimit_upper">\
-                  <select id="upper_limit_select">\
-                  <option value="1">Y-AXIS-UPPER-LIMIT:-100</option>\
-                  <option value="2">Y-AXIS-UPPER-LIMIT:-90</option>\
-                  <option value="3">Y-AXIS-UPPER-LIMIT:-80</option>\
-                  <option value= "4">Y-AXIS-UPPER-LIMIT:-70</option>\
-                  <option value="5">Y-AXIS-UPPER-LIMIT:-60</option>\
-                  <option value="6">Y-AXIS-UPPER-LIMIT:-50</option>\
-                  <option value="7">Y-AXIS-UPPER-LIMIT:-40</option>\
-                  <option value="8">Y-AXIS-UPPER-LIMIT:-30</option>\
-                  <option value= "9">Y-AXIS-UPPER-LIMIT:-20</option>\
-                  <option value= "10">Y-AXIS-UPPER-LIMIT:-10</option>\
-                  <option value="11">Y-AXIS-UPPER-LIMIT:0</option>\
-                  <option value="12">Y-AXIS-UPPER-LIMIT:10</option>\
-                  <option value="13">Y-AXIS-UPPER-LIMIT:20</option>\
-                  <option value="14">Y-AXIS-UPPER-LIMIT:30</option>\
-                  <option value= "15">Y-AXIS-UPPER-LIMIT:40</option>\
-                  <option value="16">Y-AXIS-UPPER-LIMIT:50</option>\
-                  <option value="17">Y-AXIS-UPPER-LIMIT:60</option>\
-                  <option value="18">Y-AXIS-UPPER-LIMIT:70</option>\
-                  <option value="19">Y-AXIS-UPPER-LIMIT:80</option>\
-                  <option value= "20">Y-AXIS-UPPER-LIMIT:90</option>\
-                  <option value= "21">Y-AXIS-UPPER-LIMIT:100</option>\
-                  </select>\
+                <label for "ylimit_upper_input">Y-Axis Upper Limit:</label>\
+                <input type = "number" id = "ylimit_upper_input" value = 200>\
                 </div>\
               </div>\
                 <div class="graph_control"> \
@@ -3518,7 +3476,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log("edf.data", data);
       if (!that._isDataValid(data)) {
         that.vars.windowsCache[identifierKey] = false;
-
         if (callback) {
           callback(null, noDataError);
         }
@@ -3627,7 +3584,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             values = values.map((v) => v + avg);
           }
         }
-
         if (scaleFactorAmplitude != 0) {
           //  //console.log(name);
           // gets every value and divides it by the scaleFactorAmplitude, the max value in the values array
@@ -3637,7 +3593,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           valuesScaled = values.map((v) => v / scaleFactorAmplitude);
           // //console.log(valuesScaled);
         }
-
         // console.log(valuesScaled);
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
 
@@ -4014,7 +3969,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _populateGraph: function (data) {
     /* plot all of the points to the chart */
     var that = this;
-
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
     if (!that.vars.chart) {
@@ -4046,11 +4000,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         let offset = that._getOffsetForChannelIndexPostScale(i);
         var newyData = [];
         var newXData = [];
-        const lower = document.querySelector('#lower_limit_select');
-        var lowerlimit = (lower.selectedIndex - 10) * 10;
-        that.options.y_limit_lower = (lower.selectedIndex - 10) * 10;
-        var upperlimit = (document.querySelector('#upper_limit_select').selectedIndex - 10) * 10;
-        that.options.y_limit_upper = (document.querySelector('#upper_limit_select').selectedIndex - 10) * 10;
+        const lower = document.querySelector('#ylimit_lower_input');
+        var lowerlimit = lower.value;
+        that.options.y_limit_lower = lowerlimit;
+        var upperlimit = (document.querySelector('#ylimit_upper_input').value);
+        that.options.y_limit_upper = upperlimit;
         for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
           if ((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit) {
 
@@ -4260,10 +4214,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var seriesData = xValues.map(function (x, i) {
         return [x, samplesScaledAndOffset[i]];
       });
-
+      
       // adds the offset needed to the start of the graph
       seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
-
       // adds the offset needed to the end of the graphID
       seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
 
