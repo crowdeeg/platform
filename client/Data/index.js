@@ -1,11 +1,7 @@
 import { Data, Tasks, Assignments, Patients } from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
-
-import { FilesCollection } from 'meteor/ostrio:files';
-
 import {EDFFile} from '/collections';
-
 
 // double dictionary for task inference
 let taskDictionary = {};
@@ -142,7 +138,6 @@ let assembleTaskObj = (signalNameSet, source, file) => {
 
 
 Template.Data.events({
-    
     'click .btn.download': function() {
         $(Template.instance().find('table.reactive-table')).table2csv();
     },
@@ -492,17 +487,6 @@ Template.Data.helpers({
                 label: 'Last Updated',
                 hidden: true,
             },
-
-            //CODE FOR THE DELETE COLUMN IN FILES REACTIVE TABLE
-            {
-                key: 'DELETE',
-                label: 'DELETE',
-                fn: (value,object,key)=> {
-                    const inputId = object._id; 
-                    return new Spacebars.SafeString('<button type = "button" class = "delete-button" data-id = ' + inputId + ' = >DELETE</button>');
-                }
-            },
-            //END OF CODE FOR THE DELETE COLUMN IN FILES REACTIVE TABLE
             {
                 key: 'selectFn',
                 label: 'Selected',
@@ -591,7 +575,6 @@ Template.Data.events({
         const target = $(event.target);
         const isSelected = target.is(':checked');
         const dataId = target.data('id');
-        console.log(dataId);
         const selectedData = template.selectedData.get();
         if (isSelected) {
             const data = Data.findOne(dataId);
@@ -624,38 +607,8 @@ Template.Data.events({
             delete selectedData[dataId];
         }
         template.selectedData.set(selectedData);
-    },
-
-    //CODE FOR CLICKING ON THE DELETE BUTTON IN THE FILES REACTIVE TABLE
-    'click .delete-button':function(event,template){
-        const target = $(event.target);
-        const dataId = target.data('id');
-        const data = Data.findOne(dataId);
-        const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
-
-        const file_name = alldata["name"];
-
-        const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
-
-        patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
-        console.log(patient_id);
-        console.log(file_name);
-        Patients.remove({_id:patient_id});
-        Data.remove(dataId);
-        let p = new Promise ((resolve,reject)=>{
-            Meteor.call("removeEDFFile",file_name,(error,results)=>{
-                if (error){
-                    throw new Error(error);
-                }
-                return resolve(results);
-            });
-            
-        })
-        
-        }
-    },
-    //END OF CODE FOR CLICKING ON THE DELETE BUTTON IN THE FILES REACTIVE TABLE
-);
+    }
+});
 
 Template.Data.onCreated(function() {
     this.selectedTask = new ReactiveVar(false);

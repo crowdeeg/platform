@@ -1,6 +1,6 @@
 import { dsvFormat } from "d3-dsv";
 import { Mongo } from "meteor/mongo";
-import { Data, Assignments ,EDFFile} from "/collections";
+import { Data, Assignments } from "/collections";
 
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
@@ -673,13 +673,8 @@ function indexOfChannel(channelArray, index, dataId) {
 }
 
 Meteor.methods({
-
-  "removeEDFFile"(file_name){
-    const file = EDFFile.findOne({name:file_name}).remove();
-
   "get.environment.edf.dir"(){
     return (process.env.EDF_DIR);
-
   },
   "get.edf.metadata"(recordingName) {
     return parseWFDBMetadata(WFDB.wfdbdesc(recordingName));
