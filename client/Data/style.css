@@ -2,3 +2,16 @@
 	border: 3px solid #ff4081;
     background: #f8bbd0;
 }
+
+/* Code for delete butotn inside the files reactive table*/
+.data .reactive-table .delete-button {
+    background-color: red;
+    border-color: red;
+    color :white;
+    text-align: center;
+    letter-spacing: .5px;
+    transition: .2s ease-out;
+    cursor:pointer;
+    border-radius: 5px;
+
+}
