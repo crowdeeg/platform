@@ -12,9 +12,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   options: {
     optionsURLParameter: "annotatorOptions",
-    y_axis_limited: false,
-    y_limit_lower: -200,
-    y_limit_upper: -200,
+    y_axis_limited: [],
+    y_limit_lower: [],
+    y_limit_upper: [],
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -3980,7 +3980,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
       that._updateChannelDataInSeries(that.vars.chart.series, data);
-
+      for(let i = 0;i<that.vars.chart.series.length;i++){
+        that.options.y_axis_limited[i] = false;
+        that.options.y_limit_lower[i] = -200;
+        that.options.y_limit_upper[i] = 200;
+      }
       // console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
       that.vars.chart.redraw();
@@ -3993,8 +3997,48 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data);
 
-    $(that.element).find(".ylimit_btn").click(function (e) {
-      e.preventDefault();
+    $(that.element).find(".ylimit_btn").click(function () {
+      if(that._isChannelSelected){
+
+        newyData = [];
+        newXData = [];
+        
+        let i = that.vars.selectedChannelIndex;
+        that.options.y_axis_limited[i] = true;
+        
+        let offset = that._getOffsetForChannelIndexPostScale(i);
+        //set lower value
+        var lowerlimit = document.querySelector('#ylimit_lower_input').value;
+        that.options.y_limit_lower[i] = lowerlimit;
+        //set upper value
+        var upperlimit = document.querySelector('#ylimit_upper_input').value;
+        that.options.y_limit_upper[i] = upperlimit;
+
+        for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
+          if ((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit) {
+
+            newyData.push(that.vars.chart.series[i].yData[j]);
+            newXData.push(that.vars.chart.series[i].xData[j]);
+          }
+          else {
+            newyData.push({
+              y: that.vars.chart.series[i].yData[j],
+              color: '#FFFFFF'
+            });
+            newXData.push(that.vars.chart.series[i].xData[j]);
+          }
+        }
+        that.vars.chart.series[i].yData = newyData;
+        that.vars.chart.series[i].xData = newXData;
+        $(that.element).find(".ylimit_btn").prop('disabled', true);
+        that.vars.chart.redraw();
+
+        console.log(that.options.y_axis_limited);
+        console.log(that.options.y_limit_lower);
+        console.log(that.options.y_limit_upper);
+      }
+      /*
+      DELETED CODE
       that.options.y_axis_limited = true;
       for (let i = 0; i < that.vars.chart.series.length; i++) {
         let offset = that._getOffsetForChannelIndexPostScale(i);
@@ -4023,15 +4067,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.series[i].xData = newXData;
 
 
-      }
-      $(that.element).find(".ylimit_btn").prop('disabled', true);
-      that.vars.chart.redraw();
-
+      }*/
 
     });
 
     $(that.element).find(".restore_btn").click(function () {
-      that.options.y_axis_limited = false;
+      for (let i = 0;i<that.options.y_axis_limited.length;i++){
+        that.options.y_axis_limited[i] = false;
+      }
       $(that.element).find(".ylimit_btn").prop('disabled', false);
       that._updateChannelDataInSeries(that.vars.chart.series, data);
       that.vars.chart.xAxis[0].setExtremes(
@@ -4142,27 +4185,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateChangePointLabelFixed();
     that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
 
-    if (that.options.y_axis_limited) {
-      for (let i = 0; i < that.vars.chart.series.length; i++) {
-        let offset = that._getOffsetForChannelIndexPostScale(i);
-        var newyData = [];
-        var newXData = [];
-        for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
-          if ((that.vars.chart.series[i].yData[j] - offset) >= that.options.y_limit_lower && (that.vars.chart.series[i].yData[j] - offset) <= that.options.y_limit_upper) {
+    for (let i = 0;i< that.options.y_axis_limited.length;i++){
+      
+      if (that.options.y_axis_limited[i]) {
 
-            newyData.push(that.vars.chart.series[i].yData[j]);
-            newXData.push(that.vars.chart.series[i].xData[j]);
-          }
-          else {
-            newyData.push({
-              y: that.vars.chart.series[i].yData[j],
-              color: '#FFFFFF'
-            });
-            newXData.push(that.vars.chart.series[i].xData[j]);
+        let offset = that._getOffsetForChannelIndexPostScale(i);
+        //set lower value
+        var lowerlimit = that.options.y_limit_lower[i];
+        //set upper value
+        var upperlimit = that.options.y_limit_upper[i];
+
+        for (let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+          if (!((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit)) {
+
+            that.vars.chart.series[i].yData[j] = {y:that.vars.chart.series[i].yData[j],color:'#FFFFFF'};
           }
         }
-        that.vars.chart.series[i].yData = newyData;
-        that.vars.chart.series[i].xData = newXData;
+        
       }
       that.vars.chart.redraw();
     }
