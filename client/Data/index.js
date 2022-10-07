@@ -487,6 +487,16 @@ Template.Data.helpers({
                 label: 'Last Updated',
                 hidden: true,
             },
+            //CODE FOR THE DELETE COLUMN IN FILES REACTIVE TABLE
+            {
+                key: 'DELETE',
+                label: 'DELETE',
+                fn: (value,object,key)=> {
+                    const inputId = object._id; 
+                    return new Spacebars.SafeString('<button type = "button" class = "btn delete-button" data-id = ' + inputId + ' = >DELETE</button>');
+                }
+            },
+            //END OF CODE FOR THE DELETE COLUMN IN FILES REACTIVE TABLE
             {
                 key: 'selectFn',
                 label: 'Selected',

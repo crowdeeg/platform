@@ -673,6 +673,10 @@ function indexOfChannel(channelArray, index, dataId) {
 }
 
 Meteor.methods({
+
+  "removeEDFFile"(file_name){
+    const file = EDFFile.findOne({name:file_name}).remove();
+  },
   "get.environment.edf.dir"(){
     return (process.env.EDF_DIR);
   },
