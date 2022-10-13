@@ -9591,6 +9591,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     for (let i = 0; i < newAnnotations.length; i++) {
       updateCache(annotaions[i], newAnnotations[i])
+      if (i === newAnnotations.length - 1) {
+        window.alert(`uploaded ${i} annotations`);
+      }
     }
 
     function updateCache(annotation, savedAnnotation) {
@@ -9620,6 +9623,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         savedAnnotation.arbitrationRoundNumber;
       annotationFormatted.rationale = savedAnnotation.rationale;
     }
+  
   },
 
   _redrawAnnotationsFromObjects: function (objArr) {
