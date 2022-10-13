@@ -17,6 +17,7 @@ es5-shim@4.8.0                # ECMAScript 5 compatibility for older browsers
 ecmascript@0.15.0              # Enable ECMAScript2015+ syntax in app code
 shell-server@0.5.0            # Server-side component of the `meteor shell` command
 
+mikowals:batch-insert
 accounts-base@1.8.0
 stylus@=2.513.14
 ian:accounts-ui-bootstrap-3
@@ -56,3 +57,4 @@ less@2.7.5
 yogiben:admin
 gwendall:impersonate
 ostrio:files
+

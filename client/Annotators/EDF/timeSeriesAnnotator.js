@@ -3980,7 +3980,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
       that._updateChannelDataInSeries(that.vars.chart.series, data);
-      for(let i = 0;i<that.vars.chart.series.length;i++){
+      for (let i = 0; i < that.vars.chart.series.length; i++) {
         that.options.y_axis_limited[i] = false;
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
@@ -3998,14 +3998,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateChannelDataInSeries(that.vars.chart.series, data);
 
     $(that.element).find(".ylimit_btn").click(function () {
-      if(that._isChannelSelected){
+      if (that._isChannelSelected) {
 
         newyData = [];
         newXData = [];
-        
+
         let i = that.vars.selectedChannelIndex;
         that.options.y_axis_limited[i] = true;
-        
+
         let offset = that._getOffsetForChannelIndexPostScale(i);
         //set lower value
         var lowerlimit = document.querySelector('#ylimit_lower_input').value;
@@ -4072,7 +4072,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(that.element).find(".restore_btn").click(function () {
-      for (let i = 0;i<that.options.y_axis_limited.length;i++){
+      for (let i = 0; i < that.options.y_axis_limited.length; i++) {
         that.options.y_axis_limited[i] = false;
       }
       $(that.element).find(".ylimit_btn").prop('disabled', false);
@@ -4185,8 +4185,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateChangePointLabelFixed();
     that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
 
-    for (let i = 0;i< that.options.y_axis_limited.length;i++){
-      
+    for (let i = 0; i < that.options.y_axis_limited.length; i++) {
+
       if (that.options.y_axis_limited[i]) {
 
         let offset = that._getOffsetForChannelIndexPostScale(i);
@@ -4195,13 +4195,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         //set upper value
         var upperlimit = that.options.y_limit_upper[i];
 
-        for (let j = 0;j<that.vars.chart.series[i].yData.length;j++){
+        for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
           if (!((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit)) {
 
-            that.vars.chart.series[i].yData[j] = {y:that.vars.chart.series[i].yData[j],color:'#FFFFFF'};
+            that.vars.chart.series[i].yData[j] = { y: that.vars.chart.series[i].yData[j], color: '#FFFFFF' };
           }
         }
-        
+
       }
       that.vars.chart.redraw();
     }
@@ -4253,7 +4253,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var seriesData = xValues.map(function (x, i) {
         return [x, samplesScaledAndOffset[i]];
       });
-      
+
       // adds the offset needed to the start of the graph
       seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
       // adds the offset needed to the end of the graphID
@@ -7050,7 +7050,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (annotation.metadata.displayType === undefined) {
       that._addChangePointLabelRight(annotation);
       annotation.metadata.displayType = "Box";
-      console.log(annotation.metadata.id);
+      // console.log(annotation.metadata.id);
     }
 
     if (annotation.metadata.displayType === "Box") {
@@ -7112,7 +7112,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
-    console.log(annotation);
+    // console.log(annotation);
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
 
@@ -9453,7 +9453,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             return object;
           }
         }, {});
-        if(el === {}) {
+        if (el === {}) {
           return arr;
         } else {
           arr.push(el)
@@ -9479,7 +9479,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         const properArr = arr.reduce((arr, row) => {
           if (row["Channels"]) {
-            console.log('a')
             const rowChannels = row["Channels"] === "All" ? ["All"] : row["Channels"].split("//").map((element) => { return element.slice(element.match('[a-zA-Z]').index) });
             if (rowChannels.every((channel) => {
               return channels.includes(channel);
@@ -9490,7 +9489,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           return arr;
         }, [])
 
-        const corruptRow = arr.length - properArr.length ;
+        const corruptRow = arr.length - properArr.length;
 
         if (corruptRow > 0) {
           alert(`${corruptRow} rows of data doesn't format well, we couldn't process those rows.`)
@@ -9505,6 +9504,124 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
+  _saveAnnotations: function (annotaions) {
+    var that = this;
+    const newAnnotations = annotaions.map((annotation) => {
+      var annotationId = annotation.metadata.id;
+      var type = annotation.metadata.featureType;
+      var start = that._getAnnotationXMinFixed(annotation);
+      var end = that._getAnnotationXMaxFixed(annotation);
+      // console.log(time_start);
+      // console.log(time_end);
+      var channels = annotation.metadata.channelIndices;
+      var confidence = annotation.metadata.confidence;
+      var comment = annotation.metadata.comment;
+      var rationale = undefined;
+      var metadata = {};
+      //TODO: add label handling
+      var annotationLabel = annotation.metadata.annotationLabel;
+
+      if (that._isHITModeEnabled()) {
+        metadata = {
+          visibleRegion: that.options.visibleRegion,
+          windowSizeInSeconds: that.vars.xAxisScaleInSeconds,
+          isTrainingWindow: that._isCurrentWindowTrainingWindow(),
+        };
+        if (that.options.projectUUID) {
+          metadata.projectUUID = that.options.projectUUID;
+        }
+      }
+      if (annotation.metadata.creator === undefined) {
+        annotation.metadata.creator = Meteor.userId();
+      }
+
+      if (that.options.isReadOnly) return;
+      that._incrementNumberOfAnnotationsInCurrentWindow(1);
+      that._updateLastAnnotationTime();
+      var metadata = metadata !== undefined ? metadata : {};
+      if (channels && !channels.length) {
+        channels = [channels];
+      }
+
+      if (!annotationId) {
+        var graph = $(".graph");
+        var annotationDocument = {
+          assignment: that.options.context.assignment._id,
+          user: Meteor.userId(),
+          dataFiles: that.options.context.dataset.map((data) => data._id),
+          type: "SIGNAL_ANNOTATION",
+          value: {
+            label: type,
+            confidence: confidence,
+            position: {
+              channels: channels,
+              start: parseFloat(start),
+              end: parseFloat(end),
+            },
+            metadata: {
+              recording: that.options.recordingName,
+              channels_displayed: that._getChannelsDisplayed(),
+              comment: comment,
+              annotationLabel: annotationLabel,
+              metadata: metadata,
+              annotatorConfig: {
+                task: that.options.context.task.annotatorConfig,
+                preferences: that.options.context.preferences.annotatorConfig,
+              },
+              graph: {
+                width: graph.width(),
+                height: graph.height(),
+              },
+            },
+          },
+          rationale: rationale,
+        };
+        that._addArbitrationInformationToObject(annotationDocument);
+        return annotationDocument;
+      }
+    });
+
+    const annotationsId = Annotations.batchInsert(newAnnotations);
+
+    for (let i = 0; i < annotationsId.length; i++) {
+      newAnnotations[i].id = annotationsId[i];
+    }
+
+    that._updateMarkAssignmentAsCompletedButtonState();
+
+    for (let i = 0; i < newAnnotations.length; i++) {
+      updateCache(annotaions[i], newAnnotations[i])
+    }
+
+    function updateCache(annotation, savedAnnotation) {
+      var key = that._getAnnotationsCacheKey(
+        that.vars.currentWindowRecording,
+        savedAnnotation.value.position.start,
+        savedAnnotation.value.position.end,
+        false
+      );
+      var cacheEntry = that.vars.annotationsCache[key];
+      if (!cacheEntry) {
+        cacheEntry = {
+          annotations: [],
+        };
+      }
+
+      // console.log(cacheEntry);
+      if (cacheEntry.annotations) {
+        cacheEntry.annotations.unshift(annotation.value);
+      }
+      that.vars.annotationsCache[key] = cacheEntry;
+      annotation.metadata.id = savedAnnotation.id;
+      annotationFormatted = savedAnnotation.value;
+      annotationFormatted.id = savedAnnotation.id;
+      annotationFormatted.arbitration = savedAnnotation.arbitration;
+      annotationFormatted.arbitrationRoundNumber =
+        savedAnnotation.arbitrationRoundNumber;
+      annotationFormatted.rationale = savedAnnotation.rationale;
+    }
+  },
+
   _redrawAnnotationsFromObjects: function (objArr) {
     var that = this;
 
@@ -9513,25 +9630,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       set.add(String(element.options.xValue) + element.metadata.annotationLabel);
     })
 
-    var i = 0;
-    objArr.forEach((element) => {
-      (function (i) {
-        Meteor.setTimeout(function () {
-          if (!set.has(String(element["Time"].toFixed(2)) + element["Annotation"])) {
-            if (element["Type"] != "Stage Change") {
-              that._redrawEventAnnotationFromObject(element);
-            } else {
-              that._redrawChangePointAnnotationFromObject(element);
-            }
-          }
-        }, (i % 50 * 1000));
-      }(i));
-      i++;
-    })
+    const newAnnotations = objArr.map((element) => {
+      if (!set.has(String(element["Time"].toFixed(2)) + element["Annotation"])) {
+        if (element["Type"] != "Stage Change") {
+          return that._redrawEventAnnotationFromObject(element);
+        } else {
+          return that._redrawChangePointAnnotationFromObject(element);
+        }
+      }
+    });
+    that._saveAnnotations(newAnnotations);
 
   },
 
   _redrawEventAnnotationFromObject: function (obj) {
+    var that = this;
     var that = this;
     let channels = obj["Channels"] === "All" ? that.vars.allChannels.map((element, index) => index) :
       obj["Channels"].split("//").map((element) => { return parseInt(element.split(")")[0].substring(1)) });
@@ -9562,21 +9675,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // newAnnotation.metadata.id = obj["ID"];
     newAnnotation.metadata.comment = obj["Comment"];
     newAnnotation.metadata.creator = obj["User"];
-    that._saveFeatureAnnotation(newAnnotation);
+    // that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
+    return newAnnotation
   },
 
   _redrawChangePointAnnotationFromObject: function (obj) {
     var that = this;
-
-    console.log(obj["Time"]);
     let newAnnotation = that._addAnnotationChangePointAll(obj["Time"], fromObject = true);
     newAnnotation.metadata.annotationLabel = obj["Annotation"];
     newAnnotation.metadata.comment = obj["Comment"];
     newAnnotation.metadata.creator = obj["User"];
-    that._saveFeatureAnnotation(newAnnotation);
+    // that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
     that._updateChangePointLabelLeft(newAnnotation);
+    return newAnnotation
   },
 
   _stringToColour: function (str) {
@@ -9654,6 +9767,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var discrepancies = [];
     var currentDisplayChannels = {};
+
+    if (!headerRowData.includes('startTime') || !headerRowData.includes('filename') || !headerRowData.includes('channels')) {
+      discrepancies.push('Header row is improper')
+    }
 
     that.vars.currentWindowData.channels.forEach((channel) => {
       (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
