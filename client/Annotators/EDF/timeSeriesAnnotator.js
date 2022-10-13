@@ -9415,7 +9415,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return result
     }, [])
 
-    var discrepancies = headerData.length !== headerStr.length ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
+    var discrepancies = headerData.length < 1 || headerData.length > 2 ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
     if (process) {
       const remainStr = str.slice(str.indexOf("Index,Time"));
@@ -9772,9 +9772,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var discrepancies = [];
     var currentDisplayChannels = {};
 
-    if (!headerRowData.includes('startTime') || !headerRowData.includes('filename') || !headerRowData.includes('channels')) {
-      discrepancies.push('Header row is improper')
-    }
 
     that.vars.currentWindowData.channels.forEach((channel) => {
       (currentDisplayChannels[channel.dataId] ? currentDisplayChannels[channel.dataId].push(channel.name) : currentDisplayChannels[channel.dataId] = [channel.name])
@@ -9782,8 +9779,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     const currentFileKeys = Object.keys(that.vars.recordingMetadata);
     headerRowData.forEach((headerData) => {
-      if (!currentFileKeys.includes(headerData.fileId)) {
-        discrepancies.push(`EDF file Id: ${headerData.fileName} is not match any of edf file that's displaying`)
+      if (!headerData.filename || !headerData.fileId || !headerData.channels) {
+        discrepancies.push('Header row is improper')
+      }
+      else if (!currentFileKeys.includes(headerData.fileId)) {
+        discrepancies.push(`EDF file Id: ${headerData.filename} is not match any of edf file that's displaying`)
       } else {
         if (headerData.filename !== that.vars.recordingMetadata[headerData.fileId].Record)
           discrepancies.push(`Filename ${headerData.filename} is different from the filename corrseponding to ${headerData.fileId}`);
