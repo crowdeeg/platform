@@ -3255,8 +3255,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         target_sampling_rate: that.options.targetSamplingRate,
         use_high_precision_sampling: that.options.useHighPrecisionSampling,
       };
-      that._requestData(options, (data, errorData) => {
-        //console.log("7, data:", data);
+      that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
         // console.log(errorData);
         if (
@@ -3264,8 +3263,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           windowStartTime == that.vars.currentWindowStart
         ) {
           that._applyFrequencyFilters(data, (dataFiltered) => {
+            console.log("data",data);
+            console.log("dataFiltered",dataFiltered);
+            console.log("realData",realData);
+            let real = that._alignRealDataandData(realData,dataFiltered);
             that.vars.currentWindowData = dataFiltered;
-            that._populateGraph(that.vars.currentWindowData);
+            that._populateGraph(that.vars.currentWindowData,real);
           });
         }
 
@@ -3337,6 +3340,54 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   getCurrentWindowStartReactive: function () {
     var that = this;
     return that.vars.currentWindowStartReactive.get();
+  },
+
+  _alignRealDataandData: function(realData,data){
+    let big_lst = [];
+    for(var dataId in realData.channel_values){
+      let j = 0;
+      for (var name in realData.channel_values[dataId]){
+        lst = [];
+        lst.push(realData.channel_values[dataId][name][0]);
+        console.log(name);
+        for (let i = 1;i<data.channels[j].values.length;i++){
+          if(realData.channel_values[dataId][name][i] != 
+            realData.channel_values[dataId][name][i-1]){
+              lst.push(realData.channel_values[dataId][name][i]);
+            }
+        }
+        big_lst.push(lst);
+        j++;
+      }
+    }
+
+    let other_lst = [];
+    for(var index in data.channels){
+      console.log(index);
+      lst = [];
+      lst.push(data.channels[index].values[0]);
+      for (let i = 1;i<data.channels[index].values.length;i++){
+        if (data.channels[index].values[i] != 
+          data.channels[index].values[i-1]){
+            lst.push(data.channels[index].values[i]);
+          }
+      }
+      other_lst.push(lst);
+    }
+    let output_lst = [];
+    for(var index in data.channels){
+      real = big_lst[index];
+      other = other_lst[index];
+      lst = [];
+      for(let i = 0;i<data.channels[index].values.length;i++){
+        let j = other.indexOf(data.channels[index].values[i]);
+        lst.push(real[j]);
+
+      }
+      output_lst.push(lst);
+    }
+
+    return output_lst;
   },
 
   _reloadCurrentWindow: function () {
@@ -3443,6 +3494,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.windowsCache[identifierKey].data &&
       callback
     ) {
+      console.log("hahahahah",that.vars.windowsCache[identifierKey].data);
       callback(that.vars.windowsCache[identifierKey].data);
       return;
     }
@@ -3488,9 +3540,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           options.window_length,
           numSecondsToPadBeforeAndAfter
         );
-        that.vars.reprint = 0;
+        that.vars.reprint = 1;
         if (callback) {
-          callback(that.vars.windowsCache[identifierKey].data);
+          callback(that.vars.windowsCache[identifierKey].data, null, data);
         }
       }
     });
@@ -3521,6 +3573,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(that.options.targetSamplingRate);
     // for each dataId in the channelvalues array
     for (var dataId in input.channel_values) {
+      console.log(dataId);
       // console.log(that._getCurrentMontage());
       //console.log(
       // 	"==============================================================================================="
@@ -3593,7 +3646,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           valuesScaled = values.map((v) => v / scaleFactorAmplitude);
           // //console.log(valuesScaled);
         }
-        // console.log(valuesScaled);
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
 
         var scaleFault = 0;
@@ -3966,7 +4018,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return true;
   },
 
-  _populateGraph: function (data) {
+  _populateGraph: function (data,real) {
     /* plot all of the points to the chart */
     var that = this;
     // if the chart object does not yet exist, because the user is loading the page for the first time
@@ -3979,8 +4031,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.timeEnd("_initGraph");
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
+
       that._updateChannelDataInSeries(that.vars.chart.series, data);
       for (let i = 0; i < that.vars.chart.series.length; i++) {
+
         that.options.y_axis_limited[i] = false;
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
@@ -3995,7 +4049,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
-    that._updateChannelDataInSeries(that.vars.chart.series, data);
+    that._updateChannelDataInSeries(that.vars.chart.series, data,real);
 
     $(that.element).find(".ylimit_btn").click(function () {
       if (that._isChannelSelected) {
@@ -4076,7 +4130,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_axis_limited[i] = false;
       }
       $(that.element).find(".ylimit_btn").prop('disabled', false);
-      that._updateChannelDataInSeries(that.vars.chart.series, data);
+      that._updateChannelDataInSeries(that.vars.chart.series, data,real);
       that.vars.chart.xAxis[0].setExtremes(
         that.vars.currentWindowStart,
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
@@ -4212,7 +4266,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return JSON.stringify(obj) === "{}";
   },
 
-  _updateChannelDataInSeries: function (series, data) {
+  _updateChannelDataInSeries: function (series, data,real) {
     var that = this;
     var channels = data.channels; // gets the channels from the data object
 
@@ -4258,9 +4312,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
       // adds the offset needed to the end of the graphID
       seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
-
       // stores in the series that we input into the funciton, at index c
       series[c].setData(seriesData, false, false, false);
+      series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
     });
   },
 
@@ -4423,6 +4477,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           enabled: true,
           formatter: function () {
             var x = this.x;
+            var x_index = this.series.xData.indexOf(x);
+            var realY = this.series.realyData[x_index];
             try {
               var annotation = that.vars.universalChangePointAnnotationsCache[
                 that._getUniversalAnnotationIndexByXVal(x)
@@ -4432,10 +4488,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 label = annotation.metadata.annotationLabel;
               }
               // console.log(label);
-
               return "Time Stamp: " + "<b>" + this.x + "</b>" + " s" + '<br/>' +
                 "Previous Universal Change Point:" + "<br/>" +
-                "<b>" + label + "</b>";
+                "<b>" + label + "</b>"+
+                "<br/>Y-value: " + realY;
             } catch {
               return "Error";
             }
