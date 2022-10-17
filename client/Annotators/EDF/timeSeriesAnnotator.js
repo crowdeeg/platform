@@ -3263,9 +3263,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           windowStartTime == that.vars.currentWindowStart
         ) {
           that._applyFrequencyFilters(data, (dataFiltered) => {
-            console.log("data",data);
-            console.log("dataFiltered",dataFiltered);
-            console.log("realData",realData);
+
             let real = that._alignRealDataandData(realData,dataFiltered);
             that.vars.currentWindowData = dataFiltered;
             that._populateGraph(that.vars.currentWindowData,real);
@@ -3349,7 +3347,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       for (var name in realData.channel_values[dataId]){
         lst = [];
         lst.push(realData.channel_values[dataId][name][0]);
-        console.log(name);
+
         for (let i = 1;i<data.channels[j].values.length;i++){
           if(realData.channel_values[dataId][name][i] != 
             realData.channel_values[dataId][name][i-1]){
@@ -3363,7 +3361,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     let other_lst = [];
     for(var index in data.channels){
-      console.log(index);
+
       lst = [];
       lst.push(data.channels[index].values[0]);
       for (let i = 1;i<data.channels[index].values.length;i++){
@@ -3573,7 +3571,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(that.options.targetSamplingRate);
     // for each dataId in the channelvalues array
     for (var dataId in input.channel_values) {
-      console.log(dataId);
+
       // console.log(that._getCurrentMontage());
       //console.log(
       // 	"==============================================================================================="
@@ -4057,8 +4055,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         
         let i = that.vars.selectedChannelIndex;
         that.options.y_axis_limited[i] = true;
-        
-        let offset = that._getOffsetForChannelIndexPostScale(i);
         //set lower value
         var lowerlimit = document.querySelector('#ylimit_lower_input').value;
         that.options.y_limit_lower[i] = lowerlimit;
@@ -4067,7 +4063,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_upper[i] = upperlimit;
 
         for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
-          if ((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit) {
+          if ((that.vars.chart.series[i].realyData[j]) >= lowerlimit && (that.vars.chart.series[i].realyData[j]) <= upperlimit) {
 
             newyData.push(that.vars.chart.series[i].yData[j]);
             newXData.push(that.vars.chart.series[i].xData[j]);
@@ -4084,10 +4080,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.series[i].xData = newXData;
         $(that.element).find(".ylimit_btn").prop('disabled', true);
         that.vars.chart.redraw();
-
-        console.log(that.options.y_axis_limited);
-        console.log(that.options.y_limit_lower);
-        console.log(that.options.y_limit_upper);
+      }
+      else{
+        console.log("channel not selected");
       }
       /*
       DELETED CODE
@@ -4240,15 +4235,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     for (let i = 0;i< that.options.y_axis_limited.length;i++){
       
       if (that.options.y_axis_limited[i]) {
-
-        let offset = that._getOffsetForChannelIndexPostScale(i);
         //set lower value
         var lowerlimit = that.options.y_limit_lower[i];
         //set upper value
         var upperlimit = that.options.y_limit_upper[i];
 
         for (let j = 0;j<that.vars.chart.series[i].yData.length;j++){
-          if (!((that.vars.chart.series[i].yData[j] - offset) >= lowerlimit && (that.vars.chart.series[i].yData[j] - offset) <= upperlimit)) {
+          if (!((that.vars.chart.series[i].realyData[j]) >= lowerlimit && (that.vars.chart.series[i].realyData[j]) <= upperlimit)) {
 
             that.vars.chart.series[i].yData[j] = {y:that.vars.chart.series[i].yData[j],color:'#FFFFFF'};
           }
