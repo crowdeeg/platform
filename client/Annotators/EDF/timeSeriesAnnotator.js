@@ -4017,6 +4017,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _populateGraph: function (data,real) {
+    var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
     // if the chart object does not yet exist, because the user is loading the page for the first time
@@ -4046,14 +4047,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data,real);
+    for(let i = 0;i<that.vars.chart.series.length;i++){
+      original_series[i] = that.vars.chart.series[i].yData;
 
+    }
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected){
 
         newyData = [];
-        newXData = [];
+
         
         let i = that.vars.selectedChannelIndex;
+        that.vars.chart.series[i].yData = [...original_series[i]];
         that.options.y_axis_limited[i] = true;
         //set lower value
         var lowerlimit = document.querySelector('#ylimit_lower_input').value;
@@ -4063,22 +4068,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_upper[i] = upperlimit;
 
         for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
+
           if ((that.vars.chart.series[i].realyData[j]) >= lowerlimit && (that.vars.chart.series[i].realyData[j]) <= upperlimit) {
 
             newyData.push(that.vars.chart.series[i].yData[j]);
-            newXData.push(that.vars.chart.series[i].xData[j]);
+
           }
           else {
             newyData.push({
               y: that.vars.chart.series[i].yData[j],
               color: '#FFFFFF'
             });
-            newXData.push(that.vars.chart.series[i].xData[j]);
+
           }
         }
         that.vars.chart.series[i].yData = newyData;
-        that.vars.chart.series[i].xData = newXData;
-        $(that.element).find(".ylimit_btn").prop('disabled', true);
         that.vars.chart.redraw();
       }
       else{
@@ -4119,63 +4123,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(that.element).find(".restore_btn").click(function () {
-      for (let i = 0;i<that.options.y_axis_limited.length;i++){
+      if(that._isChannelSelected){
+        let i = that.vars.selectedChannelIndex;
         that.options.y_axis_limited[i] = false;
+        that.vars.chart.series[i].yData = original_series[i];
+        that.vars.chart.redraw(); // efficiently redraw the entire window in one go
       }
-      $(that.element).find(".ylimit_btn").prop('disabled', false);
-      that._updateChannelDataInSeries(that.vars.chart.series, data,real);
-      that.vars.chart.xAxis[0].setExtremes(
-        that.vars.currentWindowStart,
-        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
-        false,
-        false
-      );
-
-      that.vars.recordScalingFactors = false;
-      that.vars.recordPolarity = false;
-      that.vars.recordTranslation = false;
-
-      // checks if the object is empty
-      if (!that._objectIsEmpty(that.vars.scalingFactors)) {
-        for (const index in that.vars.scalingFactors) {
-          that._customAmplitude(
-            index,
-            100 * (that.vars.scalingFactors[index] - 1)
-          );
-          // console.log("scaling after page change");
-          // console.log(that.vars.chart.series[index].yData);
-        }
-
-      }
-
-      if (!that._objectIsEmpty(that.vars.translation)) {
-        for (const index in that.vars.translation) {
-          that._customTranslation(index, that.vars.translation[index]);
-        }
-      }
-
-      if (!that._objectIsEmpty(that.vars.polarity)) {
-        for (const index in that.vars.polarity) {
-          that._reversePolarity(index);
-        }
-      }
-
-      that.vars.recordPolarity = true;
-      that.vars.recordScalingFactors = true;
-      that.vars.recordTranslation = true;
-
-      that.vars.chart.redraw(); // efficiently redraw the entire window in one go
-
-      // use the chart start/end so that data and annotations can never
-      // get out of synch
-      that._refreshAnnotations();
-      that._renderChannelSelection();
-      that._updateBookmarkCurrentPageButton();
-      that.vars.currentWindowStartReactive.set(that.vars.currentWindowStart);
-
-      that._updateChangePointLabelFixed();
-      that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
-
     });
 
 
