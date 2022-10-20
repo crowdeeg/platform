@@ -8782,6 +8782,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return;
     }
 
+    const windowStart = that.vars.currentWindowStart;
+    const windowEnd = windowStart + that.vars.xAxisScaleInSeconds;
+
+    console.log(annotations)
+    console.log(windowEnd)
+    console.log(windowStart)
+
     annotations
       .sort((a, b) => {
         return a.position.start - b.position.start
@@ -8800,79 +8807,82 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         var start_time = parseFloat(annotation.position.start);
         var end_time = parseFloat(annotation.position.end);
-        var confidence = annotation.confidence;
-        var comment = annotation.metadata.comment;
-        var featureType = undefined;
-        var annotationLabel = annotation.metadata.annotationLabel;
-        var user = annotation.user;
-        // var user = annotation.
+        if (end_time >= windowStart && start_time <= windowEnd) {
+          var confidence = annotation.confidence;
+          var comment = annotation.metadata.comment;
+          var featureType = undefined;
+          var annotationLabel = annotation.metadata.annotationLabel;
+          var user = annotation.user;
+          // var user = annotation.
 
-        var channelIndices = annotation.position.channels;
-        if (channelIndices === undefined) {
-          return;
-        }
-        if (!Array.isArray(channelIndices)) {
-          channelIndices = [channelIndices];
-        }
-        if (start_time === end_time) {
-          var newAnnotation = that._addAnnotationBoxChangePoint(
-            annotationId,
-            start_time,
-            channelIndices,
-            featureType,
-            end_time,
-          );
-          newAnnotation.metadata.displayType = channelIndices.length == that.vars.allChannels.length ? 'ChangePointAll' : 'ChangePoint';
-          newAnnotation.metadata.annotationLabel = annotationLabel;
-          newAnnotation.metadata.creator = user;
-          newAnnotation.metadata.comment = comment;
-          // solve label bugs with another
-          that._addCommentFormToAnnotationBox(newAnnotation);
-          that._addChangePointLabelLeft(newAnnotation);
-
-          that._updateChangePointLabelLeft(newAnnotation);
-          that._updateChangePointLabelRight(newAnnotation);
-
-
-        } else {
-          //annotation = that._addAnnotationBox(annotationId, start_time, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], that.vars.activeFeatureType);
-          let newAnnotation = that._addAnnotationBox(
-            annotationId,
-            start_time,
-            channelIndices,
-            type,
-            undefined,
-            confidence,
-            comment,
-            annotation
-          );
-
-          newAnnotation.metadata.displayType = 'Box';
-          newAnnotation.metadata.annotationLabel = annotationLabel;
-          newAnnotation.metadata.creator = user;
-          newAnnotation.metadata.comment = comment;
-
-          var { height, yValue } =
-            that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
-
-
-          newAnnotation.update({
-            xValue: start_time,
-            yValue: yValue,
-            shape: {
-              params: {
-                width: end_time - start_time,
-                height: height,
-              },
-            },
-          })
-
-          that._addCommentFormToAnnotationBox(newAnnotation);
-          that._addChangePointLabelRight(newAnnotation);
-          that._updateChangePointLabelRight(newAnnotation);
-          if (!newAnnotation.metadata.controlPointAdded) {
-            that._addBoxControlPoint(newAnnotation);
+          var channelIndices = annotation.position.channels;
+          if (channelIndices === undefined) {
+            return;
           }
+          if (!Array.isArray(channelIndices)) {
+            channelIndices = [channelIndices];
+          }
+          if (start_time === end_time) {
+            
+            var newAnnotation = that._addAnnotationBoxChangePoint(
+              annotationId,
+              start_time,
+              channelIndices,
+              featureType,
+              end_time,
+            );
+            newAnnotation.metadata.displayType = channelIndices.length == that.vars.allChannels.length ? 'ChangePointAll' : 'ChangePoint';
+            newAnnotation.metadata.annotationLabel = annotationLabel;
+            newAnnotation.metadata.creator = user;
+            newAnnotation.metadata.comment = comment;
+            // solve label bugs with another
+            that._addCommentFormToAnnotationBox(newAnnotation);
+            that._addChangePointLabelLeft(newAnnotation);
+
+            that._updateChangePointLabelLeft(newAnnotation);
+            that._updateChangePointLabelRight(newAnnotation);
+
+
+          } else {
+            //annotation = that._addAnnotationBox(annotationId, start_time, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], that.vars.activeFeatureType);
+            let newAnnotation = that._addAnnotationBox(
+              annotationId,
+              start_time,
+              channelIndices,
+              type,
+              undefined,
+              confidence,
+              comment,
+              annotation
+            );
+
+            newAnnotation.metadata.displayType = 'Box';
+            newAnnotation.metadata.annotationLabel = annotationLabel;
+            newAnnotation.metadata.creator = user;
+            newAnnotation.metadata.comment = comment;
+
+            var { height, yValue } =
+              that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
+
+
+            newAnnotation.update({
+              xValue: start_time,
+              yValue: yValue,
+              shape: {
+                params: {
+                  width: end_time - start_time,
+                  height: height,
+                },
+              },
+            })
+
+            that._addCommentFormToAnnotationBox(newAnnotation);
+            that._addChangePointLabelRight(newAnnotation);
+            that._updateChangePointLabelRight(newAnnotation);
+            if (!newAnnotation.metadata.controlPointAdded) {
+              that._addBoxControlPoint(newAnnotation);
+            }
+        }
 
 
         }
