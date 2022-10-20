@@ -3049,6 +3049,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       windows <= -that.options.windowJumpSizeFastForwardBackward
     )
       return;
+    that._flushAnnotations();
     var nextRecordings = that.options.allRecordings;
     var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
     var nextWindowStart = that.options.currentWindowStart;
@@ -3078,7 +3079,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         nextWindowStart = that.options.startTime;
         nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
       }
-      that._flushAnnotations();
+      // that._flushAnnotations();
     } else {
       if (that._areTrainingWindowsSpecified()) {
         that.vars.currentTrainingWindowIndex += windows;
@@ -3093,6 +3094,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       nextWindowStart,
       nextWindowSizeInSeconds
     );
+    that._refreshAnnotations();
   },
 
   _switchToWindow: function (allRecordings, start_time, window_length) {
@@ -8734,13 +8736,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (chart === undefined) {
       return;
     }
-
+    // that.vars.chart.annotations.allItems = []
     const windowStart = that.vars.currentWindowStart;
     const windowEnd = windowStart + that.vars.xAxisScaleInSeconds;
-
-    console.log(annotations)
-    console.log(windowEnd)
-    console.log(windowStart)
+    var oldAnnotations = that.vars.chart.annotations.allItems;
+    while (oldAnnotations && oldAnnotations.length > 0) {
+      oldAnnotations[0].destroy();
+    }
 
     annotations
       .sort((a, b) => {
@@ -8754,9 +8756,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // }
         var annotationId = annotation.id;
         // Annotations.remove(annotationId)
-        if (that.vars.annotationIDSet.has(annotationId)) {
-          return;
-        }
 
         var start_time = parseFloat(annotation.position.start);
         var end_time = parseFloat(annotation.position.end);
@@ -8835,10 +8834,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             if (!newAnnotation.metadata.controlPointAdded) {
               that._addBoxControlPoint(newAnnotation);
             }
-        }
-
-
-        }
+          } 
+        } 
 
 
         // var channelIndicesMapped = [];
