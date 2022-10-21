@@ -2585,7 +2585,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .click(function () {
         console.log(that.vars.chart.annotations.allItems);
         that.vars.chart.annotations.allItems.forEach(annotation => that._saveFeatureAnnotation(annotation));
-
       });
   },
 
@@ -8898,8 +8897,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _flushAnnotations: function () {
     var that = this;
-    annotations = that.vars.chart.annotations.allItems;
+    var annotations = that.vars.chart.annotations.allItems;
     while (annotations && annotations.length > 0) {
+      that._saveFeatureAnnotation(annotations[0]);
       annotations[0].destroy();
       that.vars.chart.selectedAnnotation = null;
     }
