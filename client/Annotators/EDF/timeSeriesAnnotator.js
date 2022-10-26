@@ -3264,7 +3264,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           windowStartTime == that.vars.currentWindowStart
         ) {
           that._applyFrequencyFilters(data, (dataFiltered) => {
-
             let real = that._alignRealDataandData(realData,dataFiltered);
             that.vars.currentWindowData = dataFiltered;
             that._populateGraph(that.vars.currentWindowData,real);
@@ -3342,6 +3341,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _alignRealDataandData: function(realData,data){
+    /*
     let big_lst = [];
     for(var dataId in realData.channel_values){
       let j = 0;
@@ -3384,8 +3384,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       }
       output_lst.push(lst);
+    }*/
+    output_lst = [];
+    for(var dataId in realData.channel_values){
+      let j = 0;
+      for(var name in realData.channel_values[dataId]){
+        lst = [];
+        starting_index = data.channels[j].numSamples.paddedBefore;
+        ending_index = data.channels[j].numSamples.dataOfInterest+starting_index;
+        for(let i = starting_index;i<ending_index;i++){
+          lst.push(realData.channel_values[dataId][name][i]);
+        }
+        output_lst.push(lst);
+        j++;
+      }
     }
-
     return output_lst;
   },
 
@@ -3615,7 +3628,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         // adds up the difference of the values from the average
         var changeVal = values.reduce((a, b) => a + Math.abs(avg - b));
-
         ////console.log(changeVal);
 
         // //console.log(name);
@@ -3646,7 +3658,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // //console.log(valuesScaled);
         }
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
-
         var scaleFault = 0;
         if (options == 0) {
           // if the amplitude is not scaled (default amplitude)
@@ -3886,6 +3897,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var output = {
       channels: channels,
       sampling_rate: input.sampling_rate,
+      realData: null,
     };
     return output;
   },
@@ -3966,6 +3978,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           );
           var scaleFactorAmplitude = channel.audio.scaleFactors.amplitude;
           if (scaleFactorAmplitude != 0) {
+            console.log(channel.values);
             channel.values = channel.values.map(
               (v) => v * scaleFactorAmplitude
             );
