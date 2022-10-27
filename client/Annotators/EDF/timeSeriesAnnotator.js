@@ -9267,6 +9267,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _downloadCSV: function () {
     var that = this;
     var channels = {};
+    
+    if (that.vars.chart.annotaions) {
+      var annotations = that.vars.chart.annotaions.allItems;
+      while (annotations && annotations.length > 0) {
+        that._saveFeatureAnnotation(annotations[0]);
+      }
+    }
+  
+  
 
     that.vars.currentWindowData.channels.forEach((channel) => {
       (channels[channel.dataId] ? channels[channel.dataId].push(channel.name) : channels[channel.dataId] = [channel.name])
