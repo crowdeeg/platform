@@ -4457,19 +4457,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               if (annotation !== undefined) {
                 label = annotation.metadata.annotationLabel;
               }
-
-              let duration = "unknown";
-
-              if (that.vars.selectedAnnotation) {
-                duration = that.vars.selectedAnnotation.options.shape.params.width;
-              }
-
               // console.log(label);
               return "Time Stamp: " + "<b>" + this.x + "</b>" + " s" + '<br/>' +
                 "Previous Universal Change Point:" + "<br/>" +
-                "<b>" + label + "</b>"+
-                "<br/> Y-value: " + realY +
-                "<br/> Duration: " + duration;
+                "<b>" + label + "</b>" +
+                "<br/>Y-value: " + realY;
             } catch {
               return "Error";
             }
