@@ -4448,7 +4448,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               // console.log(label);
               return "Time Stamp: " + "<b>" + this.x + "</b>" + " s" + '<br/>' +
                 "Previous Universal Change Point:" + "<br/>" +
-                "<b>" + label + "</b>"+
+                "<b>" + label + "</b>" +
                 "<br/>Y-value: " + realY;
             } catch {
               return "Error";
