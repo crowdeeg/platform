@@ -1949,7 +1949,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         timescaleSetting.options[select.prop("selectedIndex")].default = true;
         that.vars.xAxisScaleInSeconds = +select.val();
         that._reloadCurrentWindow();
-        
         //console.log("timescale here");
       });
       select.change();
@@ -3094,6 +3093,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       nextWindowStart,
       nextWindowSizeInSeconds
     );
+    that._refreshAnnotations();
   },
 
   _switchToWindow: function (allRecordings, start_time, window_length) {
@@ -3256,7 +3256,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         target_sampling_rate: that.options.targetSamplingRate,
         use_high_precision_sampling: that.options.useHighPrecisionSampling,
       };
-      that._requestData(options, (data, errorData, realData) => {
+      that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
         // console.log(errorData);
         if (
@@ -3264,9 +3264,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           windowStartTime == that.vars.currentWindowStart
         ) {
           that._applyFrequencyFilters(data, (dataFiltered) => {
-            let real = that._alignRealDataandData(realData, dataFiltered);
+            let real = that._alignRealDataandData(realData,dataFiltered);
             that.vars.currentWindowData = dataFiltered;
-            that._populateGraph(that.vars.currentWindowData, real);
+            that._populateGraph(that.vars.currentWindowData,real);
           });
         }
 
@@ -3314,17 +3314,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       });
     });
-    if (that.vars.chart) {
-      if (that.vars.chart.annotaions) {
-        that._flushAnnotations();
-        console.log("here")
-        that._getAnnotations(
-          that.vars.currentWindowRecording,
-          that.vars.currentWindowStart,
-          that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-        );
-      }
-    }
   },
 
   jumpToEpochWithStartTime: function (epochStartTimeInSeconds) {
@@ -3351,7 +3340,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return that.vars.currentWindowStartReactive.get();
   },
 
-  _alignRealDataandData: function (realData, data) {
+  _alignRealDataandData: function(realData,data){
     /*
     let big_lst = [];
     for(var dataId in realData.channel_values){
@@ -3397,13 +3386,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       output_lst.push(lst);
     }*/
     output_lst = [];
-    for (var dataId in realData.channel_values) {
+    for(var dataId in realData.channel_values){
       let j = 0;
-      for (var name in realData.channel_values[dataId]) {
+      for(var name in realData.channel_values[dataId]){
         lst = [];
         starting_index = data.channels[j].numSamples.paddedBefore;
-        ending_index = data.channels[j].numSamples.dataOfInterest + starting_index;
-        for (let i = starting_index; i < ending_index; i++) {
+        ending_index = data.channels[j].numSamples.dataOfInterest+starting_index;
+        for(let i = starting_index;i<ending_index;i++){
           lst.push(realData.channel_values[dataId][name][i]);
         }
         output_lst.push(lst);
@@ -3517,7 +3506,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.windowsCache[identifierKey].data &&
       callback
     ) {
-      console.log("hahahahah", that.vars.windowsCache[identifierKey].data);
+      console.log("hahahahah",that.vars.windowsCache[identifierKey].data);
       callback(that.vars.windowsCache[identifierKey].data);
       return;
     }
@@ -4041,7 +4030,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return true;
   },
 
-  _populateGraph: function (data, real) {
+  _populateGraph: function (data,real) {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
@@ -4055,8 +4044,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.timeEnd("_initGraph");
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
-      that._updateChannelDataInSeries(that.vars.chart.series, data, real);
-      for (let i = 0; i < that.vars.chart.series.length; i++) {
+      that._updateChannelDataInSeries(that.vars.chart.series, data,real);
+      for(let i = 0;i<that.vars.chart.series.length;i++){
         that.options.y_axis_limited[i] = false;
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
@@ -4071,17 +4060,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
-    that._updateChannelDataInSeries(that.vars.chart.series, data, real);
-    for (let i = 0; i < that.vars.chart.series.length; i++) {
+    that._updateChannelDataInSeries(that.vars.chart.series, data,real);
+    for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
 
     }
     $(that.element).find(".ylimit_btn").click(function () {
-      if (that._isChannelSelected) {
+      if(that._isChannelSelected){
 
         newyData = [];
 
-
+        
         let i = that.vars.selectedChannelIndex;
         that.vars.chart.series[i].yData = [...original_series[i]];
         that.options.y_axis_limited[i] = true;
@@ -4110,7 +4099,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.series[i].yData = newyData;
         that.vars.chart.redraw();
       }
-      else {
+      else{
         console.log("channel not selected");
       }
       /*
@@ -4148,7 +4137,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(that.element).find(".restore_btn").click(function () {
-      if (that._isChannelSelected) {
+      if(that._isChannelSelected){
         let i = that.vars.selectedChannelIndex;
         that.options.y_axis_limited[i] = false;
         that.vars.chart.series[i].yData = original_series[i];
@@ -4210,21 +4199,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateChangePointLabelFixed();
     that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
 
-    for (let i = 0; i < that.options.y_axis_limited.length; i++) {
-
+    for (let i = 0;i< that.options.y_axis_limited.length;i++){
+      
       if (that.options.y_axis_limited[i]) {
         //set lower value
         var lowerlimit = that.options.y_limit_lower[i];
         //set upper value
         var upperlimit = that.options.y_limit_upper[i];
 
-        for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
+        for (let j = 0;j<that.vars.chart.series[i].yData.length;j++){
           if (!((that.vars.chart.series[i].realyData[j]) >= lowerlimit && (that.vars.chart.series[i].realyData[j]) <= upperlimit)) {
 
-            that.vars.chart.series[i].yData[j] = { y: that.vars.chart.series[i].yData[j], color: '#FFFFFF' };
+            that.vars.chart.series[i].yData[j] = {y:that.vars.chart.series[i].yData[j],color:'#FFFFFF'};
           }
         }
-
+        
       }
       that.vars.chart.redraw();
     }
@@ -4235,7 +4224,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return JSON.stringify(obj) === "{}";
   },
 
-  _updateChannelDataInSeries: function (series, data, real) {
+  _updateChannelDataInSeries: function (series, data,real) {
     var that = this;
     var channels = data.channels; // gets the channels from the data object
 
@@ -4276,7 +4265,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var seriesData = xValues.map(function (x, i) {
         return [x, samplesScaledAndOffset[i]];
       });
-
+      
       // adds the offset needed to the start of the graph
       seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
       // adds the offset needed to the end of the graphID
@@ -4400,7 +4389,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       (that.vars.chart = new Highcharts.chart({
         boost: {
           // speed up
-          useGPUTranslations: true,
           enabled: true,
           seriesThreshold: 1,
         },
@@ -8501,46 +8489,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
-  _getAnnotationsOnly: function () {
-    var that = this;
-
-    
-    let annotations = Annotations.find(
-      {
-        assignment: that.options.context.assignment._id,
-        dataFiles: that.options.context.dataset.map((data) => data._id),
-        user: Meteor.userId(),
-        type: "SIGNAL_ANNOTATION",
-      },
-      {
-        sort: { updatedAt: -1 },
-      }
-    ).fetch();
-
-
-    that.vars.annotationsLoaded = true;
-
-    annotations = annotations.map(function (annotation) {
-      var annotationFormatted = annotation.value;
-      annotationFormatted.id = annotation._id;
-      annotationFormatted.user = annotation.user;
-      annotationFormatted.arbitration = annotation.arbitration;
-      annotationFormatted.arbitrationRoundNumber =
-        annotation.arbitrationRoundNumber;
-      annotationFormatted.rationale = annotation.rationale;
-      return annotationFormatted;
-    });
-
-    that._displayAnnotations(annotations, true)
-
-    return annotations;
-
-  },
-
   _getVisibleAnnotations: function (annotations) {
     var that = this;
-
-    
     var visibleAnnotations = annotations.filter(function (annotation) {
       var isVisibleFeature = true;
       // that.options.features.order.indexOf(annotation.label) > -1;
@@ -8800,7 +8750,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return annotations;
   },
 
-  _displayAnnotations: function (annotations, all = false) {
+  _displayAnnotations: function (annotations) {
     var that = this;
     var chart = that.vars.chart;
     if (chart === undefined) {
@@ -8829,7 +8779,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         var start_time = parseFloat(annotation.position.start);
         var end_time = parseFloat(annotation.position.end);
-        if ((end_time >= windowStart && start_time <= windowEnd) || all) {
+        if (end_time >= windowStart && start_time <= windowEnd) {
           var confidence = annotation.confidence;
           var comment = annotation.metadata.comment;
           var featureType = undefined;
@@ -8845,7 +8795,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             channelIndices = [channelIndices];
           }
           if (start_time === end_time) {
-
+            
             var newAnnotation = that._addAnnotationBoxChangePoint(
               annotationId,
               start_time,
@@ -8904,8 +8854,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             if (!newAnnotation.metadata.controlPointAdded) {
               that._addBoxControlPoint(newAnnotation);
             }
-          }
-        }
+          } 
+        } 
 
 
         // var channelIndicesMapped = [];
@@ -9275,15 +9225,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _downloadCSV: function () {
     var that = this;
     var channels = {};
-    
-    if (that.vars.chart.annotaions) {
-      var annotations = that.vars.chart.annotaions.allItems;
-      while (annotations && annotations.length > 0) {
-        that._saveFeatureAnnotation(annotations[0]);
-      }
-    }
-  
-  
 
     that.vars.currentWindowData.channels.forEach((channel) => {
       (channels[channel.dataId] ? channels[channel.dataId].push(channel.name) : channels[channel.dataId] = [channel.name])
@@ -9333,8 +9274,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _assembleAnnotationObject: function () {
     var that = this;
-    var allAnnotations = that._getAnnotationsOnly(that.vars.currentWindowRecording);
-    allAnnotations = that.vars.chart.annotations.allItems;
+    var allAnnotations = that.vars.chart.annotations.allItems;
     allAnnotations.sort((a, b) => {
       return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
     });
@@ -9541,7 +9481,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             return object;
           }
         }, {});
-        if (el === {}) {
+        if(el === {}) {
           return arr;
         } else {
           arr.push(el)
@@ -9577,7 +9517,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           return arr;
         }, [])
 
-        const corruptRow = arr.length - properArr.length;
+        const corruptRow = arr.length - properArr.length ;
 
         if (corruptRow > 0) {
           alert(`${corruptRow} rows of data doesn't format well, we couldn't process those rows.`)
