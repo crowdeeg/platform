@@ -7871,13 +7871,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _getMaxChannelData: function (index) {
     //gets the largest data point in the channel
     var that = this;
-    return Math.max(...that.vars.chart.series[index].yData);
+    let max = that._getOffsetForChannelIndexPostScale(index)-200;
+    for (let i = 1;i<that.vars.chart.series[index].yData.length;i++){
+      if(((typeof that.vars.chart.series[index].yData[i]) == "number")  && that.vars.chart.series[index].yData[i] > max){
+        max = that.vars.chart.series[index].yData[i];
+
+      }
+    }
+    return max;
   },
 
   _getMinChannelData: function (index) {
     //gets the smallest data point in the channel
     var that = this;
-    return Math.min(...that.vars.chart.series[index].yData);
+    let min = that._getOffsetForChannelIndexPostScale(index)+200;
+    for (let i = 1;i<that.vars.chart.series[index].yData.length;i++){
+      if(((typeof that.vars.chart.series[index].yData[i]) == "number")  && that.vars.chart.series[index].yData[i] < min){
+        min = that.vars.chart.series[index].yData[i];
+
+      }
+    }
+
+    return min;
   },
 
   _defaultAmplitude: function () {
