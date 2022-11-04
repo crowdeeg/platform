@@ -17,7 +17,13 @@
                 </div>
             </div>
         </div>
-        <div class="col s12 data">{{> reactiveTable settings=settings}}</div>
+        <div class="recordings">
+          {{#if changePage}}
+          <div class="col s12 data" id="recording">{{> reactiveTable settings=settings}}</div>
+          {{/if}}
+          <input class="page" id="page" type="number" />
+          <button class="change-page" id="change-page">Change Page</button>
+        </div>
         <div class="col s12 text-center">
             <center>
                 <b>.edf's:</b>
