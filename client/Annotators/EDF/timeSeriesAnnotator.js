@@ -4448,8 +4448,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
               let duration = "unknown";
 
-              if (that.vars.selectedAnnotation) {
+              try {
                 duration = that.vars.selectedAnnotation.options.shape.params.width;
+              } catch {
+                duration = "unknown";
               }
 
               // console.log(label);
