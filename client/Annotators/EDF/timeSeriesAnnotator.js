@@ -677,6 +677,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <label for "ylimit_upper_input">Y-Axis Upper Limit:</label>\
                 <input type = "number" id = "ylimit_upper_input" value = 200>\
                 </div>\
+                <div class = "alignment_options">\
+                  <select id = "alignment_select">\
+                    <option>Top</option>\
+                    <option>Middle</option>\
+                    <option>Bottom</option>\
+                  </select>\
+                </div>\
+                <div style="margin-bottom: 10px" class= "alignment_btn">\
+                  <button type = "button" class = "btn align_btn">Align</button>\
+                </div>\
               </div>\
                 <div class="graph_control"> \
                     <div class="experiment_container container-fluid"> \
@@ -4065,6 +4075,59 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       original_series[i] = that.vars.chart.series[i].yData;
 
     }
+    $(that.element).find(".align_btn").click(function(){
+      if(that._isChannelSelected){
+        let index = that.vars.selectedChannelIndex;
+        let option = document.querySelector('#alignment_select').selectedIndex;
+        let offset = that._getOffsetForChannelIndexPostScale(index);
+        if(option ==0){
+          console.log('TOP ALIGN');
+          let max = that._getMaxChannelData(index);
+          
+          let distance = max - offset;
+
+          for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
+            if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
+              that.vars.chart.series[index].yData[j] -= distance;
+            }
+          }
+
+          that.vars.chart.redraw();
+        }
+
+        if(option == 1){
+          console.log("MIDDLE ALIGN");
+          let avg = that._getAvgChannelData(index);
+          let distance = avg - offset;
+
+          for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
+            if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
+              that.vars.chart.series[index].yData[j] -= distance;
+            }
+          }
+
+          that.vars.chart.redraw();
+
+        }
+
+        if(option == 2){
+          console.log('BOTTOM ALIGN');
+          let min = that._getMinChannelData(index);
+          let distance = min - offset;
+
+          for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
+            if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
+              that.vars.chart.series[index].yData[j] -= distance;
+            }
+          }
+
+          that.vars.chart.redraw();
+
+        }
+      }
+    })
+
+
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected){
 
@@ -7893,6 +7956,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     return min;
+  },
+
+  _getAvgChannelData: function(index) {
+    //gets the average datapoint in the channel
+    var that = this;
+    let sum = 0;
+    j = 0;
+    for (let i = 1;i<that.vars.chart.series[index].yData.length;i++){
+      if(((typeof that.vars.chart.series[index].yData[i]) == "number")){
+        sum += that.vars.chart.series[index].yData[i];
+        j++;
+
+      }
+    }
+    return sum*1.0/j;
   },
 
   _defaultAmplitude: function () {
