@@ -1250,6 +1250,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var channelsDisplayed = [
       firstExample.channels_displayed[firstExample.channels],
     ];
+    console.log('here')
     let id = Data.findOne({ path: recordingName })._id;
     that.options.allRecordings = [{ _id: id, path: recordingName }];
     that.options.channelsDisplayed = channelsDisplayed;
@@ -1406,6 +1407,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (that.options.channelsDisplayed instanceof Array) {
       return;
     }
+    console.log(that.options.channelsDisplayed)
     return Object.keys(that.options.channelsDisplayed);
   },
 
@@ -1414,22 +1416,30 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
 
     if (that.options.channelsDisplayed instanceof Array) {
+      console.log(1)
       return that.options.channelsDisplayed;
     }
     if (montage) {
+      console.log(2)
       return that.options.channelsDisplayed[montage];
     }
     if (
       that.vars.currentMontage &&
       that.options.channelsDisplayed[that.vars.currentMontage]
     ) {
+      console.log(3)
+      console.log(that.vars.currentMontage)
+      console.log(that.options.channelsDisplayed[that.vars.currentMontage])
+      console.log(that.options.channelsDisplayed)
       return that.options.channelsDisplayed[that.vars.currentMontage];
     } else if (
       that.options.defaultMontage &&
       that.options.channelsDisplayed[that.options.defaultMontage]
     ) {
+      console.log(4)
       return that.options.channelsDisplayed[that.options.defaultMontage];
     }
+    console.log(5)
     return that.options.channelsDisplayed[that._getMontages()[0]];
   },
 
@@ -1670,7 +1680,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     select.material_select();
     //console.log("_setupMontageSelector before change");
     select.change(function () {
-      //console.log("_setupMontageSelector onchange");
+      // console.log("_setupMontageSelector onchange");
       that.vars.currentMontage = select.val();
       that._savePreferences({
         defaultMontage: that.vars.currentMontage,
@@ -2079,7 +2089,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           target_sampling_rate: that.options.targetSamplingRate,
           use_high_precision_sampling: that.options.useHighPrecisionSampling,
         };
-        ////console.log(options);
         that._requestData(options, function (data, error) {
           if (error) {
             console.log(error);
@@ -2706,15 +2715,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(that._isFromPSG(that._getTopDataId()));
     // console.log("-bottom")
     // console.log(that._isFromPSG(that._getBottomDataId()));
-    console.log(that._isFromPSG(point.dataId));
+    // console.log(that._isFromPSG(point.dataId));
 
     if (!that._isInCrosshairSyncMode()) return;
 
-    if (
-      that.vars.crosshairPosition.length === 0 &&
-      !that._isFromPSG(point.dataId)
-    )
-      return;
+    // if (
+    //   that.vars.crosshairPosition.length === 0 &&
+    //   !that._isFromPSG(point.dataId)
+    // )
+    //   return;
     let crosshairPosition = that.vars.crosshairPosition;
     let sameRecording = false;
     let index = undefined;
@@ -3256,6 +3265,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         target_sampling_rate: that.options.targetSamplingRate,
         use_high_precision_sampling: that.options.useHighPrecisionSampling,
       };
+
       that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
         // console.log(errorData);
@@ -3978,7 +3988,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           );
           var scaleFactorAmplitude = channel.audio.scaleFactors.amplitude;
           if (scaleFactorAmplitude != 0) {
-            console.log(channel.values);
+            // console.log(channel.values);
             channel.values = channel.values.map(
               (v) => v * scaleFactorAmplitude
             );
@@ -4330,7 +4340,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         subsequent changes to this plot to scroll through the signal use the much computationally expensive
         series update and axis update methods.
         */
-    //console.log("!!!!!!init graph");
+    console.log("!!!!!!init graph");
     var that = this;
     var channels = data.channels;
 
@@ -4770,7 +4780,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let alertText;
 
     if (that.vars.crosshairPosition.length === 0) {
-      alertText = "Please click on the PSG to align the graph.";
+      alertText = "Please click on a montage to align the graph.";
     } else {
       alertText = "Please click on the other montage to align the graph.";
     }
@@ -5022,7 +5032,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _getAnnotationLabel: function (channelName) {
     var that = this;
     const currentMontage = that._getCurrentMontage();
-
+    console.log('here')
     if (that.options.features.annotationType === "box") {
       switch (currentMontage) {
         case "PSG":
