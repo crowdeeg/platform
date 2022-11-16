@@ -687,6 +687,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <div style="margin-bottom: 10px" class= "alignment_btn">\
                   <button type = "button" class = "btn align_btn">Align</button>\
                 </div>\
+                <div class = "annotation_filter_options">\
+                  <select id = "annotations_select">\
+                    <option value = "all">all</option>\
+                    <option value = "Obstructive Apnea">Obstructive Apnea</option>\
+                    <option value = "Central Apnea">Central Apnea</option>\
+                    <option value = "Obstructive Hypoapnea">Obstructive Hypoapnea</option>\
+                    <option value = "Central Hypoapnea">Central Hypoapnea</option>\
+                    <option value = "Flow Limitation">Flow Limitation</option>\
+                    <option value = "Cortical Arousal">Cortical Arousal</option>\
+                    <option value = "Automatic Arousal">Autonomic Arousal</option>\
+                    <option value = "Desat. Event">Desat. Event</option>\
+                    <option value = "Mixed Apnea">Mixed Apnea</option>\
+                    <option value = "Mixed Hypoapnea">Mixed Hypoapnea</option>\
+                    <option value = "(unanalyzable)">(unanalyzable)</option>\
+                  </select>\
+                </div>\
+                <div style="margin-bottom: 10px" class= "annotation_filter_btn">\
+                  <button type = "button" class = "btn filter_btn">Filter</button>\
+                </div>\
               </div>\
                 <div class="graph_control"> \
                     <div class="experiment_container container-fluid"> \
@@ -3988,7 +4007,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           );
           var scaleFactorAmplitude = channel.audio.scaleFactors.amplitude;
           if (scaleFactorAmplitude != 0) {
-            console.log(channel.values);
             channel.values = channel.values.map(
               (v) => v * scaleFactorAmplitude
             );
@@ -6672,7 +6690,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _addChangePointLabelFixed: function () {
     var that = this;
     let chart = that.vars.chart;
-
     var annotations = that._getNonTrivialUniversalAnnotations();
     // grab the previous annotation in sorted order
     var index = that._getUniversalAnnotationIndexByXVal(that.vars.currentWindowStart);
@@ -7223,6 +7240,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _convertChangePointsToBox: function (annotation) {
     var that = this;
     var allAnnotations = that.vars.chart.annotations.allItems;
+    console.log(allAnnotations);
     allAnnotations.sort((a, b) => {
       return a.options.xValue - b.options.xValue;
     });
@@ -8581,7 +8599,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end
     );
     that._displayAnnotations(annotations);
+    
+    $(that.element).find(".filter_btn").click(function(){
+      var type = document.querySelector('#annotations_select').value;
+      var filtered_lst = [];
+      if(type == "all"){
+        that._displayAnnotations(annotations);
 
+      }
+      else{
+        annotations.forEach((item)=>{
+          if(item.metadata.annotationLabel == type){
+            filtered_lst.push(item);
+          }
+
+        })
+        that._displayAnnotations(filtered_lst);
+      }
+    })
   },
 
   _getVisibleAnnotations: function (annotations) {

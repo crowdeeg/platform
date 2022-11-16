@@ -206,6 +206,10 @@
   flex:1;
 }
 
+.alignment_options{
+  flex:0.5;
+}
+
 .frequency_filter_panel {
   display: inline-block;
   float: left;
