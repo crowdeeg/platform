@@ -731,25 +731,16 @@ Meteor.methods({
 
     // I think we get the channels using wfdb desc
     allRecordings.map((recording) => {
-      console.log('cccccccc')
-      console.dir(recording)
       const channelDisplayed = Data.findOne(
         recording._id
       ).metadata.wfdbdesc.Groups[0].Signals.reduce(
         (channels, signal) => channels + " '" + signal.Description + "'",
         "-s"
       );
-      console.log('dddddd')
-      console.log(recording.source)
       channelsDisplayed[recording.source] = channelDisplayed.split(' ').slice(1, -1)
-      console.log(typeof channelDisplayed)
-      console.log(channelsDisplayed[recording.source])
     })
-    console.log(allRecordings)
     allRecordings = allRecordings.map((recording) => {
       // console.log(recording.source);
-      console.log('aaaaaaaa')
-      console.log(recording.source);
       
       temp = parseChannelsDisplayed(
         channelsDisplayed[recording.source],

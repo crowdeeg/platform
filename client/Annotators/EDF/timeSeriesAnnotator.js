@@ -1435,7 +1435,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (that.options.channelsDisplayed instanceof Array) {
       return;
     }
-    console.log(that.options.channelsDisplayed)
     return Object.keys(that.options.channelsDisplayed);
   },
 
