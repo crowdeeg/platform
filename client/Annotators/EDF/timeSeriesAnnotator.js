@@ -677,6 +677,35 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <label for "ylimit_upper_input">Y-Axis Upper Limit:</label>\
                 <input type = "number" id = "ylimit_upper_input" value = 200>\
                 </div>\
+                <div class = "alignment_options">\
+                  <select id = "alignment_select">\
+                    <option>Top</option>\
+                    <option>Middle</option>\
+                    <option>Bottom</option>\
+                  </select>\
+                </div>\
+                <div style="margin-bottom: 10px" class= "alignment_btn">\
+                  <button type = "button" class = "btn align_btn">Align</button>\
+                </div>\
+                <div class = "annotation_filter_options">\
+                  <select id = "annotations_select">\
+                    <option value = "all">all</option>\
+                    <option value = "Obstructive Apnea">Obstructive Apnea</option>\
+                    <option value = "Central Apnea">Central Apnea</option>\
+                    <option value = "Obstructive Hypoapnea">Obstructive Hypoapnea</option>\
+                    <option value = "Central Hypoapnea">Central Hypoapnea</option>\
+                    <option value = "Flow Limitation">Flow Limitation</option>\
+                    <option value = "Cortical Arousal">Cortical Arousal</option>\
+                    <option value = "Automatic Arousal">Autonomic Arousal</option>\
+                    <option value = "Desat. Event">Desat. Event</option>\
+                    <option value = "Mixed Apnea">Mixed Apnea</option>\
+                    <option value = "Mixed Hypoapnea">Mixed Hypoapnea</option>\
+                    <option value = "(unanalyzable)">(unanalyzable)</option>\
+                  </select>\
+                </div>\
+                <div style="margin-bottom: 10px" class= "annotation_filter_btn">\
+                  <button type = "button" class = "btn filter_btn">Filter</button>\
+                </div>\
               </div>\
                 <div class="graph_control"> \
                     <div class="experiment_container container-fluid"> \
@@ -3102,7 +3131,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       nextWindowStart,
       nextWindowSizeInSeconds
     );
-    that._refreshAnnotations();
   },
 
   _switchToWindow: function (allRecordings, start_time, window_length) {
@@ -3324,6 +3352,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       });
     });
+    if (that.vars.chart) {
+      if (that.vars.chart.annotaions) {
+        that._flushAnnotations();
+        that._getAnnotations(
+          that.vars.currentWindowRecording,
+          that.vars.currentWindowStart,
+          that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+        );
+      }
+    }
   },
 
   jumpToEpochWithStartTime: function (epochStartTimeInSeconds) {
@@ -3988,7 +4026,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           );
           var scaleFactorAmplitude = channel.audio.scaleFactors.amplitude;
           if (scaleFactorAmplitude != 0) {
-            // console.log(channel.values);
             channel.values = channel.values.map(
               (v) => v * scaleFactorAmplitude
             );
@@ -4075,6 +4112,59 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       original_series[i] = that.vars.chart.series[i].yData;
 
     }
+    $(that.element).find(".align_btn").click(function(){
+      if(that._isChannelSelected){
+        let index = that.vars.selectedChannelIndex;
+        let option = document.querySelector('#alignment_select').selectedIndex;
+        let offset = that._getOffsetForChannelIndexPostScale(index);
+        if(option ==0){
+          console.log('TOP ALIGN');
+          let max = that._getMaxChannelData(index);
+          
+          let distance = max - offset;
+
+          for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
+            if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
+              that.vars.chart.series[index].yData[j] -= distance;
+            }
+          }
+
+          that.vars.chart.redraw();
+        }
+
+        if(option == 1){
+          console.log("MIDDLE ALIGN");
+          let avg = that._getAvgChannelData(index);
+          let distance = avg - offset;
+
+          for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
+            if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
+              that.vars.chart.series[index].yData[j] -= distance;
+            }
+          }
+
+          that.vars.chart.redraw();
+
+        }
+
+        if(option == 2){
+          console.log('BOTTOM ALIGN');
+          let min = that._getMinChannelData(index);
+          let distance = min - offset;
+
+          for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
+            if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
+              that.vars.chart.series[index].yData[j] -= distance;
+            }
+          }
+
+          that.vars.chart.redraw();
+
+        }
+      }
+    })
+
+
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected){
 
@@ -6619,7 +6709,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _addChangePointLabelFixed: function () {
     var that = this;
     let chart = that.vars.chart;
-
     var annotations = that._getNonTrivialUniversalAnnotations();
     // grab the previous annotation in sorted order
     var index = that._getUniversalAnnotationIndexByXVal(that.vars.currentWindowStart);
@@ -7170,6 +7259,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _convertChangePointsToBox: function (annotation) {
     var that = this;
     var allAnnotations = that.vars.chart.annotations.allItems;
+    console.log(allAnnotations);
     allAnnotations.sort((a, b) => {
       return a.options.xValue - b.options.xValue;
     });
@@ -7907,6 +7997,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return min;
   },
 
+  _getAvgChannelData: function(index) {
+    //gets the average datapoint in the channel
+    var that = this;
+    let sum = 0;
+    j = 0;
+    for (let i = 1;i<that.vars.chart.series[index].yData.length;i++){
+      if(((typeof that.vars.chart.series[index].yData[i]) == "number")){
+        sum += that.vars.chart.series[index].yData[i];
+        j++;
+
+      }
+    }
+    return sum*1.0/j;
+  },
+
   _defaultAmplitude: function () {
     // resets the amplitude to the default one by clearing all scalingFactors that were set when we scaled previously
     // (if we used any scaling features before we store it in the scalingFactors variable)
@@ -8366,6 +8471,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._saveUserEventWindow("complete");
   },
 
+  _getAnnotationsOnly: function () {
+    var that = this;
+
+
+    let annotations = Annotations.find(
+      {
+        assignment: that.options.context.assignment._id,
+        dataFiles: that.options.context.dataset.map((data) => data._id),
+        user: Meteor.userId(),
+        type: "SIGNAL_ANNOTATION",
+      },
+      {
+        sort: { updatedAt: -1 },
+      }
+    ).fetch();
+
+
+    that.vars.annotationsLoaded = true;
+
+    annotations = annotations.map(function (annotation) {
+      var annotationFormatted = annotation.value;
+      annotationFormatted.id = annotation._id;
+      annotationFormatted.user = annotation.user;
+      annotationFormatted.arbitration = annotation.arbitration;
+      annotationFormatted.arbitrationRoundNumber =
+        annotation.arbitrationRoundNumber;
+      annotationFormatted.rationale = annotation.rationale;
+      return annotationFormatted;
+    });
+
+
+    return annotations;
+
+  },
+
   _getAnnotations: function (
     recording_name,
     window_start,
@@ -8513,7 +8653,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_end
     );
     that._displayAnnotations(annotations);
+    
+    $(that.element).find(".filter_btn").click(function(){
+      var type = document.querySelector('#annotations_select').value;
+      var filtered_lst = [];
+      if(type == "all"){
+        that._displayAnnotations(annotations);
 
+      }
+      else{
+        annotations.forEach((item)=>{
+          if(item.metadata.annotationLabel == type){
+            filtered_lst.push(item);
+          }
+
+        })
+        that._displayAnnotations(filtered_lst);
+      }
+    })
   },
 
   _getVisibleAnnotations: function (annotations) {
@@ -9252,6 +9409,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _downloadCSV: function () {
     var that = this;
     var channels = {};
+    
+    if (that.vars.chart) {
+      if (that.vars.chart.annotaions) {
+        var annotations = that.vars.chart.annotaions.allItems;
+        while (annotations && annotations.length > 0) {
+          that._saveFeatureAnnotation(annotations[0]);
+        }
+      }
+    }
 
     that.vars.currentWindowData.channels.forEach((channel) => {
       (channels[channel.dataId] ? channels[channel.dataId].push(channel.name) : channels[channel.dataId] = [channel.name])
@@ -9301,43 +9467,67 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _assembleAnnotationObject: function () {
     var that = this;
-    var allAnnotations = that.vars.chart.annotations.allItems;
+    var allAnnotations = that._getAnnotationsOnly(that.vars.currentWindowRecording);
+    // var allAnnotations = that.vars.chart.annotations.allItems
+    // allAnnotations.sort((a, b) => {
+    //   return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
+    // });
+
     allAnnotations.sort((a, b) => {
-      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMinFixed(b);
+      return a.position.start - b.position.start;
     });
 
-    var rows = allAnnotations.filter(element => element.metadata.displayType != "ChangePoint").map((element, index) => {
+    // var rows = allAnnotations.filter(element => element.metadata.displayType != "ChangePoint").map((element, index) => {
+    console.log(allAnnotations[0])
+    var rows = allAnnotations.filter(element => !(element.position.start === element.position.end && element.position.channels.length === 1)).map((element, index) => {
       var type;
       var channel;
       var duration = 'NA';
       var annotation = element.metadata.annotationLabel;
 
-      if (element.metadata.displayType == 'ChangePointAll') {
+      if (element.position.start === element.position.end) {
         type = "Stage Change";
         channel = "All";
       } else {
         type = "Event";
-        channel = element.metadata.channelIndices.length === that.vars.allChannels.length ? "All" :
-          (element.metadata.channelIndices.map((element) => {
+        channel = element.position.channels.length === that.vars.allChannels.length ? "All" :
+          (element.position.channels.map((element) => {
             return `(${element})` + that.vars.currentWindowData.channels[element].name;
           })).join('//');
-        if (element.metadata.displayType != 'ChangePoint') {
-          duration = element.options.shape.params.width;
-        }
+        duration = parseFloat(element.position.end) - parseFloat(element.position.start)
       }
 
       if (element.metadata.annotationLabel == "(unanalyzable)") {
         type = 'Signal Quality';
       }
 
+      // if (element.metadata.displayType == 'ChangePointAll') {
+      //   type = "Stage Change";
+      //   channel = "All";
+      // } else {
+      //   type = "Event";
+      //   channel = element.metadata.channelIndices.length === that.vars.allChannels.length ? "All" :
+      //     (element.metadata.channelIndices.map((element) => {
+      //       return `(${element})` + that.vars.currentWindowData.channels[element].name;
+      //     })).join('//');
+      //   if (element.metadata.displayType != 'ChangePoint') {
+      //     duration = element.options.shape.params.width;
+      //   }
+      // }
+
+      // if (element.metadata.annotationLabel == "(unanalyzable)") {
+      //   type = 'Signal Quality';
+      // }
+
+
       var row = {
         "Index": index,
-        "Time": element.options.xValue,
+        "Time": element.position.start,
         "Type": type,
         "Annotation": annotation,
         "Channels": channel,
         "Duration": duration,
-        "User": element.metadata.creator,
+        "User": element.user,
         "Comment":
           // element.metadata.comment.replaceAll(',', '-').replaceAll(';', '--') || 
           "",
@@ -9561,13 +9751,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _saveAnnotations: function (annotaions) {
     var that = this;
-    const newAnnotations = annotaions.map((annotation) => {
+    let newAnnotations = annotaions.map((annotation) => {
       var annotationId = annotation.metadata.id;
       var type = annotation.metadata.featureType;
       var start = that._getAnnotationXMinFixed(annotation);
       var end = that._getAnnotationXMaxFixed(annotation);
-      // console.log(time_start);
-      // console.log(time_end);
       var channels = annotation.metadata.channelIndices;
       var confidence = annotation.metadata.confidence;
       var comment = annotation.metadata.comment;
@@ -9597,7 +9785,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (channels && !channels.length) {
         channels = [channels];
       }
-
       if (!annotationId) {
         var graph = $(".graph");
         var annotationDocument = {
@@ -9635,9 +9822,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         return annotationDocument;
       }
     });
-
+    newAnnotations = newAnnotations.filter(function(element) {
+      return element !== undefined
+    })
     const annotationsId = Annotations.batchInsert(newAnnotations);
-
     for (let i = 0; i < annotationsId.length; i++) {
       newAnnotations[i].id = annotationsId[i];
     }
@@ -9647,7 +9835,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     for (let i = 0; i < newAnnotations.length; i++) {
       updateCache(annotaions[i], newAnnotations[i])
       if (i === newAnnotations.length - 1) {
-        window.alert(`uploaded ${i} annotations`);
+        window.alert(`uploaded ${annotaions.length} annotations`);
       }
     }
 

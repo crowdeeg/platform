@@ -8,6 +8,7 @@ let taskDictionary = {};
 let dataDictionary = {};
 let page = 1;
 let limit = 10;
+let cond = {}
 
 let renderDate = (dateValue) => {
   if (dateValue instanceof Date) {
@@ -354,9 +355,15 @@ Template.Data.events({
     console.log(task);
     template.selectedTask.set(task);
   },
-  'click .recordings .change-page'(event, template) {
+  'click .change-page'(event, template) {
     template.change.set(false)
-    page = document.getElementById('page').value;
+    page = parseInt(document.getElementById('page').value);
+    limit = parseInt(document.getElementById('limit').value);
+    cond = {};
+    let patientId = document.getElementById('patientId').value;
+    let path = document.getElementById('path').value;
+    if (patientId) cond["name"] = patientId;
+    if (path) cond["path"] = path;
     Meteor.setTimeout(() => (template.change.set(true)), 1000);
   },
   'autocompleteselect input.assignee'(event, template, user) {
@@ -580,7 +587,7 @@ Template.Data.events({
 Template.Data.helpers({
   settings() {
     const selectedData = Template.instance().selectedData;
-    const data = Data.find({}, { skip: (page - 1) * limit, limit: limit }).fetch();
+    const data = Data.find(cond, { skip: (page - 1) * limit, limit: limit }).fetch();
     data.forEach((d) => {
       d.lengthFormatted = d.lengthFormatted();
       d.lengthInSeconds = d.lengthInSeconds();
@@ -770,6 +777,12 @@ Template.Data.helpers({
     console.log(Object.values(Template.instance().selectedData.get()).length === 2)
     return Object.values(Template.instance().selectedData.get()).length === 2;
   },
+  getPage() {
+    return page;
+  },
+  getLimit() {
+    return limit;
+  }
 });
 
 Template.Data.events({
