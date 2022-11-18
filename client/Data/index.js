@@ -378,112 +378,209 @@ Template.Data.events({
     template.selectedAssignees.set(selectedAssignees);
   },
   'click .btn.assign'(event, template) {
-    const modalTransitionTimeInMilliSeconds = 300;
-    MaterializeModal.form({
-      title: '',
-      bodyTemplate: 'assignSettingsForm',
-      submitLabel: '<i class="fa fa-check left"></i> Preview Assignments',
-      closeLabel: '<i class="fa fa-times left"></i> Cancel',
-      outDuration: modalTransitionTimeInMilliSeconds,
-      callback(error, response) {
-        if (error) {
-          alert(error);
-          return;
-        }
-        if (!response.submit) return;
-        const r = response.value;
+    if (document.getElementById("alginment") && document.getElementById("alginment").checked === true) {
+      const modalTransitionTimeInMilliSeconds = 300;
+      MaterializeModal.form({
+        title: '',
+        bodyTemplate: 'assignSettingsForm',
+        submitLabel: '<i class="fa fa-check left"></i> Preview Alignment',
+        closeLabel: '<i class="fa fa-times left"></i> Cancel',
+        outDuration: modalTransitionTimeInMilliSeconds,
+        callback(error, response) {
+          if (error) {
+            alert(error);
+            return;
+          }
+          if (!response.submit) return;
 
-        const task = template.selectedTask.get();
-        const data = Object.values(template.selectedData.get());
-        const assigneesDict = template.selectedAssignees.get();
-        const assignees = Object.values(template.selectedAssignees.get());
+          const task = template.selectedTask.get();
+          const data = Object.values(template.selectedData.get());
+          const assigneesDict = template.selectedAssignees.get();
+          const assignees = Object.values(template.selectedAssignees.get());
 
-        const assignmentsByAssignee = {};
-        assignees.forEach((assignee) => {
-          const assignmentsForAssignee = []
-          data.forEach((d) => {
-            let doAssign = true;
-            if (r.avoidDuplicateAssignmentsForIndividualReaders) {
-              const duplicateAssignment = Assignments.findOne({
-                task: task._id,
-                users: assignee._id,
-                dataFiles: [d._id],
+          const assignmentsByAssignee = {};
+          assignees.forEach((assignee) => {
+            const assignmentsForAssignee = []
+            data.forEach((d) => {
+              let doAssign = true;
+              assignmentsForAssignee.push({
+                doAssign: doAssign,
+                data: d,
               });
-              if (duplicateAssignment) {
-                doAssign = false;
-              }
-            }
-            assignmentsForAssignee.push({
-              doAssign: doAssign,
-              data: d,
             });
+            assignmentsByAssignee[assignee._id] = assignmentsForAssignee;
           });
-          assignmentsByAssignee[assignee._id] = assignmentsForAssignee;
-        });
 
-        let assignmentsFormatted = '';
-        Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
-          const assignee = assigneesDict[assigneeId];
-          const assignments = assignmentsByAssignee[assigneeId];
-          activeAssignments = assignments.filter(a => a.doAssign);
-          assignmentsFormatted += '<b>' + assignee.username + '</b> (' + activeAssignments.length + '):<br><br><ul>';
-          assignments.forEach((assignment) => {
-            const dataPath = assignment.data.pathAndLengthFormatted();
-            if (assignment.doAssign) {
-              assignmentsFormatted += '<li><b>' + dataPath + '</b></li>';
-            }
-            else {
-              assignmentsFormatted += '<li><strike>' + dataPath + '</strike></li>';
-            }
+          let assignmentsFormatted = '';
+          Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
+            const assignee = assigneesDict[assigneeId];
+            const assignments = assignmentsByAssignee[assigneeId];
+            activeAssignments = assignments.filter(a => a.doAssign);
+            assignmentsFormatted += '<b>' + assignee.username + '</b> (' + activeAssignments.length + '):<br><br><ul>';
+            assignments.forEach((assignment) => {
+              const dataPath = assignment.data.pathAndLengthFormatted();
+              if (assignment.doAssign) {
+                assignmentsFormatted += '<li><b>' + dataPath + '</b></li>';
+              }
+              else {
+                assignmentsFormatted += '<li><strike>' + dataPath + '</strike></li>';
+              }
+            });
+            assignmentsFormatted += '</ul>';
           });
-          assignmentsFormatted += '</ul>';
-        });
 
-        window.setTimeout(function () {
-          MaterializeModal.confirm({
-            title: 'Confirm assignments',
-            message: 'Your selection resulted in the following list of assignments:<br><br>' + assignmentsFormatted,
-            submitLabel: '<i class="fa fa-check left"></i> Create Assignment(s)',
-            closeLabel: '<i class="fa fa-times left"></i> Cancel',
-            outDuration: modalTransitionTimeInMilliSeconds,
-            callback(error, response) {
-              if (error) {
-                alert(error);
-                return;
-              }
-              if (!response.submit) {
-                return;
-              }
-
-              Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
-                const assignee = assigneesDict[assigneeId];
-                const assignments = assignmentsByAssignee[assigneeId];
-                assignments.forEach((assignment) => {
-                  if (!assignment.doAssign) return;
+          window.setTimeout(function () {
+            MaterializeModal.confirm({
+              title: 'Confirm assignments',
+              message: 'Your selection resulted in the following list of assignments:<br><br>' + assignmentsFormatted,
+              submitLabel: '<i class="fa fa-check left"></i> Create Alignment',
+              closeLabel: '<i class="fa fa-times left"></i> Cancel',
+              outDuration: modalTransitionTimeInMilliSeconds,
+              callback(error, response) {
+                if (error) {
+                  alert(error);
+                  return;
+                }
+                if (!response.submit) {
+                  return;
+                }
+                Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
+                  const assignments = assignmentsByAssignee[assigneeId];
+                  var dataFiles = assignments.map((assignment) =>
+                    assignment.data._id
+                  );
                   Assignments.insert({
                     users: [assigneeId],
                     task: task._id,
-                    dataFiles: [assignment.data._id],
+                    dataFiles: dataFiles,
                   });
                 });
-              });
 
-              template.selectedTask.set(false);
-              template.selectedData.set({});
-              template.selectedAssignees.set({});
 
-              window.setTimeout(function () {
-                MaterializeModal.message({
-                  title: 'Done!',
-                  message: 'Your selected assignments have been created successfully.',
-                  outDuration: modalTransitionTimeInMilliSeconds,
+                template.selectedTask.set(false);
+                template.selectedData.set({});
+                template.selectedAssignees.set({});
+
+                window.setTimeout(function () {
+                  MaterializeModal.message({
+                    title: 'Done!',
+                    message: 'Your selected alignment have been created successfully.',
+                    outDuration: modalTransitionTimeInMilliSeconds,
+                  });
+                }, modalTransitionTimeInMilliSeconds);
+              },
+            });
+          }, modalTransitionTimeInMilliSeconds);
+        },
+      })
+    } else {
+      const modalTransitionTimeInMilliSeconds = 300;
+      MaterializeModal.form({
+        title: '',
+        bodyTemplate: 'assignSettingsForm',
+        submitLabel: '<i class="fa fa-check left"></i> Preview Assignments',
+        closeLabel: '<i class="fa fa-times left"></i> Cancel',
+        outDuration: modalTransitionTimeInMilliSeconds,
+        callback(error, response) {
+          if (error) {
+            alert(error);
+            return;
+          }
+          if (!response.submit) return;
+          const r = response.value;
+
+          const task = template.selectedTask.get();
+          const data = Object.values(template.selectedData.get());
+          const assigneesDict = template.selectedAssignees.get();
+          const assignees = Object.values(template.selectedAssignees.get());
+
+          const assignmentsByAssignee = {};
+          assignees.forEach((assignee) => {
+            const assignmentsForAssignee = []
+            data.forEach((d) => {
+              let doAssign = true;
+              if (r.avoidDuplicateAssignmentsForIndividualReaders) {
+                const duplicateAssignment = Assignments.findOne({
+                  task: task._id,
+                  users: assignee._id,
+                  dataFiles: [d._id],
                 });
-              }, modalTransitionTimeInMilliSeconds);
-            },
+                if (duplicateAssignment) {
+                  doAssign = false;
+                }
+              }
+              assignmentsForAssignee.push({
+                doAssign: doAssign,
+                data: d,
+              });
+            });
+            assignmentsByAssignee[assignee._id] = assignmentsForAssignee;
           });
-        }, modalTransitionTimeInMilliSeconds);
-      },
-    });
+
+          let assignmentsFormatted = '';
+          Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
+            const assignee = assigneesDict[assigneeId];
+            const assignments = assignmentsByAssignee[assigneeId];
+            activeAssignments = assignments.filter(a => a.doAssign);
+            assignmentsFormatted += '<b>' + assignee.username + '</b> (' + activeAssignments.length + '):<br><br><ul>';
+            assignments.forEach((assignment) => {
+              const dataPath = assignment.data.pathAndLengthFormatted();
+              if (assignment.doAssign) {
+                assignmentsFormatted += '<li><b>' + dataPath + '</b></li>';
+              }
+              else {
+                assignmentsFormatted += '<li><strike>' + dataPath + '</strike></li>';
+              }
+            });
+            assignmentsFormatted += '</ul>';
+          });
+
+          window.setTimeout(function () {
+            MaterializeModal.confirm({
+              title: 'Confirm assignments',
+              message: 'Your selection resulted in the following list of assignments:<br><br>' + assignmentsFormatted,
+              submitLabel: '<i class="fa fa-check left"></i> Create Assignment(s)',
+              closeLabel: '<i class="fa fa-times left"></i> Cancel',
+              outDuration: modalTransitionTimeInMilliSeconds,
+              callback(error, response) {
+                if (error) {
+                  alert(error);
+                  return;
+                }
+                if (!response.submit) {
+                  return;
+                }
+
+                Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
+                  const assignee = assigneesDict[assigneeId];
+                  const assignments = assignmentsByAssignee[assigneeId];
+                  assignments.forEach((assignment) => {
+                    if (!assignment.doAssign) return;
+                    Assignments.insert({
+                      users: [assigneeId],
+                      task: task._id,
+                      dataFiles: [assignment.data._id],
+                    });
+                  });
+                });
+
+                template.selectedTask.set(false);
+                template.selectedData.set({});
+                template.selectedAssignees.set({});
+
+                window.setTimeout(function () {
+                  MaterializeModal.message({
+                    title: 'Done!',
+                    message: 'Your selected assignments have been created successfully.',
+                    outDuration: modalTransitionTimeInMilliSeconds,
+                  });
+                }, modalTransitionTimeInMilliSeconds);
+              },
+            });
+          }, modalTransitionTimeInMilliSeconds);
+        },
+      });
+    }
   },
 });
 
@@ -676,6 +773,10 @@ Template.Data.helpers({
   changePage() {
     return Template.instance().change.get();
   },
+  align() {
+    console.log(Object.values(Template.instance().selectedData.get()).length === 2)
+    return Object.values(Template.instance().selectedData.get()).length === 2;
+  },
   getPage() {
     return page;
   },
@@ -729,5 +830,5 @@ Template.Data.onCreated(function () {
   this.selectedData = new ReactiveVar({});
   this.selectedAssignees = new ReactiveVar({});
   this.change = new ReactiveVar(true);
-
+  this.align = new ReactiveVar(true);
 });

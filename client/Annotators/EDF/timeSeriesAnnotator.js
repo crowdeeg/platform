@@ -1699,7 +1699,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     select.material_select();
     //console.log("_setupMontageSelector before change");
     select.change(function () {
-      //console.log("_setupMontageSelector onchange");
+      // console.log("_setupMontageSelector onchange");
       that.vars.currentMontage = select.val();
       that._savePreferences({
         defaultMontage: that.vars.currentMontage,
@@ -2108,7 +2108,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           target_sampling_rate: that.options.targetSamplingRate,
           use_high_precision_sampling: that.options.useHighPrecisionSampling,
         };
-        ////console.log(options);
         that._requestData(options, function (data, error) {
           if (error) {
             console.log(error);
@@ -2735,15 +2734,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(that._isFromPSG(that._getTopDataId()));
     // console.log("-bottom")
     // console.log(that._isFromPSG(that._getBottomDataId()));
-    console.log(that._isFromPSG(point.dataId));
+    // console.log(that._isFromPSG(point.dataId));
 
     if (!that._isInCrosshairSyncMode()) return;
 
-    if (
-      that.vars.crosshairPosition.length === 0 &&
-      !that._isFromPSG(point.dataId)
-    )
-      return;
+    // if (
+    //   that.vars.crosshairPosition.length === 0 &&
+    //   !that._isFromPSG(point.dataId)
+    // )
+    //   return;
     let crosshairPosition = that.vars.crosshairPosition;
     let sameRecording = false;
     let index = undefined;
@@ -3284,6 +3283,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         target_sampling_rate: that.options.targetSamplingRate,
         use_high_precision_sampling: that.options.useHighPrecisionSampling,
       };
+
       that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
         // console.log(errorData);
@@ -4420,7 +4420,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         subsequent changes to this plot to scroll through the signal use the much computationally expensive
         series update and axis update methods.
         */
-    //console.log("!!!!!!init graph");
+    // console.log("!!!!!!init graph");
     var that = this;
     var channels = data.channels;
 
@@ -4860,7 +4860,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let alertText;
 
     if (that.vars.crosshairPosition.length === 0) {
-      alertText = "Please click on the PSG to align the graph.";
+      alertText = "Please click on the bottom montage to align the graph.";
     } else {
       alertText = "Please click on the other montage to align the graph.";
     }
@@ -5112,7 +5112,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _getAnnotationLabel: function (channelName) {
     var that = this;
     const currentMontage = that._getCurrentMontage();
-
+    // console.log('here')
     if (that.options.features.annotationType === "box") {
       switch (currentMontage) {
         case "PSG":
@@ -5300,7 +5300,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
       }
     } else if (that.options.features.annotationType === "cpoint") {
-      console.log("here");
+      // console.log("here");
       console.log(currentMontage);
       switch (currentMontage) {
         case "PSG":
@@ -5467,7 +5467,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
       }
     } else if (that.options.features.annotationType === "cpointall") {
-      console.log("here " + currentMontage);
       switch (currentMontage) {
         case "PSG":
           switch (channelName) {

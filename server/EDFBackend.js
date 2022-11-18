@@ -525,12 +525,14 @@ let computeChannelData = (
 };
 
 let parseChannelsDisplayed = (channelsDisplayed, recordingId) => {
-  individualChannelsRequired = new Set();
+  var individualChannelsRequired = new Set();
   var individualChannels = [];
 
   let channelsDisplayedParsed = {
     subtractions: [],
   };
+  console.log('fffffff')
+  console.log(channelsDisplayed)
 
   // console.log(channelsDisplayed);
   channelsDisplayed.forEach((channel) => {
@@ -542,7 +544,6 @@ let parseChannelsDisplayed = (channelsDisplayed, recordingId) => {
       plus: undefined,
       minus: undefined,
     };
-
     channelsDisplayedParsed.subtractions.push(subtraction);
     let operandNames = ["plus", "minus"];
     channelParts.forEach((channelPart, c) => {
@@ -710,7 +711,9 @@ Meteor.methods({
 
     // this is the original version of codes which display all channels specified in the options:
     let channelsDisplayed = options.channels_displayed;
-    // console.log(channelsDisplayed);
+    console.log('bbbbbb')
+    console.dir(options);
+    console.dir(channelsDisplayed);
 
     // let channelsDisplayed = {};
 
@@ -727,9 +730,18 @@ Meteor.methods({
     // TODO: this should only display the channels required in the montage not all of them, should speed it up
 
     // I think we get the channels using wfdb desc
+    allRecordings.map((recording) => {
+      const channelDisplayed = Data.findOne(
+        recording._id
+      ).metadata.wfdbdesc.Groups[0].Signals.reduce(
+        (channels, signal) => channels + " '" + signal.Description + "'",
+        "-s"
+      );
+      channelsDisplayed[recording.source] = channelDisplayed.split(' ').slice(1, -1)
+    })
     allRecordings = allRecordings.map((recording) => {
       // console.log(recording.source);
-      // console.dir(channelsDisplayed[recording.source]);
+      
       temp = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
         recording._id
