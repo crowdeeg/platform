@@ -1279,7 +1279,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var channelsDisplayed = [
       firstExample.channels_displayed[firstExample.channels],
     ];
-    console.log('here')
     let id = Data.findOne({ path: recordingName })._id;
     that.options.allRecordings = [{ _id: id, path: recordingName }];
     that.options.channelsDisplayed = channelsDisplayed;
@@ -1445,30 +1444,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
 
     if (that.options.channelsDisplayed instanceof Array) {
-      console.log(1)
       return that.options.channelsDisplayed;
     }
     if (montage) {
-      console.log(2)
       return that.options.channelsDisplayed[montage];
     }
     if (
       that.vars.currentMontage &&
       that.options.channelsDisplayed[that.vars.currentMontage]
     ) {
-      console.log(3)
-      console.log(that.vars.currentMontage)
-      console.log(that.options.channelsDisplayed[that.vars.currentMontage])
-      console.log(that.options.channelsDisplayed)
       return that.options.channelsDisplayed[that.vars.currentMontage];
     } else if (
       that.options.defaultMontage &&
       that.options.channelsDisplayed[that.options.defaultMontage]
     ) {
-      console.log(4)
       return that.options.channelsDisplayed[that.options.defaultMontage];
     }
-    console.log(5)
     return that.options.channelsDisplayed[that._getMontages()[0]];
   },
 
@@ -4430,7 +4421,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         subsequent changes to this plot to scroll through the signal use the much computationally expensive
         series update and axis update methods.
         */
-    console.log("!!!!!!init graph");
+    // console.log("!!!!!!init graph");
     var that = this;
     var channels = data.channels;
 
@@ -4870,7 +4861,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let alertText;
 
     if (that.vars.crosshairPosition.length === 0) {
-      alertText = "Please click on a montage to align the graph.";
+      alertText = "Please click on the bottom montage to align the graph.";
     } else {
       alertText = "Please click on the other montage to align the graph.";
     }
@@ -5122,7 +5113,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _getAnnotationLabel: function (channelName) {
     var that = this;
     const currentMontage = that._getCurrentMontage();
-    console.log('here')
+    // console.log('here')
     if (that.options.features.annotationType === "box") {
       switch (currentMontage) {
         case "PSG":
@@ -5310,7 +5301,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
       }
     } else if (that.options.features.annotationType === "cpoint") {
-      console.log("here");
+      // console.log("here");
       console.log(currentMontage);
       switch (currentMontage) {
         case "PSG":
@@ -5477,7 +5468,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
       }
     } else if (that.options.features.annotationType === "cpointall") {
-      console.log("here " + currentMontage);
       switch (currentMontage) {
         case "PSG":
           switch (channelName) {
