@@ -59,14 +59,15 @@
                 <li class="collection-item"><div>{{username}}<a href="#" data-id="{{_id}}" class="secondary-content delete"><i class="fa fa-trash"></i></a></div></li>
                 {{/each}}
             </ul>
+            {{#if align}}
+              <label class="container">Alignment
+                <input type="checkbox" id='alginment' checked="checked">
+                <span class="checkmark"></span>
+              </label>
+            {{/if}}
             {{#if data}}
             {{#if task}}
             <button class="btn assign" style="width: 100%">Assign</button>
-            {{#if align}}
-            <br>
-            <br>
-            <button class="btn align" style="width: 100%">Align</button>
-            {{/if}}
             {{/if}}
             {{/if}}
             {{/if}}
