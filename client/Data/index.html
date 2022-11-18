@@ -6,7 +6,7 @@
             <div class="col s12 m3">
                 <h3>Recordings</h3>
             </div>
-            <div class="col s12 m9">
+            <!-- <div class="col s12 m9">
                 <div class="row">
                     <div class="col s12 m6">{{> reactiveTableFilter id="filterDataPath" label="Path" fields=filterFieldsDataPath }}</div>
                     <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientId" label="Patient #" fields=filterFieldsPatientId }}</div>
@@ -15,14 +15,37 @@
                     <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientAge" label="Age" fields=filterFieldsPatientAge }}</div>
                     <div class="col s12 m6">{{> reactiveTableFilter id="filterNumAssignments" label="# Assignments" fields=filterFieldsNumAssignments }}</div>
                 </div>
+            </div> -->
+            <div class="col s12 m9">
+              <div class="row">
+                <label>Path</label>
+                <input id="path">
+                <label>Patient #</label>
+                <input id="patientId">
+              </div>
+              <button class="change-page" id="change-page">Change Data</button>
+              <br>
+              <br>
+              <div class="row">
+                <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientAge" label="Age" fields=filterFieldsPatientAge }}
+                </div>
+                <div class="col s12 m6">{{> reactiveTableFilter id="filterNumAssignments" label="# Assignments"
+                    fields=filterFieldsNumAssignments }}
+                </div>
+              </div>
             </div>
         </div>
         <div class="recordings">
           {{#if changePage}}
           <div class="col s12 data" id="recording">{{> reactiveTable settings=settings}}</div>
           {{/if}}
-          <input class="page" id="page" type="number" />
-          <button class="change-page" id="change-page">Change Page</button>
+          <div class="pagination">
+            <label>Page</label>
+            <input class="page" id="page" type="number" placeholder={{getPage}}>
+            <label># per page</label>
+            <input class="limit" id="limit" type="number" placeholder={{getLimit}}>
+            <button class="change-page" id="change-page">Change Page</button>
+          </div>
         </div>
         <div class="col s12 text-center">
             <center>
