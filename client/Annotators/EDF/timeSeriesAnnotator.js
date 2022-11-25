@@ -419,6 +419,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _create: function () {
+    console.log("CREATING");
     var that = this;
     //console.log("_create.that:", that);
     that._initializeVariables();
@@ -662,6 +663,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       ' \
             <div class="graph_container"> \
                 <div class="graph"></div> \
+                <div class = "annotation_manager_big_div">\
+                <div style = "margin-bottom:10px" class = "annotation_manager_container">\
+              </div>\
+              <div style="margin-bottom: 10px" class= "annotation_manager_delete_btn_container">\
+              <button type = "button" class = "btn annotation_manager_delete_btn">DELETE</button>\
+              </div>\
+              </div>\
                 <div class = "y-axis-options-container">\
                 <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
                   <button type = "button" class = "btn restore_btn">RESTORE Y-AXIS LIMITS</button>\
@@ -7232,6 +7240,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // deletes the annotation as well as the rendering.
     var that = this;
     var annotations = that.vars.chart.annotations.allItems;
+    console.log(annotations);
     annotations
       .slice()
       .reverse()
@@ -8641,6 +8650,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_start,
       window_end
     );
+    that._setupAnnotationManager(annotations);
     that._displayAnnotations(annotations);
     
     $(that.element).find(".filter_btn").click(function(){
@@ -10044,7 +10054,61 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     return false;
-  }
+  },
+
+  _setupAnnotationManager:function(annotations){
+    that = this;
+    console.log(annotations);
+    console.log("setting up annotation manager");
+    let container = that.element.find(".annotation_manager_container");
+    container.empty();
+    let selectContainer = $(
+      '<div class="annotation_managerselect_panel"><select></select></div>'
+    ).appendTo(that.element.find(".annotation_manager_container"));
+    let select = selectContainer.find("select");
+    annotations.forEach((annotation,i)=>{
+      let s = "id: " + annotation.id + ", annotationLabel " + annotation.metadata.annotationLabel + ", start: " + annotation.position.start + ", end: " + annotation.position.end
+      select.append(`<option value=${annotation.id}` +
+      ">" +
+      s+
+      "</option>");
+    })
+    select.material_select();
+
+    $(that.element).find(".annotation_manager_delete_btn").click(function(){
+      let i = select.val();
+      console.log(i);
+      var tbdeleted;
+      annotations.forEach((annotation)=>{
+        if(annotation.id == i){
+          tbdeleted = annotation;
+        }
+      })
+      console.log(tbdeleted);
+      that._nukeAnnotation2(tbdeleted);
+    })
+
+
+  },
+
+  _nukeAnnotation2: function (annotation) {
+    // deletes the annotation as well as the rendering.
+    var that = this;
+    var annotations = that.vars.chart.annotations.allItems;
+    console.log(annotations);
+    annotations
+      .slice()
+      .reverse()
+      .filter((a) => a.metadata.id == annotation.id)
+      .forEach((a) => {
+        a.destroy();
+        that.vars.chart.selectedAnnotation = null;
+      });
+    that._deleteAnnotation(
+      annotation.id,
+    );
+  },
+
 
 
 

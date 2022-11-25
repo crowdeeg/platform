@@ -190,6 +190,18 @@
   width:100%;
 }
 
+.annotation_manager_big_div{
+  display:flex;
+  width:100%;
+}
+
+.annotation_manager_container{
+  flex:3;
+}
+
+.annotation_manager_delete_btn_container{
+  flex:1;
+}
 .y-axis-options-container div {
   padding-left:10px;
   padding-right:10px;
