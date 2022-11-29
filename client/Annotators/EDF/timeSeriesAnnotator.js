@@ -669,6 +669,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               <div style="margin-bottom: 10px" class= "annotation_manager_delete_btn_container">\
               <button type = "button" class = "btn annotation_manager_delete_btn">DELETE</button>\
               </div>\
+              <div style="margin-bottom: 10px" class= "annotation_manager_view_btn_container">\
+              <button type = "button" class = "btn annotation_manager_view_btn">VIEW</button>\
+              </div>\
               </div>\
                 <div class = "y-axis-options-container">\
                 <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
@@ -3124,6 +3127,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds * windows
       );
     }
+    console.log(nextWindowStart);
     that._switchToWindow(
       nextRecordings,
       nextWindowStart,
@@ -3134,6 +3138,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _switchToWindow: function (allRecordings, start_time, window_length) {
     // the main funciton called when navigating to another window
     var that = this;
+    console.log(start_time);
     //console.log("_switchToWindow.that:", that);
 
     // can be ignored for now, something to do with the machine learning component of the app
@@ -10076,8 +10081,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     select.material_select();
 
     $(that.element).find(".annotation_manager_delete_btn").click(function(){
+      console.log("annotation manager delete button");
       let i = select.val();
-      console.log(i);
       var tbdeleted;
       annotations.forEach((annotation)=>{
         if(annotation.id == i){
@@ -10086,6 +10091,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       console.log(tbdeleted);
       that._nukeAnnotation2(tbdeleted);
+      that._getAnnotations();
+    })
+
+    $(that.element).find(".annotation_manager_view_btn").click(function(){
+      console.log("clicked annotation manager view button");
+      let id = select.val();
+      var tbviewed;
+      annotations.forEach((annotation)=>{
+        if(annotation.id == id){
+          tbviewed = annotation;
+        }
+      })
+      var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
+
+      that._switchToWindow(
+        that.options.allRecordings,
+        parseFloat(tbviewed.position.start),
+        nextWindowSizeInSeconds
+      )
+
     })
 
 
