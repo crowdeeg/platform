@@ -7257,15 +7257,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _convertChangePointsToBox: function (annotation) {
     var that = this;
-    console.log(that._getChannelsDisplayed().length);
-    console.log("end previous ",annotation);
-    var allAnnotations = that.vars.chart.annotations.allItems;
-    console.log(allAnnotations);
-    allAnnotations.sort((a, b) => {
-      return a.options.xValue - b.options.xValue;
-    });
+    //console.log(that._getChannelsDisplayed().length);
+    //console.log("end previous ",annotation);
+    //var allAnnotations = that.vars.chart.annotations.allItems;
+    //console.log(allAnnotations);
+    //allAnnotations.sort((a, b) => {
+      //return a.options.xValue - b.options.xValue;
+    //});
     var databaseAnnotations = that._getAnnotationsOnly();
-    console.log(databaseAnnotations);
+    //console.log(databaseAnnotations);
     databaseAnnotations.sort((a,b)=> {
       return parseFloat(a.position.start) - parseFloat(b.position.start);
     })
@@ -7273,7 +7273,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(element.position.start == element.position.end && parseFloat(element.position.start)<annotation.options.xValue 
       && ["Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"].includes(element.metadata.annotationLabel)
       ){
-        console.log(element);
+        //console.log(element);
         let newAnnotation = that._addAnnotationBox(
           undefined,
           parseFloat(element.position.start),
@@ -7294,7 +7294,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             },
           },
         })
-        console.log(newAnnotation);
+        //console.log(newAnnotation);
         // let id = element.metadata.id;
         newAnnotation.metadata.annotationLabel = element.metadata.annotationLabel;
         that._nukeAnnotation2(element);
