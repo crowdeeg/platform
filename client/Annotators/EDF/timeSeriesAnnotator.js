@@ -419,7 +419,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _create: function () {
-    console.log("CREATING");
     var that = this;
     //console.log("_create.that:", that);
     that._initializeVariables();
@@ -3127,7 +3126,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds * windows
       );
     }
-    console.log(nextWindowStart);
     that._switchToWindow(
       nextRecordings,
       nextWindowStart,
@@ -3138,7 +3136,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _switchToWindow: function (allRecordings, start_time, window_length) {
     // the main funciton called when navigating to another window
     var that = this;
-    console.log(start_time);
     //console.log("_switchToWindow.that:", that);
 
     // can be ignored for now, something to do with the machine learning component of the app
@@ -7237,7 +7234,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
-    console.log(annotation);
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
 
@@ -7261,12 +7257,62 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _convertChangePointsToBox: function (annotation) {
     var that = this;
-    var allAnnotations = that.vars.chart.annotations.allItems;
-    console.log(allAnnotations);
-    allAnnotations.sort((a, b) => {
-      return a.options.xValue - b.options.xValue;
-    });
+    //console.log(that._getChannelsDisplayed().length);
+    //console.log("end previous ",annotation);
+    //var allAnnotations = that.vars.chart.annotations.allItems;
+    //console.log(allAnnotations);
+    //allAnnotations.sort((a, b) => {
+      //return a.options.xValue - b.options.xValue;
+    //});
+    var databaseAnnotations = that._getAnnotationsOnly();
+    //console.log(databaseAnnotations);
+    databaseAnnotations.sort((a,b)=> {
+      return parseFloat(a.position.start) - parseFloat(b.position.start);
+    })
+    databaseAnnotations.forEach(element=> {
+      if(element.position.start == element.position.end && parseFloat(element.position.start)<annotation.options.xValue 
+      && ["Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"].includes(element.metadata.annotationLabel)
+      ){
+        //console.log(element);
+        let newAnnotation = that._addAnnotationBox(
+          undefined,
+          parseFloat(element.position.start),
+          element.position.channels,
+          undefined,
+          // undefined,
+          // element.metadata.comment || annotation.metadata.comment,
+          // annotation
+        );
+        
+        newAnnotation.update({
+          xValue: parseFloat(element.position.start),
+          yValue: that._getOffsetForChannelIndexPostScale(element.position.channels[0]),
+          shape: {
+            params: {
+              width: annotation.options.xValue - parseFloat(element.position.start),
+              height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
+            },
+          },
+        })
+        //console.log(newAnnotation);
+        // let id = element.metadata.id;
+        newAnnotation.metadata.annotationLabel = element.metadata.annotationLabel;
+        that._nukeAnnotation2(element);
+        that._nukeAnnotation(annotation);
+        // newAnnotation.metadata.id = id;
+        that._saveFeatureAnnotation(newAnnotation);
+        // newAnnotation.metadata.displayType = 'Box';
+        // that._updateChangePointLabelRight(newAnnotation);
 
+        return false;
+
+      }
+    })
+    that._nukeAnnotation(annotation);
+    return true;
+
+
+    /*
     allAnnotations.every(element => {
 
       // console.log(element);
@@ -7314,6 +7360,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return true;
     }
     )
+    */
     that._nukeAnnotation(annotation);
   },
 
@@ -10063,7 +10110,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _setupAnnotationManager:function(annotations){
     that = this;
-    console.log(annotations);
     console.log("setting up annotation manager");
     let container = that.element.find(".annotation_manager_container");
     container.empty();
