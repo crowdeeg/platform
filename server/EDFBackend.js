@@ -711,9 +711,9 @@ Meteor.methods({
 
     // this is the original version of codes which display all channels specified in the options:
     let channelsDisplayed = options.channels_displayed;
-    console.log('bbbbbb')
-    console.dir(options);
-    console.dir(channelsDisplayed);
+    // console.log('bbbbbb')
+    // console.dir(options);
+    // console.dir(channelsDisplayed);
 
     // let channelsDisplayed = {};
 
@@ -730,24 +730,32 @@ Meteor.methods({
     // TODO: this should only display the channels required in the montage not all of them, should speed it up
 
     // I think we get the channels using wfdb desc
+    // allRecordings.map((recording) => {
+    //   const channelDisplayed = Data.findOne(
+    //     recording._id
+    //   ).metadata.wfdbdesc.Groups[0].Signals.map(
+    //     (channels, signal) => channels + " '" + signal.Description + "'",
+    //     "-s"
+    //   );
+    //   channelsDisplayed[recording.source] = channelDisplayed.split(' ').slice(1, -1)
+    // })
     allRecordings.map((recording) => {
       const channelDisplayed = Data.findOne(
         recording._id
-      ).metadata.wfdbdesc.Groups[0].Signals.reduce(
-        (channels, signal) => channels + " '" + signal.Description + "'",
+      ).metadata.wfdbdesc.Groups[0].Signals.map(
+        (signal) => " '" + signal.Description + "'",
         "-s"
       );
-      channelsDisplayed[recording.source] = channelDisplayed.split(' ').slice(1, -1)
+      channelsDisplayed[recording.source] = channelDisplayed
     })
     allRecordings = allRecordings.map((recording) => {
-      // console.log(recording.source);
-      
       temp = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
         recording._id
       );
 
       temp = temp.individualChannelsRequired.map((channel) => {
+        // console.log(channel.name)
         return channel.name;
       });
 
