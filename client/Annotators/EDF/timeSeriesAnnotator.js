@@ -1519,6 +1519,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     //console.log("_setup.that:", that);
     that._adaptContent();
+    that._setupAnnotationManager();
     that._setupTimer();
     that._setupFeaturePanel();
     that._setupNavigationPanel();
@@ -6062,7 +6063,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     that._saveFeatureAnnotation(annotation);
     that._addChangePointLabelRight(annotation);
-
+    console.log(annotation);
     return annotation;
   },
 
@@ -6103,7 +6104,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._addChangePointLabelLeft(annotation);
 
 
-
+    console.log(annotation);
     return annotation;
   },
 
@@ -6268,9 +6269,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     // that._addCommentFormToAnnotationBox(annotation);
     // console.log(annotation);
-
-
-
+    
     return annotation;
   },
 
@@ -8702,7 +8701,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_start,
       window_end
     );
-    that._setupAnnotationManager(annotations);
     that._displayAnnotations(annotations);
     
     $(that.element).find(".filter_btn").click(function(){
@@ -9236,6 +9234,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         }
       );
+      that._setupAnnotationManager();
       // that.vars.annotationIDSet.add(annotationDocument.id);
 
       that._updateMarkAssignmentAsCompletedButtonState();
@@ -9336,6 +9335,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         return;
       }
     });
+    that._setupAnnotationManager();
   },
 
   _incrementNumberOfAnnotationsInCurrentWindow: function (increment) {
@@ -9880,7 +9880,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     for (let i = 0; i < annotationsId.length; i++) {
       newAnnotations[i].id = annotationsId[i];
     }
-
+    that._setupAnnotationManager();
     that._updateMarkAssignmentAsCompletedButtonState();
 
     for (let i = 0; i < newAnnotations.length; i++) {
@@ -10108,8 +10108,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return false;
   },
 
-  _setupAnnotationManager:function(annotations){
+  _setupAnnotationManager:function(){
     that = this;
+    annotations = that._getAnnotationsOnly();
     console.log("setting up annotation manager");
     let container = that.element.find(".annotation_manager_container");
     container.empty();
