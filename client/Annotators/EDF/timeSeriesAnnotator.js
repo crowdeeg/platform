@@ -673,6 +673,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               </div>\
               </div>\
                 <div class = "y-axis-options-container">\
+                <div style = "margin-bottom: 10 px" class = "y_mask_btn_container">\
+                <button type = "button" class = "btn y_mask_btn">MASK CHANNEL</button>\
+                </div>\
                 <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
                   <button type = "button" class = "btn restore_btn">RESTORE Y-AXIS LIMITS</button>\
                 </div>\
@@ -4165,7 +4168,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     })
 
-
+    $(that.element).find(".y_mask_btn").click(function(){
+      if(that._isChannelSelected){
+        that._maskChannelSelected();
+      }
+    })
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected){
 
@@ -6269,7 +6276,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     // that._addCommentFormToAnnotationBox(annotation);
     // console.log(annotation);
-    
+
     return annotation;
   },
 
@@ -10180,6 +10187,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.id,
     );
   },
+
+  _maskChannelSelected: function(){
+    let that = this;
+    let i = that.vars.selectedChannelIndex;
+    that.vars.chart.series[i].yData = [];
+    that.vars.chart.redraw();
+  }
 
 
 
