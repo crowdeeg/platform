@@ -1959,12 +1959,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _setupXAxisScaleSelector: function () {
     let that = this;
     let timescales = that.options.xAxisTimescales || [];
+    console.log(timescales);
     timescales.forEach((timescaleSetting) => {
       let selectContainer = $(
         '<div class="select_panel"><select></select></div>'
       ).appendTo(that.element.find(".timescale_panel"));
       let select = selectContainer.find("select");
-
+      /*
+      timescaleSetting.options.push({
+        name:"full recording",
+        value: that.vars.recordingLengthInSeconds
+      });
+      */
       let defaultOptionIndex = null;
       timescaleSetting.options.forEach((timescale, t) => {
         let selectedString = "";
@@ -1984,6 +1990,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         );
       });
 
+      console.log(that.vars.recordingLengthInSeconds);
+      
       select.material_select();
       select.change(function () {
         //console.log("timescale onchange");
@@ -2170,6 +2178,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("Finish _setupMontageSelector");
     that._setupFrequencyFilterSelector();
     //console.log("Finish _setupFrequencyFilterSelector");
+    that._addFullRecordingToXAxisScaleOptions();
     that._setupXAxisScaleSelector();
     //console.log("Finish _setupXAxisScaleSelector");
     that._setupAnnotationChoice();
@@ -10193,6 +10202,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let i = that.vars.selectedChannelIndex;
     that.vars.chart.series[i].yData = [];
     that.vars.chart.redraw();
+  },
+
+  _addFullRecordingToXAxisScaleOptions:function(){
+    that.options.xAxisTimescales.forEach((timeScaleSetting)=>{
+      timeScaleSetting.options.push({
+        name: "full recording",
+        value: that.vars.recordingLengthInSeconds
+      });
+    })
   }
 
 
