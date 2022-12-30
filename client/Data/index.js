@@ -822,7 +822,36 @@ Template.Data.events({
       delete selectedData[dataId];
     }
     template.selectedData.set(selectedData);
+  },
+  
+  'click .delete-button':function(event,template){
+    const target = $(event.target);
+    const dataId = target.data('id');
+    const data = Data.findOne(dataId);
+    const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
+
+    const file_name = alldata["name"];
+
+    const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
+
+    patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
+    console.log(patient_id);
+    console.log(file_name);
+    Patients.remove({_id:patient_id});
+    Data.remove(dataId);
+    var file_id = file_name.split(".")[0];
+    console.log(file_id)
+  
+    Meteor.call('removeFile',file_id,function(err,res){
+      if (err){
+        console.log(err);
+      }
+    })
+    
+    
   }
+  
+  
 });
 
 Template.Data.onCreated(function () {
