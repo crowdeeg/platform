@@ -4577,8 +4577,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 "<b>" + label + "</b>"+
                 "<br/> Y-value: " + realY +
                 "<br/> Duration: " + duration;
-            } catch {
-              return "Error";
+            } catch(err) {
+              return "Error Displaying Tooltip: " + err.message;
             }
           },
         },
