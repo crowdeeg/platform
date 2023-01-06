@@ -761,26 +761,11 @@ Meteor.methods({
       channelsDisplayed[recording.source] = channelDisplayed
     })
     allRecordings = allRecordings.map((recording) => {
-      temp = parseChannelsDisplayed(
-        channelsDisplayed[recording.source],
-        recording._id
-      );
-
-      temp = temp.individualChannelsRequired.map((channel) => {
-        // console.log(channel.name)
-        return channel.name;
-      });
-
       channelsDisplayed[recording.source] = Data.findOne(
         recording._id
       ).metadata.wfdbdesc.Groups[0].Signals.map(
         (signal) => "'" + signal.Description + "'"
       );
-
-      //TODO: Uncomment this for the channels displayed to be the ones in BasicDemo.js and the ones in the file
-      channelsDisplayed[recording.source] = channelsDisplayed[
-        recording.source
-      ].filter((value) => temp.includes(value));
 
       recording.channelsDisplayedParsed = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
