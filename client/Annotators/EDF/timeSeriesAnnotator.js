@@ -1120,12 +1120,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               message:
                 "You just completed the last window of the training phase. That means that, from now on, you will not be able to see the correct answer after submitting yours any longer. The examples panel below, however, will stay visible throughout the entire task. Hopefully, the training phase helped you learn more about the signal pattern we are looking for!",
               callback: function () {
+                console.log("hshhshshs");
                 that._shiftChart(1);
                 that._unblockGraphInteraction();
               },
             })
             .appendTo(that.element);
         } else {
+          console.log("hellp");
           that._shiftChart(1);
           that._unblockGraphInteraction();
         }
@@ -2339,6 +2341,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".forward")
         .click(function () {
+          console.log('lllll')
           that._shiftChart(1 / 5);
         });
     }
@@ -2346,6 +2349,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".backward")
         .click(function () {
+          console.log('mmmm')
           that._shiftChart(-1 / 5);
         });
     }
@@ -2869,6 +2873,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // left arrow, a, page down
       // backward
       e.preventDefault();
+      console.log('oooo')
       that._shiftChart(-1 / 5);
       return;
     } else if (
@@ -2885,6 +2890,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // fast foward
       e.preventDefault();
       // that._updateChannelGain("step_increase");
+      console.log("ee")
       that._shiftChart(-1);
       return;
     } else if (keyCode == 40) {
@@ -3152,7 +3158,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // the main funciton called when navigating to another window
     var that = this;
     //console.log("_switchToWindow.that:", that);
-
     // can be ignored for now, something to do with the machine learning component of the app
     // console.log(!that._isCurrentWindowSpecifiedTrainingWindow());
 
@@ -3291,6 +3296,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       }
     }
+    //console.log(that);
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
       // gets the data for all the prefetched windows
@@ -3298,7 +3304,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         (windowStartTime < that.vars.recordingLengthInSeconds + window_length ? Math.min(that.vars.recordingLengthInSeconds, windowStartTime) : windowStartTime) :
         (windowStartTime > -window_length ? Math.max(0, windowStartTime) : windowStartTime)
       );
-
+      //console.log(that);
       var options = {
         recordings: allRecordings,
         channels_displayed: that._getChannelsDisplayed(), // get all channels we would like to display
@@ -3308,6 +3314,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         target_sampling_rate: that.options.targetSamplingRate,
         use_high_precision_sampling: that.options.useHighPrecisionSampling,
       };
+      //console.log(that);
+      
 
       that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
@@ -3317,8 +3325,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           windowStartTime == that.vars.currentWindowStart
         ) {
           that._applyFrequencyFilters(data, (dataFiltered) => {
+            //console.log(that);
             let real = that._alignRealDataandData(realData,dataFiltered);
             that.vars.currentWindowData = dataFiltered;
+            //console.log(that);
             that._populateGraph(that.vars.currentWindowData,real);
           });
         }
@@ -4110,6 +4120,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //Variable to ensure we are not restoring a channel a sencond time
     var restored = true;
+    var masked = false;
 
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
@@ -4127,7 +4138,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
       }
-      // console.log("here we scale all channels to screen");
+      console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
       that.vars.chart.redraw();
 
@@ -4135,6 +4146,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // see http://jsfiddle.net/ajxyuax2/1/ 
     }
 
+    //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, data,real);
@@ -4142,7 +4154,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       original_series[i] = that.vars.chart.series[i].yData;
 
     }
-    console.log(original_series);
+    //console.log(original_series);
     $(that.element).find(".align_btn").click(function(){
       if(that._isChannelSelected){
         let index = that.vars.selectedChannelIndex;
@@ -4185,6 +4197,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $(that.element).find(".y_mask_btn").click(function(){
       if(that._isChannelSelected){
         that._maskChannelSelected();
+        masked = true;
       }
     })
     $(that.element).find(".ylimit_btn").click(function () {
@@ -4219,13 +4232,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         }
         that.vars.chart.series[i].yData = newyData;
-        console.log(that.vars.chart.series[i].yData);
+        console.log(that.vars);
         that.vars.chart.redraw();
       }
       else{
         console.log("channel not selected");
       }
       restored=false;
+      console.log(that);
       /*
       DELETED CODE
       that.options.y_axis_limited = true;
@@ -4261,23 +4275,40 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(that.element).find(".restore_btn").click(function () {
-      if(that._isChannelSelected && !restored){
+      if(that._isChannelSelected && (!restored || masked)){
         let i = that.vars.selectedChannelIndex;
         that.options.y_axis_limited[i] = false;
         console.log(original_series[i]);
         console.log(that);
+        console.log(that.vars.scalingFactors[i]);
         //that._updateSingleChannelDataInSeries(that.vars.chart.series, data,real, i);
         /*
         samplesScaledAndOffset = channel.values.map(function (value, v) {
           return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
         });
         */
-        that.vars.chart.series[i].yData = original_series[i];
+
+
+        //that.vars.chart.series[i].yData = original_series[i];
+
+
         //that._updateSingleChannelDataInSeries(that.vars.chart.series, data,real, i);
         //that._scaleAllToScreen();
-        console.log(original_series[i]);
+        //console.log(original_series[i]);
+        that._updateSingleChannelDataInSeries(that.vars.chart.series, data,real, i);
+        //for(let i = 0;i<that.vars.chart.series.length;i++){
+        that.options.y_axis_limited[i] = false;
+        that.options.y_limit_lower[i] = -200;
+        that.options.y_limit_upper[i] = 200;
+        //}
+        // THE PROBLEM IS NOT IN HERE!!!!!!!!!!!!!!!!!!!!1
+        //console.log(that);
+        console.log("here we scale selected channels to screen");
+        that._scaleToScreen(i);
+        //console.log(that);
+        
         that.vars.chart.redraw(); // efficiently redraw the entire window in one go
-
+        console.log(that);
         
       }
     });
@@ -4324,7 +4355,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.recordScalingFactors = true;
     that.vars.recordTranslation = true;
 
+    //console.log("first after");
     that.vars.chart.redraw(); // efficiently redraw the entire window in one go
+    //console.log(that);
 
     // use the chart start/end so that data and annotations can never
     // get out of synch
@@ -4341,6 +4374,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._limitYData(i);
       }
       that.vars.chart.redraw();
+      //console.log(i + "redraw after")
+      //console.log(that);
     }
   },
 
@@ -4378,17 +4413,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(xValues);
     console.log(channel);
     
+    console.log(that.vars.scalingFactors);
 
     // gets the recording end in seconds snapped to the nearest second
     var recordingEndInSecondsSnapped = that._getRecordingEndInSecondsSnapped();
+    console.log(that.vars.scalingFactors);
 
     var channelName = channel.name;
     var channelIndex = index;
     console.log(channelName);
     console.log(channelIndex);
     var flipFactor = that._getFlipFactorForChannel(channel);
+    console.log(that.vars.scalingFactors);
     console.log(flipFactor);
     var gain = that._getGainForChannelIndex(channelIndex);
+    console.log(that.vars.scalingFactors);
     console.log(gain);
 
     if (gain === undefined) {
@@ -4399,18 +4438,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // gets some additional information needed to graph using channel and c
     var offsetPreScale = that._getOffsetForChannelPreScale(channel);
+    //console.log(that.vars.scalingFactors);
     var offsetPostScale = that._getOffsetForChannelIndexPostScale(channelIndex);
+    //console.log(that.vars.scalingFactors);
 
     // gets the values
     var samplesScaledAndOffset = channel.values.map(function (value, v) {
       return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
     });
-    console.log(samplesScaledAndOffset);
+    //console.log(that.vars.scalingFactors);
+    //console.log(samplesScaledAndOffset);
     // creates an array that stores all the data
     var seriesData = [];
     for(let i = 0; i < xValues.length; i++){
         seriesData.push([xValues[i], samplesScaledAndOffset[i]])
     }
+    //console.log(that.vars.scalingFactors);
     /*
     var seriesData = xValues.map(function (x, i) {
       console.log(x);
@@ -4419,15 +4462,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return [x, samplesScaledAndOffset[i]];
     });
     */
-    console.log(seriesData);
+    //console.log(seriesData);
 
     // adds the offset needed to the start of the graph
     seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
+    //console.log(that.vars.scalingFactors);
     // adds the offset needed to the end of the graphID
     seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
+    //console.log(that.vars.scalingFactors);
     // stores in the series that we input into the funciton, at index c
     series[channelIndex].setData(seriesData, false, false, false);
+    //console.log(that.vars.scalingFactors);
     series[channelIndex].realyData = [series[channelIndex].yData[0]].concat(real[channelIndex]).concat(series[channelIndex].yData[-1]);
+    //console.log(that.vars.scalingFactors);
+    //console.log(that.vars.scalingFactors[index])
     return;
     /*
     return channels.map(function (channel, c) {
@@ -4472,7 +4520,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _updateChannelDataInSeries: function (series, data,real) {
     var that = this;
     var channels = data.channels; // gets the channels from the data object
-    console.log(data.channels);
+    //console.log(data.channels);
+    //console.log(that);
 
     //gets the xValues for the graph using from the data object i.e the time values
     var xValues = Array.from(
@@ -4489,10 +4538,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // and the channel index (c)
       console.log("channel:")
       console.log(channel);
-      //if(series[c].yData.length != 0){
-          // using them, we get the flipfactor and gain
+      if(series[c].yData.length != 0){
+        // using them, we get the flipfactor and gain
+        
         var flipFactor = that._getFlipFactorForChannel(channel);
+        
         var gain = that._getGainForChannelIndex(c);
+        
 
         if (gain === undefined) {
           gain = 1.0;
@@ -4503,11 +4555,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // gets some additional information needed to graph using channel and c
         var offsetPreScale = that._getOffsetForChannelPreScale(channel);
         var offsetPostScale = that._getOffsetForChannelIndexPostScale(c);
-
+        
         // gets the values
         samplesScaledAndOffset = channel.values.map(function (value, v) {
           return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
         });
+        
 
         // creates an array that stores all the data
         var seriesData = xValues.map(function (x, i) {
@@ -4517,12 +4570,58 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         
         // adds the offset needed to the start of the graph
         seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
+        
         // adds the offset needed to the end of the graphID
         seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
+        
         // stores in the series that we input into the funciton, at index c
+        
         series[c].setData(seriesData, false, false, false);
+        
         series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
-      //}
+      } else {
+        // using them, we get the flipfactor and gain
+        
+        var flipFactor = that._getFlipFactorForChannel(channel);
+        
+        var gain = that._getGainForChannelIndex(c);
+        
+
+        if (gain === undefined) {
+          gain = 1.0;
+        }
+
+        var flipFactorAndGain = flipFactor * gain;
+
+        // gets some additional information needed to graph using channel and c
+        var offsetPreScale = that._getOffsetForChannelPreScale(channel);
+        var offsetPostScale = that._getOffsetForChannelIndexPostScale(c);
+        
+        // gets the values
+        samplesScaledAndOffset = channel.values.map(function (value, v) {
+          return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
+        });
+        
+
+        // creates an array that stores all the data
+        var seriesData = xValues.map(function (x, i) {
+          return [x, samplesScaledAndOffset[i]];
+        });
+        console.log(seriesData);
+        
+        // adds the offset needed to the start of the graph
+        seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
+        
+        // adds the offset needed to the end of the graphID
+        seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
+        
+        // stores in the series that we input into the funciton, at index c
+        
+        series[c].setData(seriesData, false, false, false);
+        
+        series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
+        series[c].yData = [];
+      }
       
     });
   },
@@ -7789,7 +7888,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .find(".channel-label")
       .click(function (event) {
         var index = $(this).data("index");
-        console.log(index); 
+        //console.log(index); 
 
         that._selectChannel(index);
         // console.log(that.vars.selectedChannelIndex);
@@ -7799,7 +7898,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _selectChannel: function (index) {
     var that = this;
-    console.log(that);
+    //console.log(that);
     that.vars.selectedChannelIndex = index;
     $(".channel-label").removeClass("selected");
     $(".gain-button").prop("disabled", false);
@@ -7814,7 +7913,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // renders the amplitude adjustment menu given the channel index
       that._renderAmplitudeAdjustmentMenu(that.vars.selectedChannelIndex);
       const channelName = this.vars.currentWindowData.channels[index].name;
-      console.log("test");
+      //console.log("test");
     }
   },
 
@@ -8024,6 +8123,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     scaleFactor = scaleFactor / 100;
 
     var that = this;
+    console.log("customAmplitude")
+    //console.log(index)
+    console.log(that);
     if (that._isChannelSelected() === true) {
       // checks if a channel is selected
       channel = that.vars.allChannels[index];
@@ -8055,6 +8157,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.scalingFactors[index] = 1 + scaleFactor;
       }
     }
+    //console.log(that);
   },
 
   _scaleAllToScreen: function () {
@@ -8098,31 +8201,31 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       Math.abs(upperBound) - Math.abs(maxChannelData)
     );
 
-    // console.log("====BEFORE=====")
-    // console.log("Channel: " + index);
-    // console.log("min: " + minChannelData);
-    // console.log("max : " + maxChannelData);
-    // console.log("maxChannelData -zeroPosition: " + (maxChannelData -zeroPosition));
-    // console.log("minChannelData -zeroPosition: " + (minChannelData - zeroPosition));
-    // console.log("zeroPosition: " + zeroPosition);
-    // console.log("lowerBound: " + lowerBound);
-    // console.log("upperBound: " + upperBound);
-    // console.log("absoluteLowerDifference: " + absoluteLowerDifference);
-    // console.log("absoluteUpperDifference: " + absoluteUpperDifference);
-    // console.log("percentageDifferenceUpper: " + percentageDifferenceUpper);
-    // console.log("percentageDifferenceLower: " + percentageDifferenceLower);
+     //console.log("====BEFORE=====")
+     //console.log("Channel: " + index);
+     //console.log("min: " + minChannelData);
+     //console.log("max : " + maxChannelData);
+     //console.log("maxChannelData -zeroPosition: " + (maxChannelData -zeroPosition));
+     //console.log("minChannelData -zeroPosition: " + (minChannelData - zeroPosition));
+     //console.log("zeroPosition: " + zeroPosition);
+     //console.log("lowerBound: " + lowerBound);
+     //console.log("upperBound: " + upperBound);
+     //console.log("absoluteLowerDifference: " + absoluteLowerDifference);
+     //console.log("absoluteUpperDifference: " + absoluteUpperDifference);
+     //console.log("percentageDifferenceUpper: " + percentageDifferenceUpper);
+     //console.log("percentageDifferenceLower: " + percentageDifferenceLower);
 
     if (lowerBound > minChannelData || upperBound < maxChannelData) {
       //checks if the data is not within the bounds, we scale the data down to "fit the screen"
-
+      console.log(1);
       if (lowerBound > minChannelData && upperBound < maxChannelData) {
         // if both are out of bounds
         // check which absolute difference is the greater
         // value to get the percentage difference
-
+        console.log(2);
         if (absoluteLowerDifference > absoluteUpperDifference) {
           // if the lowerdifference is greater, we scale the data by the percentage difference
-
+          console.log(3);
           that._customAmplitude(index, percentageDifferenceLower);
         } else {
           // if the upperdifference is greater, we scale the data by the percentage difference
@@ -8165,6 +8268,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._customAmplitude(index, percentageDifferenceUpper);
       }
     }
+    //console.log(that);
   },
 
   _getPercentDifference: function (initialValue, finalValue) {
@@ -8189,9 +8293,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //gets the smallest data point in the channel
     var that = this;
     let min = that._getOffsetForChannelIndexPostScale(index)+200;
-    console.log(that);
-    console.log(index);
-    console.log(that.vars.chart.series[index]);
+    //console.log(that);
+    //console.log(index);
+    //console.log(that.vars.chart.series[index]);
     for (let i = 1;i<that.vars.chart.series[index].yData.length;i++){
       if(((typeof that.vars.chart.series[index].yData[i]) == "number")  && that.vars.chart.series[index].yData[i] < min){
         min = that.vars.chart.series[index].yData[i];
@@ -8247,7 +8351,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _renderChannelSelection: function () {
     var that = this;
-    console.log(that);
+    //console.log(that);
     that._selectChannel(that.vars.selectedChannelIndex);
   },
 
