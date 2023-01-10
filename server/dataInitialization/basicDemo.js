@@ -863,3 +863,4 @@ Meteor.startup(() => {
   //     }
   // })}
 
+module.exports = {userAccounts};
