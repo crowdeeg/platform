@@ -10216,11 +10216,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _addFullRecordingToXAxisScaleOptions:function(){
     that.options.xAxisTimescales.forEach((timeScaleSetting)=>{
-      timeScaleSetting.options.push({
-        name: "full recording",
-        value: that.vars.recordingLengthInSeconds
-      });
-    })
+      // Check if full recording option already exists.
+      let filteredOptions = timeScaleSetting.options.filter((option) => option.name === "full recording");
+      if (filteredOptions.length === 0) {
+        // If it does not exist, add it.
+        timeScaleSetting.options.push({
+          name: "full recording",
+          value: that.vars.recordingLengthInSeconds
+        });
+      } else {
+        // If it does exist, update it's value.
+        filteredOptions.forEach((option) => {
+          option.value = that.vars.recordingLengthInSeconds;
+        });
+      }
+    });
   }
 
 
