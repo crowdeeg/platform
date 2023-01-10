@@ -9,7 +9,7 @@ import {
 
 import { FilesCollection } from 'meteor/ostrio:files';
 
-
+/*
 const userAccounts = {
 	ADMIN: {
 		username: "Admin User",
@@ -19,6 +19,18 @@ const userAccounts = {
 			__global_roles__: ["admin"],
 		},
 	},
+	TEST: {
+		username: "Test User",
+		email: "test@example.com",
+		password: "test",
+		roles: {
+			__global_roles__: ["tester"],
+		},
+	},
+};
+*/
+
+const userAccounts = {
 	TEST: {
 		username: "Test User",
 		email: "test@example.com",
@@ -93,7 +105,7 @@ Meteor.startup(() => {
       recordingInfo[recordingFileFolder] = [dataInfo];
     }
   };
-
+  
   for (let userName in userAccounts) {
     const user = userAccounts[userName];
     const userDoc = Accounts.findUserByEmail(user.email);
@@ -108,12 +120,17 @@ Meteor.startup(() => {
       });
       if (user.roles) {
         for (var group in user.roles) {
+          console.log(group);
+          console.log(user._id);
+          console.log(user.roles[group]);
           Roles.addUsersToRoles(user._id, user.roles[group], group);
+          console.log(user);
         }
       }
-      //console.log('Created user account "' + user.username + '", "' + user.email + '" (' + user._id + ')');
+      console.log('Created user account "' + user.username + '", "' + user.email + '" (' + user._id + ')');
     }
   }
+  
 
   recordingPaths.forEach((recordingPath) => {
     const recordingPathParts = recordingPath.path.split("/");
@@ -500,6 +517,7 @@ Meteor.startup(() => {
   });
 });
 
+
   /** The following commented out codes are the original way basicDemo.js creating new    and assignments
    *  which is outdated if having sub-folders under where we store the edf files
    */
@@ -845,3 +863,4 @@ Meteor.startup(() => {
   //     }
   // })}
 
+module.exports = {userAccounts};
