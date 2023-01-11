@@ -6709,11 +6709,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // Buttons
     var toggleButton = $(
-      '<button type="submit" class="btn btn-primary fa fa-pencil"></button>'
+      '<button onMouseOver="that.vars.chart.tooltip.label.hide()" onMouseOut="that.vars.chart.tooltip.label.show()" type="submit" class="btn btn-primary fa fa-pencil"></button>'
     );
 
     var trashButton = $(
-      '<button type="reset" class="btn btn-primary fa fa-trash"></button>'
+      '<button onMouseOver="that.vars.chart.tooltip.label.hide()" onMouseOut="that.vars.chart.tooltip.label.show()" type="reset" class="btn btn-primary fa fa-trash"></button>'
     );
 
     //gets all the relevant labels based on annotation type
@@ -6725,6 +6725,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .hide()
       .keydown(function (event) {
         event.stopPropagation();
+      })
+      .mouseover(function () {
+        that.vars.chart.tooltip.label.hide();
+      })
+      .mouseout(function () {
+        that.vars.chart.tooltip.label.show();
       })
       .css({ zIndex: 1 });
     //add the options to the select element
