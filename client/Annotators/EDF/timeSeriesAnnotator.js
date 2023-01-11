@@ -1120,14 +1120,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               message:
                 "You just completed the last window of the training phase. That means that, from now on, you will not be able to see the correct answer after submitting yours any longer. The examples panel below, however, will stay visible throughout the entire task. Hopefully, the training phase helped you learn more about the signal pattern we are looking for!",
               callback: function () {
-                console.log("hshhshshs");
                 that._shiftChart(1);
                 that._unblockGraphInteraction();
               },
             })
             .appendTo(that.element);
         } else {
-          console.log("hellp");
           that._shiftChart(1);
           that._unblockGraphInteraction();
         }
