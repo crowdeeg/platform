@@ -2339,7 +2339,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".forward")
         .click(function () {
-          console.log('lllll')
           that._shiftChart(1 / 5);
         });
     }
@@ -2347,7 +2346,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".backward")
         .click(function () {
-          console.log('mmmm')
           that._shiftChart(-1 / 5);
         });
     }
@@ -2871,7 +2869,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // left arrow, a, page down
       // backward
       e.preventDefault();
-      console.log('oooo')
       that._shiftChart(-1 / 5);
       return;
     } else if (
@@ -2888,7 +2885,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // fast foward
       e.preventDefault();
       // that._updateChannelGain("step_increase");
-      console.log("ee")
       that._shiftChart(-1);
       return;
     } else if (keyCode == 40) {
@@ -4191,7 +4187,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $(that.element).find(".y_mask_btn").click(function(){
       if(that._isChannelSelected){
         that._maskChannelSelected();
-        masked = true;
       }
     })
     $(that.element).find(".ylimit_btn").click(function () {
