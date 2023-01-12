@@ -357,16 +357,18 @@ Template.Data.events({
   },
   'click .change-page'(event, template) {
     template.change.set(false)
+    console.log(document.getElementById('page'))
     page = parseInt(document.getElementById('page').value);
+    console.log(document);
     limit = parseInt(document.getElementById('limit').value);
     cond = {};
-    let patientId = document.getElementById('patientId').value;
-    let path = document.getElementById('path').value;
+    let patientId = document.getElementById('patientId') ? document.getElementById('patientId').value : null;
+    let path = document.getElementById('path') ? document.getElementById('path').value : null;
     //console.log(path);
     if (patientId) cond["name"] = patientId;
     if (path) cond["path"] = path;
     //console.log(cond);
-    //console.log(template);
+    console.log(template);
     Meteor.setTimeout(() => (template.change.set(true)), 1000);
   },
   'autocompleteselect input.assignee'(event, template, user) {
@@ -590,7 +592,11 @@ Template.Data.events({
 Template.Data.helpers({
   settings() {
     const selectedData = Template.instance().selectedData;
-    const data = Data.find(cond, { skip: (page - 1) * limit, limit: limit }).fetch();
+    console.log("start");
+    console.log(Data);
+    const data = Data.find(cond, { skip: (page - 1) * limit}).fetch();
+    console.log(data);
+    console.log(page);
     data.forEach((d) => {
       d.lengthFormatted = d.lengthFormatted();
       d.lengthInSeconds = d.lengthInSeconds();
@@ -863,4 +869,12 @@ Template.Data.onCreated(function () {
   this.selectedAssignees = new ReactiveVar({});
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
+  this.change.set(false);
+  //console.log(document.getElementById('page'))
+  //page = parseInt(document.getElementById('page').value);
+  //console.log(document.getElementById('recordings'));
+  //this.change.get();
+  //limit = parseInt(document.getElementById('limit').value);
+  Meteor.setTimeout(() => (this.change.set(true)), 1000);
+  console.log(this);
 });
