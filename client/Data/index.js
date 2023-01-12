@@ -362,8 +362,11 @@ Template.Data.events({
     cond = {};
     let patientId = document.getElementById('patientId').value;
     let path = document.getElementById('path').value;
+    //console.log(path);
     if (patientId) cond["name"] = patientId;
     if (path) cond["path"] = path;
+    //console.log(cond);
+    //console.log(template);
     Meteor.setTimeout(() => (template.change.set(true)), 1000);
   },
   'autocompleteselect input.assignee'(event, template, user) {
