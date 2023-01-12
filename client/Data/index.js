@@ -869,12 +869,5 @@ Template.Data.onCreated(function () {
   this.selectedAssignees = new ReactiveVar({});
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
-  this.change.set(false);
-  //console.log(document.getElementById('page'))
-  //page = parseInt(document.getElementById('page').value);
-  //console.log(document.getElementById('recordings'));
-  //this.change.get();
-  //limit = parseInt(document.getElementById('limit').value);
-  Meteor.setTimeout(() => (this.change.set(true)), 1000);
-  console.log(this);
+  //console.log(this);
 });
