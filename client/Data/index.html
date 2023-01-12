@@ -17,16 +17,22 @@
                 </div>
             </div> -->
             <div class="col s12 m9">
-              <div class="row">
+              <!--div class="row">
                 <label>Path</label>
                 <input id="path">
                 <label>Patient #</label>
                 <input id="patientId">
               </div>
-              <button class="change-page" id="change-page">Change Data</button>
+              <button class="change-page" id="change-page">Change Data</button-->
               <br>
               <br>
               <div class="row">
+                <div class="col s12 m6">{{> reactiveTableFilter id="filterDataPath" label="Path"
+                    fields=filterFieldsDataPath }}
+                </div>
+                <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientId" label="Patient #"
+                    fields=filterFieldsPatientId }}
+                </div>
                 <div class="col s12 m6">{{> reactiveTableFilter id="filterPatientAge" label="Age" fields=filterFieldsPatientAge }}
                 </div>
                 <div class="col s12 m6">{{> reactiveTableFilter id="filterNumAssignments" label="# Assignments"
