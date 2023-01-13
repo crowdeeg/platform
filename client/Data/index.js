@@ -594,7 +594,7 @@ Template.Data.helpers({
     const selectedData = Template.instance().selectedData;
     console.log("start");
     console.log(Data);
-    const data = Data.find(cond, { skip: (page - 1) * limit}).fetch();
+    const data = Data.find(cond, { skip: (page - 1) * limit, limit:limit}).fetch();
     console.log(data);
     console.log(page);
     data.forEach((d) => {
