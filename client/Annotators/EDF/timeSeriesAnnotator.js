@@ -587,6 +587,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       // A hash set of all the annotation ids in that have been rendered, used to prevent repeated rendering
       annotationIDSet: new Set(),
+
+      // Holds outstanding highchart event callbacks for removal purposes.
+      highchartEvents: {}
     };
     if (that._getMontages()) {
       that.vars.currentMontage =
@@ -2434,9 +2437,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     if (toggle) {
-      Highcharts.addEvent(document, "wheel", scroll);
+      if (that.vars.highchartEvents["timelock"]) {
+        Highcharts.removeEvent(document, "wheel", that.vars.highchartEvents["timelock"]);
+      }
+      that.vars.highchartEvents["timelock"] = Highcharts.addEvent(document, "wheel", scroll);
     } else {
-      Highcharts.removeEvent(document, "wheel", scroll);
+      if (that.vars.highchartEvents["timelock"]) {
+        that.vars.highchartEvents["timelock"]();
+      }
       that.vars.reprint = 1;
       that._reloadCurrentWindow();
     }
