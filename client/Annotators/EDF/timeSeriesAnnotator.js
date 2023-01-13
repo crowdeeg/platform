@@ -2438,7 +2438,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     if (toggle) {
       if (that.vars.highchartEvents["timelock"]) {
-        Highcharts.removeEvent(document, "wheel", that.vars.highchartEvents["timelock"]);
+        that.vars.highchartEvents["timelock"]();
       }
       that.vars.highchartEvents["timelock"] = Highcharts.addEvent(document, "wheel", scroll);
     } else {
