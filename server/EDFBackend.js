@@ -676,14 +676,19 @@ function indexOfChannel(channelArray, index, dataId) {
 Meteor.methods({
 
   "removeFile"(id){
+    
     EDFFile.then(result =>{
-      result.remove({_id:id},function(error){
+      id = id.replace(/\s+/g, '');
+      id = id.replace(/\W/g, '');
+      console.log("ID: " + id);
+      return result.remove({_id:id},function(error){
         if (error){
           console.error("File wasn't removed, error: " + error.reason)
-  
+          console.log("here1");
         }
         else{
           console.info("File successfully removed");
+          console.log("here2");
         }
       })
     })

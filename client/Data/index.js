@@ -1,4 +1,4 @@
-import { Data, Tasks, Assignments, Patients } from '/collections';
+import { Data, Tasks, Assignments, Patients} from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
@@ -847,9 +847,19 @@ Template.Data.events({
     console.log(patient_id);
     console.log(file_name);
     Patients.remove({_id:patient_id});
-    Data.remove(dataId);
+    try{
+      Data.remove(dataId);
+      console.log("Removed from data");
+    } catch(error){
+      console.log("Not removed from DATA");
+      console.log("ERROR: " + error);
+    }
+
     var file_id = file_name.split(".")[0];
+    file_id = file_id.trim();
     console.log(file_id)
+
+    
   
     Meteor.call('removeFile',file_id,function(err,res){
       if (err){
