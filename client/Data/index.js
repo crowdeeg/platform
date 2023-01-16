@@ -1,7 +1,15 @@
 import { Data, Tasks, Assignments, Patients} from '/collections';
+import React from 'react';
+import { Tabular } from "meteor/aldeed:tabular";
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
+
+import { $ } from 'meteor/jquery';
+import dataTablesBootstrap from 'datatables.net-bs';
+import 'datatables.net-bs/css/dataTables.bootstrap.css';
+import { connections } from 'mongoose';
+
 
 // double dictionary for task inference
 let taskDictionary = {};
@@ -9,6 +17,9 @@ let dataDictionary = {};
 let page = 1;
 let limit = 10;
 let cond = {}
+var selectedData = new ReactiveVar({});
+var selectedAssignees = new ReactiveVar({});
+var selectedTask = new ReactiveVar(false);
 
 let renderDate = (dateValue) => {
   if (dateValue instanceof Date) {
@@ -377,6 +388,7 @@ Template.Data.events({
     template.selectedAssignees.set(selectedAssignees);
   },
   'click .assignees .delete'(event, template) {
+    console.log(template.selectedAssignees.get());
     const dataId = $(event.currentTarget).data('id');
     const selectedAssignees = template.selectedAssignees.get();
     delete selectedAssignees[dataId];
@@ -589,6 +601,8 @@ Template.Data.events({
   },
 });
 
+
+
 Template.Data.helpers({
   settings() {
     const selectedData = Template.instance().selectedData;
@@ -777,6 +791,7 @@ Template.Data.helpers({
     }
   },
   assignees() {
+    console.log(Template.instance().selectedAssignees.get());
     return Object.values(Template.instance().selectedAssignees.get());
   },
   changePage() {
@@ -800,6 +815,8 @@ Template.Data.events({
     const isSelected = target.is(':checked');
     const dataId = target.data('id');
     const selectedData = template.selectedData.get();
+    console.log(selectedData);
+    console.log(template)
     if (isSelected) {
       const data = Data.findOne(dataId);
       selectedData[dataId] = data;
@@ -835,7 +852,9 @@ Template.Data.events({
   
   'click .delete-button':function(event,template){
     const target = $(event.target);
+    console.log(target);
     const dataId = target.data('id');
+    console.log(dataId);
     const data = Data.findOne(dataId);
     const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
 
@@ -873,11 +892,148 @@ Template.Data.events({
   
 });
 
+TabularTables = {};
+  Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
+
+  TabularTables.Data = new Tabular.Table({
+    name: "Data",
+    collection: Data,
+    columns: [
+      {data: "path", title: "Path"},
+      {data: "name", title: "Patient #"},
+      {title: "Delete",
+        tmpl: Meteor.isClient && Template.deleteButton},
+      {title: "Selected", 
+        tmpl: Meteor.isClient && Template.selected}
+    ],
+    initComplete: function() {
+      $('.dataTables_empty').html('processing');
+    },
+    processing: false,
+    skipCount: true,
+    pagingType: 'simple',
+    infoCallback: (settings, start, end) => `Showing ${start} to ${end}`,
+});
+
+Template.selected.helpers({
+  id(){
+    return this._id;
+  }
+
+});
+
+Template.selected.events({
+  'change .select-data': function (event, template) {
+    console.log("here")
+    const target = $(event.target);
+    const isSelected = target.is(':checked');
+    //const dataId = target.data('id');
+    const dataId = this._id;
+    console.log(this);
+    //const selectedData = template.selectedData.get();
+    //console.log(Template.Data)
+    //const selectedData = Template.Data.selectedData.get();
+    console.log(Template.Data);
+    if (isSelected) {
+      const data = Data.findOne(dataId);
+      selectedData[dataId] = data;
+
+      let signalNameString = dataDictionary[dataId];
+      // console.log(signalNameString);
+      // console.log(dataDictionary);
+      // console.log(dataId);
+      if (signalNameString) {
+        let taskId = taskDictionary[signalNameString];
+        // console.log(taskId);
+        // console.log(taskDictionary);
+        if (taskId) {
+          const task = Tasks.findOne(taskId);
+          // console.log(task);
+          selectedTask.set(task);
+        }
+      }
+      let user = Meteor.user();
+
+      console.log(user);
+
+      selectedAssignees[user._id] = user;
+      //template.selectedAssignees.set(selectedAssignees);
+      selectedAssignees.set(selectedAssignees);
+      console.log(selectedAssignees.get());
+
+    }
+    else {
+      delete selectedData[dataId];
+    }
+    selectedData.set(selectedData);
+  }
+});
+
+Template.deleteButton.events({
+  'click .delete-button': function(event,template){
+    
+    //const target = $(event.target);
+    //console.log(target);
+    console.log(this);
+    console.log(this.id);
+    //const dataId = target.data('id');
+    const dataId = this._id;
+    console.log(dataId);
+    const data = Data.findOne(dataId);
+    console.log(data);
+    const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
+    console.log(alldata);
+
+    const file_name = alldata["name"];
+
+    const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
+
+    const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
+    console.log(patient_id);
+    console.log(file_name);
+    try{
+      Patients.remove({_id:patient_id});
+      console.log("Successfully removed from Patients");
+    } catch(error){
+      console.log("Not removed from Patients");
+      console.log("ERROR: " + error);
+    }
+    
+    
+
+    try{
+      Data.remove(dataId);
+      console.log("Removed from data");
+    } catch(error){
+      console.log("Not removed from DATA");
+      console.log("ERROR: " + error);
+    }
+
+    var file_id = file_name.split(".")[0];
+    file_id = file_id.trim();
+    console.log(file_id)
+  
+    Meteor.call('removeFile',file_id,function(err,res){
+      if (err){
+        console.log(err);
+      }
+    })
+    
+  }
+});
+
+
 Template.Data.onCreated(function () {
-  this.selectedTask = new ReactiveVar(false);
-  this.selectedData = new ReactiveVar({});
-  this.selectedAssignees = new ReactiveVar({});
+  this.selectedTask = selectedTask;
+  this.selectedData = selectedData;
+  this.selectedAssignees = selectedAssignees;
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
+
   //console.log(this);
+});
+
+Template.selected.onCreated(function(){
+  this.change = new ReactiveVar(true);
+  this.align = new ReactiveVar(true);
 });
