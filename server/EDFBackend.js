@@ -1,6 +1,6 @@
 import { dsvFormat } from "d3-dsv";
 import { Mongo } from "meteor/mongo";
-import { Data, Assignments,EDFFile} from "/collections";
+import { Data, Assignments,EDFFile, sanitize} from "/collections";
 
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
