@@ -673,6 +673,8 @@ function indexOfChannel(channelArray, index, dataId) {
   return channelArray.findIndex(isChannel, { name: index, dataId: dataId });
 }
 
+const edfFileSync = Meteor.wrapAsync()
+
 Meteor.methods({
 
   "removeFile"(id){
@@ -681,19 +683,42 @@ Meteor.methods({
       id = id.replace(/\s+/g, '');
       id = id.replace(/\W/g, '');
       console.log("ID: " + id);
-      return result.remove({_id:id},function(error){
-        if (error){
-          console.error("File wasn't removed, error: " + error.reason)
-          console.log("here1");
-        }
-        else{
-          console.info("File successfully removed");
-          console.log("here2");
-        }
-      })
+      return new Promise((resolve, reject) => {
+        const recordingPath = `/uploaded/${id}.edf`;
+        Data.remove({ path: recordingPath }, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            result.remove({_id:id},function(error){
+              if (error){
+                console.error("File wasn't removed, error: " + error.reason)
+                console.log("here1");
+                reject(error);
+              }
+              else{
+                console.info("File successfully removed");
+                console.log("here2");
+                resolve();
+              }
+            });
+          }
+        });
+      });
     })
 
     
+  },
+  "get.file.exists"(fileId){
+    return new Promise((resolve, reject) => {
+      EDFFile.then(result =>{
+        let file = result.findOne({ _id: fileId });
+        if (file) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
   },
   "get.environment.edf.dir"(){
     return (process.env.EDF_DIR);

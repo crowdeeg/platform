@@ -139,6 +139,31 @@ let assembleTaskObj = (signalNameSet, source, file) => {
   }
 }
 
+let deleteFile = (fileName) => {
+  return new Promise((resolve, reject) => {
+    let patient = Patients.findOne({id:"Unspecified Patient - "+ fileName });
+    let fileId = fileName.split(".")[0].replace(/\W/g, '');
+    if (patient) {
+      let patient_id = patient["_id"];
+      console.log(patient_id);
+      console.log(fileName);
+      Patients.remove({_id:patient_id});
+    }
+
+    fileId = fileId.trim();
+    console.log(fileId);
+
+    Meteor.call('removeFile',fileId,function(err,res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      resolve();
+    });
+  });
+};
+
 
 Template.Data.events({
   'click .btn.local': function () {
@@ -232,6 +257,8 @@ Template.Data.events({
     let filesUploadFailed = "";
     let uploadsEnded = 0;
     let filesSuccessfullyUploadedString = "";
+    let overwritePromise = false;
+    let overwriteDuplicates = false;
 
     for (let i = 0; i < allFiles.length; i++) {
 
@@ -248,95 +275,160 @@ Template.Data.events({
 
           // Since EDFFile is a promise, we need to handle it as such
           EDFFile.then(result => {
-            var uploadInstance = result.insert({
-              file: input,
-              chunkSize: 'dynamic',
-              fileName: input.name,
-              fileId: input.name.split('.')[0].replace(/\W/g, ''),
-            }, false);
+            let fileId = input.name.split('.')[0].replace(/\W/g, '');
 
-            uploadInstance.on('end', function (error, fileObj) {
+            let checkIfFileExists = new Promise((resolve, reject) => {
+              Meteor.call("get.file.exists", fileId,
+                (error, result) => {
+                  if (error) {
+                    throw new Error("Error checking file\n" + error);
+                  }
 
-              console.log(fileObj);
-              if (error) {
+                  if (result) {
+                    if (!overwritePromise) {
+                      overwritePromise = new Promise((oResolve, oReject) => {
+                        const modalTransitionTimeInMilliSeconds = 300;
+                        MaterializeModal.confirm({
+                          title: 'Duplicate File',
+                          message: 'Duplicate Files Detected. Overwrite?<br>',
+                          submitLabel: '<i class="fa fa-check left"></i> Overwrite All Duplicates',
+                          closeLabel: '<i class="fa fa-times left"></i> Ignore Duplicates',
+                          outDuration: modalTransitionTimeInMilliSeconds,
+                          callback(error, response) {
+                            if (error) {
+                              alert(error);
+                              oReject(error);
+                              reject(error);
+                              return;
+                            }
+                            if (!response.submit) {
+                              oResolve();
+                              return;
+                            }
 
-                window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
-                filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
-                uploadsEnded++;
-                if (uploadsEnded === allFiles.length) {
-                  window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
-                }
-              } else {
-                // window.alert('File "' + fileObj.name + '" successfully uploaded');
-                console.log(uploadInstance.config.fileId);
-
-                const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
-
-                let promise = new Promise((resolve, reject) => {
-                  Meteor.call("get.edf.metadata", recordingPath,
-                    (error, results) => {
-                      if (error) {
-                        throw new Error("Cannot get recording metadata\n" + error);
-                      }
-
-                      return resolve(results);
+                            overwriteDuplicates = true;
+                            oResolve();
+                          }
+                        });
+                      });
                     }
-                  );
-                });
 
-                promise.then(result => {
-                  console.log(result);
-                  patientId = Patients.insert({
-                    id: "Unspecified Patient - " + fileObj.name,
-                  });
-                  // Data object creation
-                  var dataDocument = {
-                    name: fileObj.name,
-                    type: "EDF",
-                    source: "Other",
-                    patient: patientId,
-                    path: recordingPath,
-                    metadata: { wfdbdesc: result },
+                    overwritePromise.then(() => {
+                      if (overwriteDuplicates) {
+                        deleteFile(input.name).then(() => {
+                          resolve();
+                        }).catch((err) => {
+                          console.log(err);
+                          reject(err);
+                        });
+                      } else {
+                        reject("Duplicate file skipped.");
+                        return;
+                      }
+                    });
+                  } else {
+                    resolve();
                   }
+                }
+              );
+            });
 
-                  var dataId = Data.insert(dataDocument);
-                  console.log(dataId);
-
-                  let signalNameSet = getSignalNameSet(result);
-                  let signalNameString = [...signalNameSet].join(' ');
-
-                  dataDictionary[dataId] = signalNameString;
-
-                  let temp = taskDictionary[signalNameString];
-
-                  if (!temp) {
-                    let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
-                    console.log(taskDocument);
-                    let taskID = Tasks.insert(taskDocument);
-                    console.log(taskID);
-
-                    taskDictionary[signalNameString] = taskID
-                  }
-                  filesSuccessfullyUploaded++;
-                  filesSuccessfullyUploadedString += fileObj.name + "\n";
+            checkIfFileExists.then(() => {
+              var uploadInstance = result.insert({
+                file: input,
+                chunkSize: 'dynamic',
+                fileName: input.name,
+                fileId: fileId,
+              }, false);
+  
+              uploadInstance.on('end', function (error, fileObj) {
+                if (error) {
+  
+                  window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
+                  filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
                   uploadsEnded++;
-
                   if (uploadsEnded === allFiles.length) {
                     window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
                   }
-
-                })
-
-
+                } else {
+                  // window.alert('File "' + fileObj.name + '" successfully uploaded');
+                  console.log(uploadInstance.config.fileId);
+  
+                  const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
+  
+                  let promise = new Promise((resolve, reject) => {
+                    Meteor.call("get.edf.metadata", recordingPath,
+                      (error, results) => {
+                        if (error) {
+                          throw new Error("Cannot get recording metadata\n" + error);
+                        }
+  
+                        return resolve(results);
+                      }
+                    );
+                  });
+  
+                  promise.then(result => {
+                    console.log(result);
+                    patientId = Patients.insert({
+                      id: "Unspecified Patient - " + fileObj.name,
+                    });
+                    // Data object creation
+                    var dataDocument = {
+                      name: fileObj.name,
+                      type: "EDF",
+                      source: "Other",
+                      patient: patientId,
+                      path: recordingPath,
+                      metadata: { wfdbdesc: result },
+                    }
+  
+                    var dataId = Data.insert(dataDocument);
+                    console.log(dataId);
+  
+                    let signalNameSet = getSignalNameSet(result);
+                    let signalNameString = [...signalNameSet].join(' ');
+  
+                    dataDictionary[dataId] = signalNameString;
+  
+                    let temp = taskDictionary[signalNameString];
+  
+                    if (!temp) {
+                      let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
+                      console.log(taskDocument);
+                      let taskID = Tasks.insert(taskDocument);
+                      console.log(taskID);
+  
+                      taskDictionary[signalNameString] = taskID
+                    }
+                    filesSuccessfullyUploaded++;
+                    filesSuccessfullyUploadedString += fileObj.name + "\n";
+                    uploadsEnded++;
+  
+                    if (uploadsEnded === allFiles.length) {
+                      window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
+                    }
+  
+                  })
+  
+  
+                }
+  
+  
+              });
+  
+              uploadInstance.start();
+            }, (err) => {
+              uploadsEnded++;
+              filesUploadFailed += input.name + ": " + err + "\n";
+  
+              if (uploadsEnded === allFiles.length) {
+                window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
               }
-
-
             });
-
-            uploadInstance.start();
           }).catch(error => {
             console.log("Upload Process Failed")
-          })
+          });
 
 
         };
@@ -836,38 +928,11 @@ Template.Data.events({
   'click .delete-button':function(event,template){
     const target = $(event.target);
     const dataId = target.data('id');
-    const data = Data.findOne(dataId);
     const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
 
     const file_name = alldata["name"];
 
-    const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
-
-    patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
-    console.log(patient_id);
-    console.log(file_name);
-    Patients.remove({_id:patient_id});
-    try{
-      Data.remove(dataId);
-      console.log("Removed from data");
-    } catch(error){
-      console.log("Not removed from DATA");
-      console.log("ERROR: " + error);
-    }
-
-    var file_id = file_name.split(".")[0];
-    file_id = file_id.trim();
-    console.log(file_id)
-
-    
-  
-    Meteor.call('removeFile',file_id,function(err,res){
-      if (err){
-        console.log(err);
-      }
-    })
-    
-    
+    deleteFile(file_name);
   }
   
   
