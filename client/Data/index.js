@@ -1,4 +1,4 @@
-import { Data, Tasks, Assignments, Patients} from '/collections';
+import { Data, Tasks, Assignments, Patients, getFileId} from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
@@ -142,7 +142,7 @@ let assembleTaskObj = (signalNameSet, source, file) => {
 let deleteFile = (fileName) => {
   return new Promise((resolve, reject) => {
     let patient = Patients.findOne({id:"Unspecified Patient - "+ fileName });
-    let fileId = fileName.split(".")[0].replace(/\W/g, '');
+    let fileId = getFileId(fileName);
     if (patient) {
       let patient_id = patient["_id"];
       console.log(patient_id);
@@ -275,7 +275,7 @@ Template.Data.events({
 
           // Since EDFFile is a promise, we need to handle it as such
           EDFFile.then(result => {
-            let fileId = input.name.split('.')[0].replace(/\W/g, '');
+            let fileId = getFileId(input.name);
 
             let checkIfFileExists = new Promise((resolve, reject) => {
               Meteor.call("get.file.exists", fileId,
@@ -352,7 +352,6 @@ Template.Data.events({
                   }
                 } else {
                   // window.alert('File "' + fileObj.name + '" successfully uploaded');
-                  console.log(uploadInstance.config.fileId);
   
                   const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
   
@@ -427,7 +426,7 @@ Template.Data.events({
               }
             });
           }).catch(error => {
-            console.log("Upload Process Failed")
+            console.log("Upload Process Failed: ", error);
           });
 
 
