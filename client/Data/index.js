@@ -17,9 +17,9 @@ let dataDictionary = {};
 let page = 1;
 let limit = 10;
 let cond = {}
-var selectedData = new ReactiveVar({});
-var selectedAssignees = new ReactiveVar({});
-var selectedTask = new ReactiveVar(false);
+var selectedDataG = new ReactiveVar({});
+var selectedAssigneesG = new ReactiveVar({});
+var selectedTaskG = new ReactiveVar(false);
 
 let renderDate = (dateValue) => {
   if (dateValue instanceof Date) {
@@ -930,6 +930,7 @@ Template.selected.events({
     //const dataId = target.data('id');
     const dataId = this._id;
     console.log(this);
+    let selectedData = selectedDataG.get();
     //const selectedData = template.selectedData.get();
     //console.log(Template.Data)
     //const selectedData = Template.Data.selectedData.get();
@@ -949,23 +950,29 @@ Template.selected.events({
         if (taskId) {
           const task = Tasks.findOne(taskId);
           // console.log(task);
-          selectedTask.set(task);
+          selectedTaskG.set(task);
         }
       }
       let user = Meteor.user();
 
       console.log(user);
 
+      /*
+      let selectedAssignees = template.selectedAssignees.get();
+      selectedAssignees[user._id] = user;
+      template.selectedAssignees.set(selectedAssignees); 
+      */
+      let selectedAssignees = selectedAssigneesG.get();
       selectedAssignees[user._id] = user;
       //template.selectedAssignees.set(selectedAssignees);
-      selectedAssignees.set(selectedAssignees);
-      console.log(selectedAssignees.get());
+      selectedAssigneesG.set(selectedAssignees);
+      console.log(selectedAssigneesG.get());
 
     }
     else {
       delete selectedData[dataId];
     }
-    selectedData.set(selectedData);
+    selectedDataG.set(selectedData);
   }
 });
 
@@ -1024,9 +1031,9 @@ Template.deleteButton.events({
 
 
 Template.Data.onCreated(function () {
-  this.selectedTask = selectedTask;
-  this.selectedData = selectedData;
-  this.selectedAssignees = selectedAssignees;
+  this.selectedTask = selectedTaskG;
+  this.selectedData = selectedDataG;
+  this.selectedAssignees = selectedAssigneesG;
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
 
