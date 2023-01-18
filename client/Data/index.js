@@ -1,5 +1,4 @@
 import { Data, Tasks, Assignments, Patients} from '/collections';
-import React from 'react';
 import { Tabular } from "meteor/aldeed:tabular";
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
@@ -806,6 +805,10 @@ Template.Data.helpers({
   },
   getLimit() {
     return limit;
+  },
+  getPatientID: function(){
+    console.log(this);
+    return "unspecified";
   }
 });
 
@@ -849,20 +852,23 @@ Template.Data.events({
     }
     template.selectedData.set(selectedData);
   },
-  
+  /*
   'click .delete-button':function(event,template){
     const target = $(event.target);
     console.log(target);
-    const dataId = target.data('id');
-    console.log(dataId);
+    //const dataId = target.data('id');
+    console.log(this);
+    //console.log(dataId);
+    const dataId = this._id;
     const data = Data.findOne(dataId);
     const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
+    console.log(alldata);
 
     const file_name = alldata["name"];
 
     const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
 
-    patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
+    const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
     console.log(patient_id);
     console.log(file_name);
     Patients.remove({_id:patient_id});
@@ -888,19 +894,70 @@ Template.Data.events({
     
     
   }
+  */
   
   
 });
 
+// Note here we have the new Table
+// Given that we need different templates to render the delete and select button, we have 
+// new template events for deleting and selecting.
+// Thus all new changes must appear in these events for the new table
+// Note that the TabularTables.Data code needs to be in both server and client (idk why either)
+
 TabularTables = {};
-  Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
+Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
 
   TabularTables.Data = new Tabular.Table({
     name: "Data",
     collection: Data,
     columns: [
       {data: "path", title: "Path"},
-      {data: "name", title: "Patient #"},
+      {data: "metadata.wfdbdesc.Length", title: "Length",
+        render:function(val){
+          return val.split(" ")[0];
+        }},
+      {data: "_id", title: "Patient #",
+        render:function(val){
+          //let patient_id = Data.findOne({_id:val}).patient;
+          //return Patients.findOne({_id:patient_id}).id;
+          const data = Data.find({_id: val}).fetch();
+          let patientNum = "";
+          //Note there will only be one element for forEach is not a big deal
+          data.forEach((d)=> {
+            patientNum = d.patientDoc().id;
+          })
+          return patientNum;
+        }},
+      {data: "_id", title: "# Assignments", 
+        render:function(val){
+          if(val){
+            const data = Data.find({_id: val}).fetch();
+            let numAssignments = 0;
+            data.forEach((d) => {
+              numAssignments = d.numAssignments()
+            })
+            return numAssignments;
+          }
+        }},
+        {data: "_id", title: "# Assignments Completed", 
+        render:function(val){
+          const data = Data.find({_id: val}).fetch();
+          let numAssignmentsCompleted = 0;
+          data.forEach((d) => {
+            numAssignmentsCompleted = d.numAssignmentsCompleted()
+          })
+          return numAssignmentsCompleted;
+        }},
+        {data: "_id", title: "Assignees", 
+        render:function(val){
+          const data = Data.find({_id: val}).fetch();
+          let assignees = [];
+          data.forEach((d) => {
+            assignees = d.assigneeNames()
+          })
+          return assignees;
+        }},
       {title: "Delete",
         tmpl: Meteor.isClient && Template.deleteButton},
       {title: "Selected", 
@@ -981,55 +1038,64 @@ Template.deleteButton.events({
     
     //const target = $(event.target);
     //console.log(target);
+    console.log('looooooooooooooooooooooooooooooooooooool')
     console.log(this);
     console.log(this.id);
     //const dataId = target.data('id');
     const dataId = this._id;
-    console.log(dataId);
-    const data = Data.findOne(dataId);
-    console.log(data);
-    const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
-    console.log(alldata);
-
-    const file_name = alldata["name"];
-
-    const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
-
-    const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
-    console.log(patient_id);
-    console.log(file_name);
-    try{
-      Patients.remove({_id:patient_id});
-      console.log("Successfully removed from Patients");
-    } catch(error){
-      console.log("Not removed from Patients");
-      console.log("ERROR: " + error);
-    }
-    
-    
-
-    try{
-      Data.remove(dataId);
-      console.log("Removed from data");
-    } catch(error){
-      console.log("Not removed from DATA");
-      console.log("ERROR: " + error);
-    }
-
-    var file_id = file_name.split(".")[0];
-    file_id = file_id.trim();
-    console.log(file_id)
+    // So that the user knows they cannot delete the original files needed for CROWDEEG to Run
+    // I am struggling to make the row for these two blue like the original
+    console.log(this);
+    if(this.path === "/physionet/edfx/PSG.edf" || this.path === "/physionet/edfx/ANNE.edf"){
+      window.alert("You cannot delete " + this.path + " since it is needed for the app to run");
+    } else {
+      console.log(dataId);
+      const data = Data.findOne(dataId);
+      console.log(data);
+      const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
+      console.log(alldata);
   
-    Meteor.call('removeFile',file_id,function(err,res){
-      if (err){
-        console.log(err);
+      const file_name = alldata["name"];
+  
+      const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
+  
+      const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
+      console.log(patient_id);
+      console.log(file_name);
+      try{
+        Patients.remove({_id:patient_id});
+        console.log("Successfully removed from Patients");
+      } catch(error){
+        console.log("Not removed from Patients");
+        console.log("ERROR: " + error);
       }
-    })
+      
+      
+  
+      try{
+        Data.remove(dataId);
+        console.log("Removed from data");
+      } catch(error){
+        console.log("Not removed from DATA");
+        console.log("ERROR: " + error);
+      }
+  
+      var file_id = file_name.split(".")[0];
+      file_id = file_id.trim();
+      console.log(file_id)
+    
+      Meteor.call('removeFile',file_id,function(err,res){
+        if (err){
+          console.log(err);
+        }
+      })
+    }
+    
     
   }
 });
 
-
+// Tabular does not do well with parent-child relationships with the ReactiveVars so global variable had to be made
 Template.Data.onCreated(function () {
   this.selectedTask = selectedTaskG;
   this.selectedData = selectedDataG;

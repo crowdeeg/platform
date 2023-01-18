@@ -25,9 +25,9 @@
     cursor:pointer;
 }
 
-.selected-data {
+.selected .tr.select-data{
 	border: 3px solid #ff4081;
-    background: #f8bbd0;
+  background: #f8bbd0;
 }
 
 .container {
