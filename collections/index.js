@@ -1,4 +1,5 @@
 import { Match } from 'meteor/check'
+import { helpers } from 'meteor/ostrio:files';
 import moment, { relativeTimeRounding } from 'moment'
 import swal from 'sweetalert2'
 import seedrandom from 'seedrandom'
@@ -2502,7 +2503,6 @@ env_p = new Promise ((resolve,reject)=>{
 
 // We chain the then blocks, as we cannot instantiate EDFFile before we have edf_dir
 exports.EDFFile = env_p.then(result =>{
-        console.log(result);
         var edf_dir = result;
     
         console.log(edf_dir);
@@ -2520,6 +2520,14 @@ exports.EDFFile = env_p.then(result =>{
         
     })
     .catch(error => console.log(error))
+
+exports.getFileId = (fileName) => {
+
+    /* helpers.sanitize is how ids are sanitized in the ostrio:files import, in server.js of their github repository.
+       This is done since we construct file ids based on their name, so to replicate we need to sanitize the same way.
+       (Note the split and replace is our own sanitization). */
+    return helpers.sanitize(fileName.split('.')[0].replace(/\W/g, ''), 20, 'a');
+};
 
 
 Meteor.startup(() => {

@@ -1,4 +1,4 @@
-import { Data, Tasks, Assignments, Patients} from '/collections';
+import { Data, Tasks, Assignments, Patients, getFileId} from '/collections';
 import { Tabular } from "meteor/aldeed:tabular";
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
@@ -152,7 +152,7 @@ let assembleTaskObj = (signalNameSet, source, file) => {
 let deleteFile = (fileName) => {
   return new Promise((resolve, reject) => {
     let patient = Patients.findOne({id:"Unspecified Patient - "+ fileName });
-    let fileId = fileName.split(".")[0].replace(/\W/g, '');
+    let fileId = getFileId(fileName);
     if (patient) {
       let patient_id = patient["_id"];
       console.log(patient_id);
@@ -878,46 +878,14 @@ Template.Data.events({
     template.selectedData.set(selectedData);
   },
   /*
-  'click .delete-button':function(event,template){
+    'click .delete-button':function(event,template){
     const target = $(event.target);
-    console.log(target);
-    //const dataId = target.data('id');
-    console.log(this);
-    //console.log(dataId);
-    const dataId = this._id;
-    const data = Data.findOne(dataId);
+    const dataId = target.data('id');
     const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
-    console.log(alldata);
 
     const file_name = alldata["name"];
 
-    const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
-
-    const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
-    console.log(patient_id);
-    console.log(file_name);
-    Patients.remove({_id:patient_id});
-    try{
-      Data.remove(dataId);
-      console.log("Removed from data");
-    } catch(error){
-      console.log("Not removed from DATA");
-      console.log("ERROR: " + error);
-    }
-
-    var file_id = file_name.split(".")[0];
-    file_id = file_id.trim();
-    console.log(file_id)
-
-    
-  
-    Meteor.call('removeFile',file_id,function(err,res){
-      if (err){
-        console.log(err);
-      }
-    })
-    
-    
+    deleteFile(file_name);
   }
   */
   
