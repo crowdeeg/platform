@@ -3096,6 +3096,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _shiftChart: function (windows) {
+    //console.log(this.vars.chart.series);
     var that = this;
     if (!that.vars.forwardEnabled && windows >= 1) return;
     if (
@@ -4139,7 +4140,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
       that.vars.chart.redraw();
-
+      //console.log("init scal factors")
+      //console.log(this.vars.scalingFactors);
       that._addChangePointLabelFixed();
       // see http://jsfiddle.net/ajxyuax2/1/ 
     }
@@ -4147,11 +4149,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
+    //console.log(this.vars.chart.series);
     that._updateChannelDataInSeries(that.vars.chart.series, data,real);
     for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
 
     }
+    //console.log(this.vars.chart.series);
+    //console.log(this.vars.scalingFactors);
     //console.log(original_series);
     $(that.element).find(".align_btn").click(function(){
       if(that._isChannelSelected){
@@ -4309,6 +4314,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.recordPolarity = false;
     that.vars.recordTranslation = false;
 
+    
     // checks if the object is empty
     if (!that._objectIsEmpty(that.vars.scalingFactors)) {
       for (const index in that.vars.scalingFactors) {
@@ -4321,6 +4327,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
 
     }
+    
+    //console.log(this.vars.chart.series);
 
     if (!that._objectIsEmpty(that.vars.translation)) {
       for (const index in that.vars.translation) {
@@ -4360,6 +4368,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log(i + "redraw after")
       //console.log(that);
     }
+
+    //console.log(this.vars.chart.series);
   },
 
   //Auto-limit the yData if there exists a limit on it
@@ -4491,6 +4501,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var offsetPreScale = that._getOffsetForChannelPreScale(channel);
         var offsetPostScale = that._getOffsetForChannelIndexPostScale(c);
         
+        //if(c===2){console.log(channel.values);}
         // gets the values
         samplesScaledAndOffset = channel.values.map(function (value, v) {
           return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
@@ -4529,7 +4540,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var offsetPreScale = that._getOffsetForChannelPreScale(channel);
         var offsetPostScale = that._getOffsetForChannelIndexPostScale(c);
         
-
         // gets the values
         samplesScaledAndOffset = channel.values.map(function (value, v) {
           return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
@@ -4957,6 +4967,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       );
     }
     that._setupYAxisLinesAndLabels();
+    console.log("proper init");
   },
 
   /*_changeAmplitude: function (index, channels) {
@@ -8058,6 +8069,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _customAmplitude: function (index, scaleFactor) {
     //converts scaleFactor to a decimal from percentage
     scaleFactor = scaleFactor / 100;
+    //if(index===2){console.log(scaleFactor);}
 
     var that = this;
     //console.log("customAmplitude")
@@ -8109,6 +8121,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _scaleToScreen: function (index) {
     var that = this;
+    //console.log(this.vars.scalingFactors);
+    //console.log(Object.keys(this.vars.scalingFactors).length);
 
     // for each channel, we get the max/min values of the yData and check if it is above/below zeroPosition +/- 200,
     const zeroPosition = that._getOffsetForChannelIndexPostScale(index);
@@ -8152,54 +8166,61 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
      //console.log("percentageDifferenceUpper: " + percentageDifferenceUpper);
      //console.log("percentageDifferenceLower: " + percentageDifferenceLower);
 
-    if (lowerBound > minChannelData || upperBound < maxChannelData) {
-      //checks if the data is not within the bounds, we scale the data down to "fit the screen"
-      if (lowerBound > minChannelData && upperBound < maxChannelData) {
-        // if both are out of bounds
-        // check which absolute difference is the greater
-        // value to get the percentage difference
-        if (absoluteLowerDifference > absoluteUpperDifference) {
-          // if the lowerdifference is greater, we scale the data by the percentage difference
+    //Check if the min and max data is 0, if it is then do not scale it (previously would be
+    // and Infite scaleFactor causing stuff to go "missing" when the values changed from 0 to like
+    // -0.00001)
+    if(minChannelData === 0 && maxChannelData === 0){
+      that._customAmplitude(index, 1);
+    } else {
+      if (lowerBound > minChannelData || upperBound < maxChannelData) {
+        //checks if the data is not within the bounds, we scale the data down to "fit the screen"
+        if (lowerBound > minChannelData && upperBound < maxChannelData) {
+          // if both are out of bounds
+          // check which absolute difference is the greater
+          // value to get the percentage difference
+          if (absoluteLowerDifference > absoluteUpperDifference) {
+            // if the lowerdifference is greater, we scale the data by the percentage difference
+            that._customAmplitude(index, percentageDifferenceLower);
+          } else {
+            // if the upperdifference is greater, we scale the data by the percentage difference
+
+            that._customAmplitude(index, percentageDifferenceUpper);
+          }
+        } else if (lowerBound > minChannelData && upperBound > maxChannelData) {
+          // if the min data is not within the lower bound
+          // we scale the data by the percentage difference
+
           that._customAmplitude(index, percentageDifferenceLower);
-        } else {
-          // if the upperdifference is greater, we scale the data by the percentage difference
+        } else if (lowerBound < minChannelData && upperBound < maxChannelData) {
+          // if the max data is not within the upper bound
+          // we scale the data by the percentage difference
 
           that._customAmplitude(index, percentageDifferenceUpper);
         }
-      } else if (lowerBound > minChannelData && upperBound > maxChannelData) {
-        // if the min data is not within the lower bound
-        // we scale the data by the percentage difference
+      } else if (lowerBound < minChannelData || upperBound > maxChannelData) {
+        // checks if data is within bounds, but is not scaled enough to "fit the screen"
 
-        that._customAmplitude(index, percentageDifferenceLower);
-      } else if (lowerBound < minChannelData && upperBound < maxChannelData) {
-        // if the max data is not within the upper bound
-        // we scale the data by the percentage difference
+        if (lowerBound < minChannelData && upperBound > maxChannelData) {
+          // if both are too small
+          // check which absolute difference is the lesser
+          // value to get the percentage difference
 
-        that._customAmplitude(index, percentageDifferenceUpper);
-      }
-    } else if (lowerBound < minChannelData || upperBound > maxChannelData) {
-      // checks if data is within bounds, but is not scaled enough to "fit the screen"
+          if (absoluteLowerDifference > absoluteUpperDifference) {
+            that._customAmplitude(index, percentageDifferenceUpper);
+          } else {
+            that._customAmplitude(index, percentageDifferenceLower);
+          }
+        } else if (lowerBound < minChannelData && upperBound < maxChannelData) {
+          // if the min data is not within the lower bound
+          // we scale the data by the percentage difference
 
-      if (lowerBound < minChannelData && upperBound > maxChannelData) {
-        // if both are too small
-        // check which absolute difference is the lesser
-        // value to get the percentage difference
-
-        if (absoluteLowerDifference > absoluteUpperDifference) {
-          that._customAmplitude(index, percentageDifferenceUpper);
-        } else {
           that._customAmplitude(index, percentageDifferenceLower);
+        } else if (lowerBound > minChannelData && upperBound > maxChannelData) {
+          // if the max data is not within the upper bound
+          // we scale the data by the percentage difference
+
+          that._customAmplitude(index, percentageDifferenceUpper);
         }
-      } else if (lowerBound < minChannelData && upperBound < maxChannelData) {
-        // if the min data is not within the lower bound
-        // we scale the data by the percentage difference
-
-        that._customAmplitude(index, percentageDifferenceLower);
-      } else if (lowerBound > minChannelData && upperBound > maxChannelData) {
-        // if the max data is not within the upper bound
-        // we scale the data by the percentage difference
-
-        that._customAmplitude(index, percentageDifferenceUpper);
       }
     }
     //console.log(that);
