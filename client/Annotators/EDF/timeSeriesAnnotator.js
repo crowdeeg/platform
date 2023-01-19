@@ -4296,7 +4296,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
 
-
     // sets the min and max values for the chart
     that.vars.chart.xAxis[0].setExtremes(
       that.vars.currentWindowStart,
@@ -4509,7 +4508,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
         
         // stores in the series that we input into the funciton, at index c
-        
         series[c].setData(seriesData, false, false, false);
         series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
       } else {
@@ -8074,14 +8072,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // takes each point in the ydata of the graph and scales it by the scaleFactor
 
     // console.log(that.vars.chart.series[index].yData);
-    that.vars.chart.series[index].yData.forEach((point, idx) => {
+    let newData = that.vars.chart.series[index].yData.map((point, i) => {
       if (point !== zeroPosition) {
-        that.vars.chart.series[index].yData[idx] =
           // some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
           // to get an accurate percentage scaling
-          zeroPosition + (point - zeroPosition) * (1 + scaleFactor);
+          return [that.vars.chart.series[index].xData[i], zeroPosition + (point - zeroPosition) * (1 + scaleFactor)];
       }
+      return [that.vars.chart.series[index].xData[i], point];
     });
+
+    that.vars.chart.series[index].setData(newData, false, false, false);;
 
     // code allowing the scaling to persist when you switch windows
     if (that.vars.recordScalingFactors) {
