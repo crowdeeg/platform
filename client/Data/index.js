@@ -149,6 +149,31 @@ let assembleTaskObj = (signalNameSet, source, file) => {
   }
 }
 
+let deleteFile = (fileName) => {
+  return new Promise((resolve, reject) => {
+    let patient = Patients.findOne({id:"Unspecified Patient - "+ fileName });
+    let fileId = fileName.split(".")[0].replace(/\W/g, '');
+    if (patient) {
+      let patient_id = patient["_id"];
+      console.log(patient_id);
+      console.log(fileName);
+      Patients.remove({_id:patient_id});
+    }
+
+    fileId = fileId.trim();
+    console.log(fileId);
+
+    Meteor.call('removeFile',fileId,function(err,res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      resolve();
+    });
+  });
+};
+
 
 Template.Data.events({
   'click .btn.local': function () {
@@ -1043,6 +1068,7 @@ Template.deleteButton.events({
     console.log(this.id);
     //const dataId = target.data('id');
     const dataId = this._id;
+
     // So that the user knows they cannot delete the original files needed for CROWDEEG to Run
     // I am struggling to make the row for these two blue like the original
     console.log(this);
@@ -1050,15 +1076,27 @@ Template.deleteButton.events({
       window.alert("You cannot delete " + this.path + " since it is needed for the app to run");
     } else {
       console.log(dataId);
-      const data = Data.findOne(dataId);
-      console.log(data);
+      //const data = Data.findOne(dataId);
+      //console.log(data);
       const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
       console.log(alldata);
   
       const file_name = alldata["name"];
+      deleteFile(file_name);
+
+      try{
+        Data.remove(dataId);
+        console.log("Removed from data");
+      } catch(error){
+        console.log("Not removed from DATA");
+        console.log("ERROR: " + error);
+      }
   
+
+      // This is the old way of deleting before Dawson's fix
+      /*
       const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
-  
+    
       const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
       console.log(patient_id);
       console.log(file_name);
@@ -1089,6 +1127,7 @@ Template.deleteButton.events({
           console.log(err);
         }
       })
+      */
     }
     
     
