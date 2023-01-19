@@ -438,6 +438,8 @@ Template.Data.events({
           const data = Object.values(template.selectedData.get());
           const assigneesDict = template.selectedAssignees.get();
           const assignees = Object.values(template.selectedAssignees.get());
+          console.log(assignees);
+          console.log(data);
 
           const assignmentsByAssignee = {};
           assignees.forEach((assignee) => {
@@ -450,6 +452,7 @@ Template.Data.events({
               });
             });
             assignmentsByAssignee[assignee._id] = assignmentsForAssignee;
+            console.log(assignmentsByAssignee);
           });
 
           let assignmentsFormatted = '';
@@ -490,6 +493,7 @@ Template.Data.events({
                   var dataFiles = assignments.map((assignment) =>
                     assignment.data._id
                   );
+                  console.log(dataFiles);
                   Assignments.insert({
                     users: [assigneeId],
                     task: task._id,
@@ -912,8 +916,6 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
         }},
       {data: "_id", title: "Patient #",
         render:function(val){
-          //let patient_id = Data.findOne({_id:val}).patient;
-          //return Patients.findOne({_id:patient_id}).id;
           const data = Data.find({_id: val}).fetch();
           let patientNum = "";
           //Note there will only be one element for forEach is not a big deal
@@ -928,6 +930,7 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
             const data = Data.find({_id: val}).fetch();
             let numAssignments = 0;
             data.forEach((d) => {
+              console.log(d);
               numAssignments = d.numAssignments()
             })
             return numAssignments;
