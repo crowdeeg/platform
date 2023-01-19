@@ -930,7 +930,6 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
             const data = Data.find({_id: val}).fetch();
             let numAssignments = 0;
             data.forEach((d) => {
-              console.log(d);
               numAssignments = d.numAssignments()
             })
             return numAssignments;

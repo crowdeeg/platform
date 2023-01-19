@@ -434,16 +434,13 @@ Data.helpers({
     assignmentsCursor(filter, options) {
         filter = filter || {};
         filter = _.extend({}, filter, { dataFiles: this._id });
-        console.log(filter);
         const assignments = Assignments.find(filter, options);
-        console.log(assignments);
         return assignments;
     },
     assignmentDocs(filter, options) {
         return this.assignmentsCursor(filter, options).fetch();
     },
     numAssignments(filter, options) {
-        console.log(this.assignmentsCursor(filter, options).count());
         return this.assignmentsCursor(filter, options).count();
     },
     numAssignmentsPending(filter, options) {
