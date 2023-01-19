@@ -1,9 +1,9 @@
 import { Data, Tasks, Assignments, Patients, getFileId} from '/collections';
-import { Tabular } from "meteor/aldeed:tabular";
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
 
+import { Tabular } from "meteor/aldeed:tabular";
 import { $ } from 'meteor/jquery';
 import dataTablesBootstrap from 'datatables.net-bs';
 import 'datatables.net-bs/css/dataTables.bootstrap.css';
