@@ -4737,7 +4737,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               return "Time Stamp: " + "<b>" + this.x + "</b>" + " s" + '<br/>' +
                 "Previous Universal Change Point:" + "<br/>" +
                 "<b>" + label + "</b>"+
-                "<br/> Y-value: " + realY +
+                "<br/> " + this.series.name + " value: " + realY +
                 "<br/> Duration: " + duration;
             } catch(err) {
               return "Error Displaying Tooltip: " + err.message;
