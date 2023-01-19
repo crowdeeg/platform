@@ -433,7 +433,7 @@ Data.helpers({
     },
     assignmentsCursor(filter, options) {
         filter = filter || {};
-        filter = _.extend({}, filter, { dataFiles: [this._id] });
+        filter = _.extend({}, filter, { dataFiles: this._id });
         const assignments = Assignments.find(filter, options);
         return assignments;
     },

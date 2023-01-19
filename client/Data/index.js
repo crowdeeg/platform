@@ -3,12 +3,22 @@ import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
 
+import { Tabular } from "meteor/aldeed:tabular";
+import { $ } from 'meteor/jquery';
+import dataTablesBootstrap from 'datatables.net-bs';
+import 'datatables.net-bs/css/dataTables.bootstrap.css';
+import { connections } from 'mongoose';
+
+
 // double dictionary for task inference
 let taskDictionary = {};
 let dataDictionary = {};
 let page = 1;
 let limit = 10;
 let cond = {}
+var selectedDataG = new ReactiveVar({});
+var selectedAssigneesG = new ReactiveVar({});
+var selectedTaskG = new ReactiveVar(false);
 
 let renderDate = (dateValue) => {
   if (dateValue instanceof Date) {
@@ -468,6 +478,7 @@ Template.Data.events({
     template.selectedAssignees.set(selectedAssignees);
   },
   'click .assignees .delete'(event, template) {
+    console.log(template.selectedAssignees.get());
     const dataId = $(event.currentTarget).data('id');
     const selectedAssignees = template.selectedAssignees.get();
     delete selectedAssignees[dataId];
@@ -493,6 +504,8 @@ Template.Data.events({
           const data = Object.values(template.selectedData.get());
           const assigneesDict = template.selectedAssignees.get();
           const assignees = Object.values(template.selectedAssignees.get());
+          console.log(assignees);
+          console.log(data);
 
           const assignmentsByAssignee = {};
           assignees.forEach((assignee) => {
@@ -505,6 +518,7 @@ Template.Data.events({
               });
             });
             assignmentsByAssignee[assignee._id] = assignmentsForAssignee;
+            console.log(assignmentsByAssignee);
           });
 
           let assignmentsFormatted = '';
@@ -545,6 +559,7 @@ Template.Data.events({
                   var dataFiles = assignments.map((assignment) =>
                     assignment.data._id
                   );
+                  console.log(dataFiles);
                   Assignments.insert({
                     users: [assigneeId],
                     task: task._id,
@@ -679,6 +694,8 @@ Template.Data.events({
     }
   },
 });
+
+
 
 Template.Data.helpers({
   settings() {
@@ -868,6 +885,7 @@ Template.Data.helpers({
     }
   },
   assignees() {
+    console.log(Template.instance().selectedAssignees.get());
     return Object.values(Template.instance().selectedAssignees.get());
   },
   changePage() {
@@ -882,6 +900,10 @@ Template.Data.helpers({
   },
   getLimit() {
     return limit;
+  },
+  getPatientID: function(){
+    console.log(this);
+    return "unspecified";
   }
 });
 
@@ -891,6 +913,8 @@ Template.Data.events({
     const isSelected = target.is(':checked');
     const dataId = target.data('id');
     const selectedData = template.selectedData.get();
+    console.log(selectedData);
+    console.log(template)
     if (isSelected) {
       const data = Data.findOne(dataId);
       selectedData[dataId] = data;
@@ -923,8 +947,8 @@ Template.Data.events({
     }
     template.selectedData.set(selectedData);
   },
-  
-  'click .delete-button':function(event,template){
+  /*
+    'click .delete-button':function(event,template){
     const target = $(event.target);
     const dataId = target.data('id');
     const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
@@ -933,15 +957,231 @@ Template.Data.events({
 
     deleteFile(file_name);
   }
+  */
   
   
 });
 
+// Note here we have the new Table
+// Given that we need different templates to render the delete and select button, we have 
+// new template events for deleting and selecting.
+// Thus all new changes must appear in these events for the new table
+// Note that the TabularTables.Data code needs to be in both server and client (idk why either)
+
+TabularTables = {};
+Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
+
+  TabularTables.Data = new Tabular.Table({
+    name: "Data",
+    collection: Data,
+    columns: [
+      {data: "path", title: "Path"},
+      {data: "metadata.wfdbdesc.Length", title: "Length",
+        render:function(val){
+          return val.split(" ")[0];
+        }},
+      {data: "_id", title: "Patient #",
+        render:function(val){
+          const data = Data.find({_id: val}).fetch();
+          let patientNum = "";
+          //Note there will only be one element for forEach is not a big deal
+          data.forEach((d)=> {
+            patientNum = d.patientDoc().id;
+          })
+          return patientNum;
+        }},
+      {data: "_id", title: "# Assignments", 
+        render:function(val){
+          if(val){
+            const data = Data.find({_id: val}).fetch();
+            let numAssignments = 0;
+            data.forEach((d) => {
+              numAssignments = d.numAssignments()
+            })
+            return numAssignments;
+          }
+        }},
+        {data: "_id", title: "# Assignments Completed", 
+        render:function(val){
+          const data = Data.find({_id: val}).fetch();
+          let numAssignmentsCompleted = 0;
+          data.forEach((d) => {
+            numAssignmentsCompleted = d.numAssignmentsCompleted()
+          })
+          return numAssignmentsCompleted;
+        }},
+        {data: "_id", title: "Assignees", 
+        render:function(val){
+          const data = Data.find({_id: val}).fetch();
+          let assignees = [];
+          data.forEach((d) => {
+            assignees = d.assigneeNames()
+          })
+          return assignees;
+        }},
+      {title: "Delete",
+        tmpl: Meteor.isClient && Template.deleteButton},
+      {title: "Selected", 
+        tmpl: Meteor.isClient && Template.selected}
+    ],
+    initComplete: function() {
+      $('.dataTables_empty').html('processing');
+    },
+    processing: false,
+    skipCount: true,
+    pagingType: 'simple',
+    infoCallback: (settings, start, end) => `Showing ${start} to ${end}`,
+});
+
+Template.selected.helpers({
+  id(){
+    return this._id;
+  }
+
+});
+
+Template.selected.events({
+  'change .select-data': function (event, template) {
+    console.log("here")
+    const target = $(event.target);
+    const isSelected = target.is(':checked');
+    //const dataId = target.data('id');
+    const dataId = this._id;
+    console.log(this);
+    let selectedData = selectedDataG.get();
+    //const selectedData = template.selectedData.get();
+    //console.log(Template.Data)
+    //const selectedData = Template.Data.selectedData.get();
+    console.log(Template.Data);
+    if (isSelected) {
+      const data = Data.findOne(dataId);
+      selectedData[dataId] = data;
+
+      let signalNameString = dataDictionary[dataId];
+      // console.log(signalNameString);
+      // console.log(dataDictionary);
+      // console.log(dataId);
+      if (signalNameString) {
+        let taskId = taskDictionary[signalNameString];
+        // console.log(taskId);
+        // console.log(taskDictionary);
+        if (taskId) {
+          const task = Tasks.findOne(taskId);
+          // console.log(task);
+          selectedTaskG.set(task);
+        }
+      }
+      let user = Meteor.user();
+
+      console.log(user);
+
+      /*
+      let selectedAssignees = template.selectedAssignees.get();
+      selectedAssignees[user._id] = user;
+      template.selectedAssignees.set(selectedAssignees); 
+      */
+      let selectedAssignees = selectedAssigneesG.get();
+      selectedAssignees[user._id] = user;
+      //template.selectedAssignees.set(selectedAssignees);
+      selectedAssigneesG.set(selectedAssignees);
+      console.log(selectedAssigneesG.get());
+
+    }
+    else {
+      delete selectedData[dataId];
+    }
+    selectedDataG.set(selectedData);
+  }
+});
+
+Template.deleteButton.events({
+  'click .delete-button': function(event,template){
+    
+    //const target = $(event.target);
+    //console.log(target);
+    console.log('looooooooooooooooooooooooooooooooooooool')
+    console.log(this);
+    console.log(this.id);
+    //const dataId = target.data('id');
+    const dataId = this._id;
+
+    // So that the user knows they cannot delete the original files needed for CROWDEEG to Run
+    // I am struggling to make the row for these two blue like the original
+    console.log(this);
+    if(this.path === "/physionet/edfx/PSG.edf" || this.path === "/physionet/edfx/ANNE.edf"){
+      window.alert("You cannot delete " + this.path + " since it is needed for the app to run");
+    } else {
+      console.log(dataId);
+      //const data = Data.findOne(dataId);
+      //console.log(data);
+      const alldata = Data.findOne({_id:dataId},{fields:{name:1}});
+      console.log(alldata);
+  
+      const file_name = alldata["name"];
+      deleteFile(file_name);
+
+      try{
+        Data.remove(dataId);
+        console.log("Removed from data");
+      } catch(error){
+        console.log("Not removed from DATA");
+        console.log("ERROR: " + error);
+      }
+  
+
+      // This is the old way of deleting before Dawson's fix
+      /*
+      const patients = Patients.findOne({id:"Unspecified Patient - "+ file_name });
+    
+      const patient_id = Patients.findOne({id:"Unspecified Patient - "+ file_name })["_id"];
+      console.log(patient_id);
+      console.log(file_name);
+      try{
+        Patients.remove({_id:patient_id});
+        console.log("Successfully removed from Patients");
+      } catch(error){
+        console.log("Not removed from Patients");
+        console.log("ERROR: " + error);
+      }
+      
+      
+  
+      try{
+        Data.remove(dataId);
+        console.log("Removed from data");
+      } catch(error){
+        console.log("Not removed from DATA");
+        console.log("ERROR: " + error);
+      }
+  
+      var file_id = file_name.split(".")[0];
+      file_id = file_id.trim();
+      console.log(file_id)
+    
+      Meteor.call('removeFile',file_id,function(err,res){
+        if (err){
+          console.log(err);
+        }
+      })
+      */
+    }
+    
+    
+  }
+});
+
+// Tabular does not do well with parent-child relationships with the ReactiveVars so global variable had to be made
 Template.Data.onCreated(function () {
-  this.selectedTask = new ReactiveVar(false);
-  this.selectedData = new ReactiveVar({});
-  this.selectedAssignees = new ReactiveVar({});
+  this.selectedTask = selectedTaskG;
+  this.selectedData = selectedDataG;
+  this.selectedAssignees = selectedAssigneesG;
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
+
   //console.log(this);
+});
+
+Template.selected.onCreated(function(){
+  this.change = new ReactiveVar(true);
+  this.align = new ReactiveVar(true);
 });

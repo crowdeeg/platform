@@ -16,7 +16,7 @@
                     <div class="col s12 m6">{{> reactiveTableFilter id="filterNumAssignments" label="# Assignments" fields=filterFieldsNumAssignments }}</div>
                 </div>
             </div> -->
-            <div class="col s12 m9">
+            <!--div class="col s12 m9">
               <div class="row">
                 <label>Path</label>
                 <input id="path">
@@ -39,19 +39,20 @@
                     fields=filterFieldsNumAssignments }}
                 </div>
               </div>
-            </div>
+            </div-->
         </div>
         <div class="recordings">
           {{#if changePage}}
-          <div class="col s12 data" id="recording">{{> reactiveTable settings=settings}}</div>
+          <!--div class="col s12 data" id="recording">{{> reactiveTable settings=settings}}</div-->
           {{/if}}
-          <div class="pagination">
+          <div class="col s12 data" id="recording">{{> tabular table=TabularTables.Data fields=fields class="table table-striped table-bordered table-condensed"}}</div>
+          <!--div class="pagination">
             <label>Page</label>
             <input class="page" id="page" type="number" placeholder={{getPage}}>
             <label># per page</label>
             <input class="limit" id="limit" type="number" placeholder={{getLimit}}>
             <button class="change-page" id="change-page">Change Page</button>
-          </div>
+          </div-->
         </div>
         <div class="col s12 text-center">
             <center>
@@ -103,4 +104,12 @@
         </div>
         <div class="col s12 m4"></div>
     </div>
+</template>
+<template name="deleteButton">
+    <button type = "button" class = "btn delete-button" >DELETE</button>
+</template>
+<template name="selected">
+    <tr>
+        <input type="checkbox" class="select-data" id="{{id}}"><label for="{{id}}"></label>
+    </tr> 
 </template>
