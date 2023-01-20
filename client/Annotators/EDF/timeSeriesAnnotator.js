@@ -475,6 +475,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // initializing variables for future usage by the functions
     var that = this;
     that.vars = {
+      previousAnnotationLabel: null,
       currentTimeDiff: 0,
       annotationClicks: {
         clickOne: null,
@@ -4120,7 +4121,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
-
+    console.log(that.vars.previousAnnotationLabel);
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
     if (!that.vars.chart) {
@@ -6397,13 +6398,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         mouseleave: function (event) {
           that.vars.selectedAnnotation = undefined;
+          console.log("hehehe")
         },
 
         mouseup: function (event) {
           var element = $(this.group.element);
           var annotation = this;
+          console.log("hellp")
 
           element.mouseout(event => {
+            console.log("ioioioio")
             that._saveFeatureAnnotation(annotation);
             element.off('mouseout');
             element.off('mouseup');
@@ -6807,8 +6811,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     form.submit(function (event) {
       event.preventDefault();
       var collapsed = toggleButton.hasClass("fa-pencil");
+      console.log(collapsed);
       if (collapsed) {
         toggleButton.removeClass("fa-pencil").addClass("fa-floppy-o");
+        console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         input.show().focus();
         annotationLabelSelector.show();
         $(".changePointLabelRight").hide();
@@ -6816,7 +6822,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.tooltip.label.hide();
 
       } else {
-
+        console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBb")
 
         //////
         $(".changePointLabelRight").show();
@@ -6827,6 +6833,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         annotationLabelSelector.hide();
         var comment = input.val();
         var annotationLabel = annotationLabelSelector.val();
+        console.log(annotationLabel);
         toggleButton.focus();
         annotations
           .filter((a) => a.metadata.id == annotation.metadata.id)
@@ -6838,6 +6845,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             //gets the label from the form selector
             $(a.group.element).find(".form-control").val(annotationLabel);
           });
+        console.log("here")
         that._saveFeatureAnnotation(annotation);
         that.vars.chart.tooltip.label.show();
       }
@@ -7294,6 +7302,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _saveFeatureAnnotation: function (annotation) {
     var that = this;
+    console.log(that);
 
     var annotationId = annotation.metadata.id;
     var type = annotation.metadata.featureType;
@@ -7376,12 +7385,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._updateControlPoint(annotation);
     }
 
-
     // convert changepoint annotations to box annotations where neccesary.
     if (annotation.metadata.annotationLabel == '(end previous state)') {
       that._convertChangePointsToBox(annotation);
     }
-
 
     // if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
     that._updateChangePointLabelRight(annotation);
@@ -7426,7 +7433,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       that._saveFeatureAnnotation(annotation);
     }
+    console.log(annotation.metadata.annotationLabel);
+    console.log(this);
+    if(annotation.metadata.annotationLabel === undefined){
+      console.log(this.vars.previousAnnotationLabel);
+      annotation.metadata.annotationLabel = this.vars.previousAnnotationLabel;
+    }
 
+    console.log(annotation.metadata.annotationLabel);
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
@@ -9483,6 +9497,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         rationale: rationale,
       };
       that._addArbitrationInformationToObject(annotationModifier);
+      console.log(that.vars);
       //TODO: BUG HERE - if the with regards to id
       // console.log(annotationModifier);
       Annotations.update(
@@ -9526,6 +9541,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         cacheEntry.annotations.unshift(annotation.value);
       }
       that.vars.annotationsCache[key] = cacheEntry;
+      //that.vars.previousAnnotationLabel = annotationLabel;
+      if(annotationLabel != undefined){
+        that.vars.previousAnnotationLabel = annotationLabel;
+      }
       callback && callback(annotation, null);
     }
   },
