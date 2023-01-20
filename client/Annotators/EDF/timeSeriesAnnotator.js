@@ -6846,6 +6846,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             $(a.group.element).find(".form-control").val(annotationLabel);
           });
         console.log("here")
+        const boxVals = [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"];
+        if(annotation.metadata.displayType === "Box"){
+          that.vars.previousAnnotationLabelBox = annotationLabel;
+        }
         that._saveFeatureAnnotation(annotation);
         that.vars.chart.tooltip.label.show();
       }
@@ -7757,6 +7761,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMinFixed: function (annotation) {
+    console.log(annotation);
     return parseFloat(annotation.options.xValue).toFixed(2);
   },
 
@@ -9541,12 +9546,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         cacheEntry.annotations.unshift(annotation.value);
       }
       that.vars.annotationsCache[key] = cacheEntry;
-      //that.vars.previousAnnotationLabel = annotationLabel;
-      console.log(annotation);
-      const boxVals = [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"];
-      if(annotationLabel != undefined && boxVals.includes(annotationLabel)){
-        that.vars.previousAnnotationLabelBox = annotationLabel;
-      }
       callback && callback(annotation, null);
     }
   },
