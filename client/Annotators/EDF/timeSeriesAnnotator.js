@@ -475,7 +475,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // initializing variables for future usage by the functions
     var that = this;
     that.vars = {
-      previousAnnotationLabel: null,
+      previousAnnotationLabelBox: null,
       currentTimeDiff: 0,
       annotationClicks: {
         clickOne: null,
@@ -4121,7 +4121,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
-    console.log(that.vars.previousAnnotationLabel);
+    console.log(that.vars.previousAnnotationLabelBox);
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
     if (!that.vars.chart) {
@@ -7435,12 +7435,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     console.log(annotation.metadata.annotationLabel);
     console.log(this);
-    if(annotation.metadata.annotationLabel === undefined){
-      console.log(this.vars.previousAnnotationLabel);
-      annotation.metadata.annotationLabel = this.vars.previousAnnotationLabel;
+    if(annotation.metadata.annotationLabel === undefined && annotation.metadata.displayType === "Box"){
+      console.log(this.vars.previousAnnotationLabelBox);
+      annotation.metadata.annotationLabel = this.vars.previousAnnotationLabelBox;
     }
 
-    console.log(annotation.metadata.annotationLabel);
+    console.log(annotation.metadata.previousAnnotationLabelBox);
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
@@ -9542,8 +9542,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
       that.vars.annotationsCache[key] = cacheEntry;
       //that.vars.previousAnnotationLabel = annotationLabel;
-      if(annotationLabel != undefined){
-        that.vars.previousAnnotationLabel = annotationLabel;
+      console.log(annotation);
+      const boxVals = [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"];
+      if(annotationLabel != undefined && boxVals.includes(annotationLabel)){
+        that.vars.previousAnnotationLabelBox = annotationLabel;
       }
       callback && callback(annotation, null);
     }
