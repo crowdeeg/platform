@@ -9689,8 +9689,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.currentWindowData.channels.forEach((channel) => {
       (channels[channel.dataId] ? channels[channel.dataId].push(channel.name) : channels[channel.dataId] = [channel.name])
     });
+    let fileName = "";
 
     var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
+      let extBegin = record.Record.lastIndexOf(".");
+      if (extBegin > 0) {
+        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+      } else {
+        fileName = fileName + record.Record + "_";
+      }
       return (JSON.stringify({
         'filename': record.Record,
         'fileId': key,
@@ -9706,11 +9713,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     fileInfo.push(...annotations);
     const blob = new Blob(fileInfo, { type: "text/csv" });
     const href = URL.createObjectURL(blob);
+    fileName = fileName + "annotations.csv";
     const a = Object.assign(document.createElement("a"),
       {
         href,
         style: "display:none",
-        download: "annotations.csv",
+        download: fileName,
       }
     )
     document.body.appendChild(a);
@@ -9726,7 +9734,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "alignment.json");
+    let fileName = "";
+    Object.values(that.vars.recordingMetadata).forEach((record) => {
+      let extBegin = record.Record.lastIndexOf(".");
+      if (extBegin > 0) {
+        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+      } else {
+        fileName = fileName + record.Record + "_";
+      }
+    });
+    fileName = fileName + "alignment.json";
+    downloadAnchorNode.setAttribute("download", fileName);
     document.body.appendChild(downloadAnchorNode); // required for firefox
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
