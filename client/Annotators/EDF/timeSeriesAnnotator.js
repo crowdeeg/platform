@@ -475,6 +475,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // initializing variables for future usage by the functions
     var that = this;
     that.vars = {
+      previousAnnotationLabelBox: null,
       currentTimeDiff: 0,
       annotationClicks: {
         clickOne: null,
@@ -2922,6 +2923,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           return;
         }
         annotation.metadata.annotationLabel = feature;
+        if(annotation.metadata.displayType === "Box"){
+          that.vars.previousAnnotationLabelBox = feature;
+        }
         that._saveFeatureAnnotation(annotation);
       }
 
@@ -3992,6 +3996,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _applyFrequencyFilters: function (data, callback) {
     var that = this;
+    //console.log(this.vars.chart);
     var numRemainingChannelsToFilter = data.channels.length;
     var maxDetectableFrequencyInHz = data.sampling_rate / 2;
     var frequencyFilters = that.vars.frequencyFilters || [];
@@ -4120,7 +4125,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
-
+    console.log(that.vars.previousAnnotationLabelBox);
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
     if (!that.vars.chart) {
@@ -6252,7 +6257,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     that._saveFeatureAnnotation(annotation);
     that._addChangePointLabelRight(annotation);
-    console.log(annotation);
+    //console.log(annotation);
     return annotation;
   },
 
@@ -6293,7 +6298,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._addChangePointLabelLeft(annotation);
 
 
-    console.log(annotation);
+    //console.log(annotation);
     return annotation;
   },
 
@@ -6397,11 +6402,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         mouseleave: function (event) {
           that.vars.selectedAnnotation = undefined;
+          //console.log("hehehe")
         },
 
         mouseup: function (event) {
           var element = $(this.group.element);
           var annotation = this;
+          //console.log("hellp")
+          //console.log("ioioioio")
+          //console.log(annotation);
+
+          that._saveFeatureAnnotation(annotation);
+
 
           element.mouseout(event => {
             that._saveFeatureAnnotation(annotation);
@@ -6807,8 +6819,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     form.submit(function (event) {
       event.preventDefault();
       var collapsed = toggleButton.hasClass("fa-pencil");
+      console.log(collapsed);
       if (collapsed) {
         toggleButton.removeClass("fa-pencil").addClass("fa-floppy-o");
+        //console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         input.show().focus();
         annotationLabelSelector.show();
         $(".changePointLabelRight").hide();
@@ -6816,7 +6830,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.tooltip.label.hide();
 
       } else {
-
+        //console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBb")
 
         //////
         $(".changePointLabelRight").show();
@@ -6827,8 +6841,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         annotationLabelSelector.hide();
         var comment = input.val();
         var annotationLabel = annotationLabelSelector.val();
+       // console.log(annotationLabel);
         toggleButton.focus();
-        annotations
+         annotations
           .filter((a) => a.metadata.id == annotation.metadata.id)
           .forEach((a) => {
             a.metadata.comment = comment;
@@ -6838,8 +6853,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             //gets the label from the form selector
             $(a.group.element).find(".form-control").val(annotationLabel);
           });
+        //console.log("here");
+        if(annotation.metadata.displayType === "Box"){
+          that.vars.previousAnnotationLabelBox = annotationLabel;
+        }
         that._saveFeatureAnnotation(annotation);
         that.vars.chart.tooltip.label.show();
+        //console.log('CCCCCCCCCCCCCCCCCCCCCC');
       }
     });
 
@@ -7294,6 +7314,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _saveFeatureAnnotation: function (annotation) {
     var that = this;
+    //console.log(that);
 
     var annotationId = annotation.metadata.id;
     var type = annotation.metadata.featureType;
@@ -7376,12 +7397,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._updateControlPoint(annotation);
     }
 
-
     // convert changepoint annotations to box annotations where neccesary.
     if (annotation.metadata.annotationLabel == '(end previous state)') {
       that._convertChangePointsToBox(annotation);
     }
-
 
     // if (annotation.metadata.displayType == 'ChangePoint' || annotation.metadata.displayType == 'ChangePointAll') {
     that._updateChangePointLabelRight(annotation);
@@ -7426,7 +7445,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       that._saveFeatureAnnotation(annotation);
     }
-
+    if(annotation.metadata.annotationLabel === undefined && annotation.metadata.displayType === "Box"){
+      console.log(this.vars.previousAnnotationLabelBox);
+      annotation.metadata.annotationLabel = this.vars.previousAnnotationLabelBox;
+    }
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
@@ -7743,6 +7765,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMinFixed: function (annotation) {
+    //console.log(annotation);
     return parseFloat(annotation.options.xValue).toFixed(2);
   },
 
@@ -9483,6 +9506,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         rationale: rationale,
       };
       that._addArbitrationInformationToObject(annotationModifier);
+      //console.log(that.vars);
       //TODO: BUG HERE - if the with regards to id
       // console.log(annotationModifier);
       Annotations.update(
