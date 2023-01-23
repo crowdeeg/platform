@@ -2923,6 +2923,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           return;
         }
         annotation.metadata.annotationLabel = feature;
+        if(annotation.metadata.displayType === "Box"){
+          that.vars.previousAnnotationLabelBox = feature;
+        }
         that._saveFeatureAnnotation(annotation);
       }
 
@@ -3993,6 +3996,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _applyFrequencyFilters: function (data, callback) {
     var that = this;
+    //console.log(this.vars.chart);
     var numRemainingChannelsToFilter = data.channels.length;
     var maxDetectableFrequencyInHz = data.sampling_rate / 2;
     var frequencyFilters = that.vars.frequencyFilters || [];
@@ -6253,7 +6257,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     that._saveFeatureAnnotation(annotation);
     that._addChangePointLabelRight(annotation);
-    console.log(annotation);
+    //console.log(annotation);
     return annotation;
   },
 
@@ -6294,7 +6298,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._addChangePointLabelLeft(annotation);
 
 
-    console.log(annotation);
+    //console.log(annotation);
     return annotation;
   },
 
@@ -6398,16 +6402,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         mouseleave: function (event) {
           that.vars.selectedAnnotation = undefined;
-          console.log("hehehe")
+          //console.log("hehehe")
         },
 
         mouseup: function (event) {
           var element = $(this.group.element);
           var annotation = this;
-          console.log("hellp")
+          //console.log("hellp")
+          //console.log("ioioioio")
+          //console.log(annotation);
+
+          that._saveFeatureAnnotation(annotation);
+
 
           element.mouseout(event => {
-            console.log("ioioioio")
             that._saveFeatureAnnotation(annotation);
             element.off('mouseout');
             element.off('mouseup');
@@ -6814,7 +6822,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(collapsed);
       if (collapsed) {
         toggleButton.removeClass("fa-pencil").addClass("fa-floppy-o");
-        console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        //console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         input.show().focus();
         annotationLabelSelector.show();
         $(".changePointLabelRight").hide();
@@ -6822,7 +6830,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.chart.tooltip.label.hide();
 
       } else {
-        console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBb")
+        //console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBb")
 
         //////
         $(".changePointLabelRight").show();
@@ -6833,9 +6841,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         annotationLabelSelector.hide();
         var comment = input.val();
         var annotationLabel = annotationLabelSelector.val();
-        console.log(annotationLabel);
+       // console.log(annotationLabel);
         toggleButton.focus();
-        annotations
+         annotations
           .filter((a) => a.metadata.id == annotation.metadata.id)
           .forEach((a) => {
             a.metadata.comment = comment;
@@ -6845,13 +6853,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             //gets the label from the form selector
             $(a.group.element).find(".form-control").val(annotationLabel);
           });
-        console.log("here")
-        const boxVals = [undefined, "Obstructive Apnea", "Central Apnea", "Obstructive Hypoapnea", "Central Hypoapnea", "Flow Limitation", "Cortical Arousal", "Autonomic Arousal", "Desat. Event", "Mixed Apnea", "Mixed Hypoapnea", "(unanalyzable)"];
+        //console.log("here");
         if(annotation.metadata.displayType === "Box"){
           that.vars.previousAnnotationLabelBox = annotationLabel;
         }
         that._saveFeatureAnnotation(annotation);
         that.vars.chart.tooltip.label.show();
+        //console.log('CCCCCCCCCCCCCCCCCCCCCC');
       }
     });
 
@@ -7306,7 +7314,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _saveFeatureAnnotation: function (annotation) {
     var that = this;
-    console.log(that);
+    //console.log(that);
 
     var annotationId = annotation.metadata.id;
     var type = annotation.metadata.featureType;
@@ -7437,14 +7445,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
       that._saveFeatureAnnotation(annotation);
     }
-    console.log(annotation.metadata.annotationLabel);
-    console.log(this);
     if(annotation.metadata.annotationLabel === undefined && annotation.metadata.displayType === "Box"){
       console.log(this.vars.previousAnnotationLabelBox);
       annotation.metadata.annotationLabel = this.vars.previousAnnotationLabelBox;
     }
-
-    console.log(annotation.metadata.previousAnnotationLabelBox);
     // console.log(that.vars.universalChangePointAnnotations.map(a => that._getAnnotationXMinFixed(a)));
     // console.log(that.vars.universalChangePointAnnotationsCache.map(a => that._getAnnotationXMinFixed(a)));
   },
@@ -7761,7 +7765,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _getAnnotationXMinFixed: function (annotation) {
-    console.log(annotation);
+    //console.log(annotation);
     return parseFloat(annotation.options.xValue).toFixed(2);
   },
 
@@ -9502,7 +9506,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         rationale: rationale,
       };
       that._addArbitrationInformationToObject(annotationModifier);
-      console.log(that.vars);
+      //console.log(that.vars);
       //TODO: BUG HERE - if the with regards to id
       // console.log(annotationModifier);
       Annotations.update(
