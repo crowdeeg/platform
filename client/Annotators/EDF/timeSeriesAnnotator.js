@@ -39,6 +39,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     toggleInfoPanel: undefined,
     staticFrequencyFiltersByChannelType: {},
     staticFrequencyFiltersByDataModality: {},
+    maskedChannels: [],
     preClassification: {
       show: false,
       title: "Pre-Classification",
@@ -159,7 +160,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           {
             name: "60 Sec/page",
             value: 60,
-            default: true,
           },
           // below will lower the data sampling rates i.e. lower the resolution
           {
@@ -485,6 +485,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       recordTranslation: true,
       translation: {},
       scalingFactors: {},
+      originalScalingFactors: {},
       polarity: {},
       uniqueClass: that._getUUID(),
       activeFeatureType: 0,
@@ -1977,31 +1978,69 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
       */
       let defaultOptionIndex = null;
-      timescaleSetting.options.forEach((timescale, t) => {
-        let selectedString = "";
-
-        if (timescale.default) {
-          selectedString = ' selected="selected"';
-          defaultOptionIndex = t;
-        }
-        select.append(
-          `<option value=${timescale.value}` +
-          selectedString +
-          ">" +
-          timescaleSetting.title +
-          ": " +
-          timescale.name +
-          "</option>"
-        );
-      });
+      if(that.options.context.preferences.annotatorConfig.timescaleSetting ==null){
+        timescaleSetting.options.forEach((timescale, t) => {
+          let selectedString = "";
+          console.log(timescale);
+  
+          if (timescale.value === 60) {
+            selectedString = ' selected="selected"';
+            defaultOptionIndex = t;
+          }
+          
+          select.append(
+            `<option value=${timescale.value}` +
+            selectedString +
+            ">" +
+            timescaleSetting.title +
+            ": " +
+            timescale.name +
+            "</option>"
+          );
+          console.log(select);
+        });
+      } else {
+        timescaleSetting.options.forEach((timescale, t) => {
+          let selectedString = "";
+          console.log(timescale);
+  
+          console.log(that.options.context.preferences.annotatorConfig.timescaleSetting);
+          
+          if(that.options.context.preferences.annotatorConfig.timescaleSetting != null){
+            if (timescale.value === that.options.context.preferences.annotatorConfig.timescaleSetting.value) {
+              selectedString = ' selected="selected"';
+              defaultOptionIndex = t;
+            }
+          }
+          
+          select.append(
+            `<option value=${timescale.value}` +
+            selectedString +
+            ">" +
+            timescaleSetting.title +
+            ": " +
+            timescale.name +
+            "</option>"
+          );
+          console.log(select);
+        });
+      }
+      
 
       console.log(that.vars.recordingLengthInSeconds);
-      
+      console.log(defaultOptionIndex);
+
       select.material_select();
       select.change(function () {
         //console.log("timescale onchange");
-        if (defaultOptionIndex)
+        if (defaultOptionIndex){
           delete timescaleSetting.options[defaultOptionIndex].default;
+        }
+
+        console.log(timescaleSetting.options[select.prop("selectedIndex")]);
+        that._savePreferences({
+          timescaleSetting: timescaleSetting.options[select.prop("selectedIndex")],
+        });
         timescaleSetting.options[select.prop("selectedIndex")].default = true;
         that.vars.xAxisScaleInSeconds = +select.val();
         that._reloadCurrentWindow();
@@ -4137,8 +4176,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
       }
+      that.options.maskedChannels.forEach((i) => {
+        that._maskChannelWithIndex(i);
+      });
+      console.log(that.vars.scalingFactors);
       console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
+      console.log(that.vars.originalScalingFactors);
+      if(that.options.context.preferences.annotatorConfig.scalingFactors != null){
+        that.vars.scalingFactors = that.options.context.preferences.annotatorConfig.scalingFactors;
+      }
+      if(that.options.context.preferences.annotatorConfig.translations != null){
+        that.vars.translation = that.options.context.preferences.annotatorConfig.translations;
+      }
+      console.log(that.vars.scalingFactors);
       that.vars.chart.redraw();
       //console.log("init scal factors")
       //console.log(this.vars.scalingFactors);
@@ -4287,16 +4338,37 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
         //something is changing the scale factor afterwards
-        that.vars.scalingFactors[i] = scaleFactor;
-        
-       
+        //that.vars.scalingFactors[i] = scaleFactor;
+
+        // set the scaling factor to the original one and save it
+        that.vars.scalingFactors[i] = that.vars.originalScalingFactors[i];
+        that._savePreferences({
+          scalingFactors: that.vars.scalingFactors,
+        })
+
+
+        // remove any translation if there are any
+        delete that.vars.translation[i];
+
+        // save the updated translation
+        that._savePreferences({
+          translations: that.vars.translation,
+        })
+
+        // if the index is masked, remove it from our list of maskedChannels and save
+        that.options.maskedChannels = that.options.maskedChannels.filter((el) => el != i);
+        that._savePreferences({
+          maskedChannels: that.options.maskedChannels,
+        })
+
         console.log("here we scale selected channels to screen");
         that._scaleToScreen(i);
         
         that.vars.chart.redraw(); // efficiently redraw the entire window in one go
    
         // This is the only solution to the channel not blowing up when shifting pages
-        that.vars.scalingFactors[i] = scaleFactor;
+        //that.vars.scalingFactors[i] = scaleFactor;
+        that.vars.scalingFactors[i] = that.vars.originalScalingFactors[i];
         
       }
     });
@@ -4345,6 +4417,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.recordScalingFactors = true;
     that.vars.recordTranslation = true;
 
+    if(that.options.context.preferences.annotatorConfig.scalingFactors != null){
+      that.vars.scalingFactors = that.options.context.preferences.annotatorConfig.scalingFactors;
+    }
     //console.log("first after");
     that.vars.chart.redraw(); // efficiently redraw the entire window in one go
     //console.log(that);
@@ -4367,7 +4442,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log(i + "redraw after")
       //console.log(that);
     }
-
+    console.log(that.vars.scalingFactors);
     //console.log(this.vars.chart.series);
   },
 
@@ -8043,25 +8118,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _moveDown: function (index) {
     var that = this;
     that._customTranslation(index, -25);
+    that._savePreferences({
+      translations: that.vars.translation
+    });
   },
 
   _moveUp: function (index) {
     var that = this;
     that._customTranslation(index, 25);
+    that._savePreferences({
+      translations: that.vars.translation
+    });
   },
 
   _increaseAmplitude: function (index) {
     // preset decrease amplitude function that increases amplitude by 100%
 
     var that = this;
+    //console.log(that);
     that._customAmplitude(index, 100);
+    //console.log(that);
+    that._savePreferences({
+      scalingFactors: that.vars.scalingFactors,
+    });
   },
 
   _decreaseAmplitude: function (index) {
     // preset decrease amplitude function that decreases amplitude by 50%
 
     var that = this;
+    console.log(that.vars.scalingFactors);
     that._customAmplitude(index, -50);
+    console.log(that.vars.scalingFactors);
+    that._savePreferences({
+      scalingFactors: that.vars.scalingFactors,
+    });
   },
 
   _customAmplitude: function (index, scaleFactor) {
@@ -8117,6 +8208,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.allChannels.forEach((channel, idx) => {
       that._scaleToScreen(idx);
     });
+    that.vars.originalScalingFactors = that.vars.scalingFactors;
   },
 
   _scaleToScreen: function (index) {
@@ -10418,6 +10510,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _maskChannelSelected: function(){
     let that = this;
     let i = that.vars.selectedChannelIndex;
+    that.vars.chart.series[i].yData = [];
+    that.vars.chart.redraw();
+    console.log(that)
+    if(that.options.maskedChannels.find((el) => el == i) == null){
+      that.options.maskedChannels.push(i);
+    }
+    that._savePreferences({
+      maskedChannels: that.options.maskedChannels,
+    });
+  },
+
+  _maskChannelWithIndex: function (i) {
+    let that = this;
     that.vars.chart.series[i].yData = [];
     that.vars.chart.redraw();
   },
