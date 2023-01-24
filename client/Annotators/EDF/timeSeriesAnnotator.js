@@ -4259,6 +4259,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that.options.context.preferences.annotatorConfig.scalingFactors != null){
         that.vars.scalingFactors = that.options.context.preferences.annotatorConfig.scalingFactors;
       }
+      //console.log(that.vars.translation);
       //add translations
       if(that.options.context.preferences.annotatorConfig.translations != null){
         that.vars.translation = that.options.context.preferences.annotatorConfig.translations;
@@ -9939,8 +9940,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _downloadPreferencesJSON: function () {
     var that = this;
+    // if we are downloading the preferences for the initial graph, we need enough info
+    // so that when uploading the "default" preferences, the graph does go back to its initial state.
+    if(that.options.context.preferences.annotatorConfig.scalingFactors == null){
+      that.options.context.preferences.annotatorConfig.scalingFactors = that.vars.originalScalingFactors;
+    } 
+    if(that.options.context.preferences.annotatorConfig.maskedChannels == null){
+      that.options.context.preferences.annotatorConfig.maskedChannels = [];
+    }
+    if(that.options.context.preferences.annotatorConfig.translations == null){
+      that.options.context.preferences.annotatorConfig.translations = {};
+    }
     var obj = that.options.context.preferences.annotatorConfig;
-    
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
