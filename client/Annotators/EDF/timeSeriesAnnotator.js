@@ -785,6 +785,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             </div>\
                         </div> \
                         <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
+                            <b> Annotations: </b>&nbsp\
                             <button type="button" id="annotation_save" class="btn btn-default fa fa-save" ></button>&nbsp\
                             <button type="button" id="annotation_download" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" id="annotation_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
@@ -847,8 +848,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </div> \
                 </div> \
             </div> \
-            <div style="position: relative; left: 38%" class="preferences_panel"> \
-                <b> Preferences </b>:\
+            <div style="display: flex; margin-bottom: 20px; margin-left: 30px; margin-right: 20px; flex-flow: row" class="preferences_panel"> \
+                <b> Preferences: </b>&nbsp\
                 <button type="button" id="preferences_save" class="btn btn-default fa fa-save" ></button>&nbsp\
                 <button type="button" id="preferences_download" class="btn btn-default fa fa-download" ></button>&nbsp\
                 <button type="button" id="preferences_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
