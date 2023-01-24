@@ -15,6 +15,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_axis_limited: [],
     y_limit_lower: [],
     y_limit_upper: [],
+    y_axis_limited_values: [],
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -784,9 +785,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             </div>\
                         </div> \
                         <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
-                            <button type="button" class="btn btn-default fa fa-save" ></button>&nbsp\
-                            <button type="button" class="btn btn-default fa fa-download" ></button>&nbsp\
-                            <button type="button" class="btn btn-default fa fa-upload" ></button>&nbsp\
+                            <button type="button" id="annotation_save" class="btn btn-default fa fa-save" ></button>&nbsp\
+                            <button type="button" id="annotation_download" class="btn btn-default fa fa-download" ></button>&nbsp\
+                            <button type="button" id="annotation_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
                             <input type="file" accept=".csv, .json" multiple id="File">\
                         </div> \
                         <div style="margin-bottom: 20px" class="navigation_panel"> \
@@ -845,6 +846,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                         </div> \
                     </div> \
                 </div> \
+            </div> \
+            <div style="position: relative; left: 38%" class="preferences_panel"> \
+                <b> Preferences </b>:\
+                <button type="button" id="preferences_save" class="btn btn-default fa fa-save" ></button>&nbsp\
+                <button type="button" id="preferences_download" class="btn btn-default fa fa-download" ></button>&nbsp\
+                <button type="button" id="preferences_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
+                <input type="file" accept=".json" id="PreferencesFile">\
             </div> \
         ';
     $(that.element).html(content);
@@ -1534,6 +1542,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupSleepStagePanel();
     that._setupTimeSyncPanel();
     that._setupIOPanel();
+    that._setupPreferencesPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
     that
@@ -1981,7 +1990,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that.options.context.preferences.annotatorConfig.timescaleSetting ==null){
         timescaleSetting.options.forEach((timescale, t) => {
           let selectedString = "";
-          console.log(timescale);
+          //console.log(timescale);
   
           if (timescale.value === 60) {
             selectedString = ' selected="selected"';
@@ -2002,9 +2011,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else {
         timescaleSetting.options.forEach((timescale, t) => {
           let selectedString = "";
-          console.log(timescale);
-  
-          console.log(that.options.context.preferences.annotatorConfig.timescaleSetting);
           
           if(that.options.context.preferences.annotatorConfig.timescaleSetting != null){
             if (timescale.value === that.options.context.preferences.annotatorConfig.timescaleSetting.value) {
@@ -2022,13 +2028,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             timescale.name +
             "</option>"
           );
-          console.log(select);
+          //console.log(select);
         });
       }
       
 
       console.log(that.vars.recordingLengthInSeconds);
-      console.log(defaultOptionIndex);
+      //console.log(defaultOptionIndex);
 
       select.material_select();
       select.change(function () {
@@ -2668,23 +2674,52 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var element = $(that.element);
 
     element
-      .find(".fa-download")
+      .find("#annotation_download")
       .click(function () {
         that._downloadCSV();
         that._downloadJSON();
       });
 
     element
-      .find(".fa-upload")
+      .find("#annotation_upload")
       .click(function () {
         that._parseFile();
       });
 
     element
-      .find(".fa-save")
+      .find("#annotation_save")
       .click(function () {
         console.log(that.vars.chart.annotations.allItems);
         that.vars.chart.annotations.allItems.forEach(annotation => that._saveFeatureAnnotation(annotation));
+      });
+  },
+
+  _setupPreferencesPanel: function () {
+    var that = this;
+
+    var element = $(that.element);
+    console.log(element);
+
+    element
+      .find("#preferences_download")
+      .click(function () {
+        that._downloadPreferencesJSON();
+      });
+
+    element
+      .find("#preferences_upload")
+      .click(function () {
+        that._parsePreferencesJsonFile();
+      });
+
+    element
+      .find("#preferences_save")
+      .click(function () {
+        console.log(that.options.context.preferences.uploadedPreferences);
+        that._savePreferences(that.options.context.preferences.uploadedPreferences);
+        //console.log(that.options.context.preferences.annotatorConfig);
+        //reload the screen so we can actually view the preferences
+        location.reload();
       });
   },
 
@@ -4153,6 +4188,35 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
   },
+
+  //same as the normal limiting but based on index for the purpose of preferences
+  _limitYAxisByIndex: function(index, lowerlimit, upperlimit, original_series){
+    newyData = [];
+        
+    that.vars.chart.series[index].yData = [...original_series[index]];
+    that.options.y_axis_limited[index] = true;
+
+    that.options.y_limit_lower[index] = lowerlimit;
+
+    that.options.y_limit_upper[index] = upperlimit;
+
+    for (let j = 0; j < that.vars.chart.series[index].yData.length; j++) {
+
+      if ((that.vars.chart.series[index].realyData[j]) >= lowerlimit && (that.vars.chart.series[index].realyData[j]) <= upperlimit) {
+
+        newyData.push(that.vars.chart.series[index].yData[j]);
+
+      }
+      else {
+        newyData.push({
+          y: that.vars.chart.series[index].yData[j],
+          color: '#FFFFFF'
+        });
+
+      }
+    }
+    that.vars.chart.series[index].yData = newyData;
+  },
   
 
   _populateGraph: function (data,real) {
@@ -4176,20 +4240,35 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
       }
+      //mask all the channels based on preferences
       that.options.maskedChannels.forEach((i) => {
         that._maskChannelWithIndex(i);
       });
+      
+    
       console.log(that.vars.scalingFactors);
       console.log("here we scale all channels to screen");
       that._scaleAllToScreen();
-      console.log(that.vars.originalScalingFactors);
+      for(let i = 0;i<that.vars.chart.series.length;i++){
+        original_series[i] = that.vars.chart.series[i].yData;
+  
+      }
+      //once we set up the original data, update some values based on our preferences for this file
+      // add scaling factors (amplitude stuff)
       if(that.options.context.preferences.annotatorConfig.scalingFactors != null){
         that.vars.scalingFactors = that.options.context.preferences.annotatorConfig.scalingFactors;
       }
+      //add translations
       if(that.options.context.preferences.annotatorConfig.translations != null){
         that.vars.translation = that.options.context.preferences.annotatorConfig.translations;
       }
-      console.log(that.vars.scalingFactors);
+      //limit each channel that needs to be
+      if(that.options.context.preferences.annotatorConfig.limitedYAxis != null){
+        that.options.context.preferences.annotatorConfig.limitedYAxis.forEach((item)=> {
+          that._limitYAxisByIndex(item.index, item.lowerlimit, item.upperlimit, original_series);
+        });
+      }
+      //console.log(that.vars.scalingFactors);
       that.vars.chart.redraw();
       //console.log("init scal factors")
       //console.log(this.vars.scalingFactors);
@@ -4268,6 +4347,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         //set upper value
         var upperlimit = document.querySelector('#ylimit_upper_input').value;
         that.options.y_limit_upper[i] = upperlimit;
+        
+        //save the limit values in our preferences
+        if(that.options.y_axis_limited_values.filter(el => el.index == i) < 1){
+          that.options.y_axis_limited_values.push({"index":i, "lowerlimit": lowerlimit, "upperlimit":upperlimit});
+          that._savePreferences({
+            limitedYAxis: that.options.y_axis_limited_values,
+          })
+        }
+
 
         for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
 
@@ -4361,6 +4449,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           maskedChannels: that.options.maskedChannels,
         })
 
+        // if the index is limited, remove it from our list of limited vals and save
+        that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(el => el.index != i);
+        that._savePreferences({
+          limitedYAxis: that.options.y_axis_limited_values,
+        })
+
         console.log("here we scale selected channels to screen");
         that._scaleToScreen(i);
         
@@ -4442,7 +4536,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log(i + "redraw after")
       //console.log(that);
     }
-    console.log(that.vars.scalingFactors);
+    //console.log(that.vars.scalingFactors);
     //console.log(this.vars.chart.series);
   },
 
@@ -8111,8 +8205,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
 
-    console.log(that.vars.translation);
-    console.log(that.vars.recordTranslation);
+    //console.log(that.vars.translation);
+    //console.log(that.vars.recordTranslation);
   },
 
   _moveDown: function (index) {
@@ -9842,6 +9936,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     downloadAnchorNode.remove();
   },
 
+  _downloadPreferencesJSON: function () {
+    var that = this;
+    var obj = that.options.context.preferences.annotatorConfig;
+    
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
+    var downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    let fileName = "";
+    Object.values(that.vars.recordingMetadata).forEach((record) => {
+      let extBegin = record.Record.lastIndexOf(".");
+      if (extBegin > 0) {
+        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+      } else {
+        fileName = fileName + record.Record + "_";
+      }
+    });
+    fileName = fileName + "preferences.json";
+    downloadAnchorNode.setAttribute("download", fileName);
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  },
+
   _assembleAnnotationObject: function () {
     var that = this;
     var allAnnotations = that._getAnnotationsOnly(that.vars.currentWindowRecording);
@@ -9933,6 +10050,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     else return [];
   },
 
+  _parsePreferencesJsonFile(){
+    var that = this;
+    const jsonFile = document.getElementById("PreferencesFile");
+    console.log(jsonFile.files);
+    // since we only allow 1 file in the input, we can just take the first index
+    var input = jsonFile.files[0];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const data = JSON.parse(text);
+      console.log(data);
+      // save the data in a variable we always have access to
+      that.options.context.preferences.uploadedPreferences = data;
+      console.log(that.options.context.preferences.uploadedPreferences);
+    }
+    // need this or the onload wont work
+    reader.readAsText(input);
+    
+  },
 
   _parseFile: function () {
     var that = this;
