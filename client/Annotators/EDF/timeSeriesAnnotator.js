@@ -2915,7 +2915,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // Constant offset to make ruler more visible.
     rulerX = rulerX - 14;
     let rulerWidth = 7;
+    let tickLength = 7;
+    let tickWidth = 2;
     let textX = rulerX - 52;
+    let precision = 6;
     let firstY = rulerPoints[0][1];
     let value = undefined;
 
@@ -2937,9 +2940,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       // Horizontal tick.
       chart.renderer.path(["M", rulerX - (rulerWidth / 2), rulerPoints[i][1] + yOffset, "L",
-        rulerX + 7, rulerPoints[i][1] + yOffset])
+        rulerX + tickLength, rulerPoints[i][1] + yOffset])
       .attr({
-        "stroke-width": 2,
+        "stroke-width": tickWidth,
         stroke: i % 2 ? "green" : "red"
       })
       .add(that.vars.ruler.rulerGroup)
@@ -2947,7 +2950,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       // Ruler text
       value = ((axis.toValue(rulerPoints[i][1]) - axis.toValue(firstY)) * scale / flipFactor);
-      chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6), 
+      chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision), 
         textX, rulerPoints[i][1] + yOffset)
       .attr(textAttr)
       .add(that.vars.ruler.rulerGroup);
@@ -2956,16 +2959,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let lastY = rulerPoints[rulerPoints.length - 1][1];
 
     chart.renderer.path(["M", rulerX - (rulerWidth / 2), lastY + yOffset, "L",
-      rulerX + 7, lastY + yOffset])
+      rulerX + tickLength, lastY + yOffset])
     .attr({
-      "stroke-width": 2,
+      "stroke-width": tickWidth,
       stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
     })
     .add(that.vars.ruler.rulerGroup)
     .toFront();
 
     value = ((axis.toValue(lastY) - axis.toValue(firstY)) * scale / flipFactor);
-    chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6),
+    chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision),
       textX, lastY + yOffset)
       .attr(textAttr)
       .add(that.vars.ruler.rulerGroup);
@@ -2985,16 +2988,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           .toFront();
 
           chart.renderer.path(["M", rulerX - (rulerWidth / 2), mouseEvent.chartY + yOffset, "L",
-            rulerX + 7, mouseEvent.chartY + yOffset])
+            rulerX + tickLength, mouseEvent.chartY + yOffset])
           .attr({
-            "stroke-width": 2,
+            "stroke-width": tickWidth,
             stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
           })
           .add(that.vars.ruler.rulerGroup)
           .toFront();
 
           value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor);
-          chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6),
+          chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision),
             textX, mouseEvent.chartY + yOffset)
           .attr(textAttr)
           .add(that.vars.ruler.rulerGroup);
@@ -3011,16 +3014,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           .toFront();
 
           chart.renderer.path(["M", rulerX - (rulerWidth / 2), mouseEvent.chartY, "L",
-            rulerX + 7, mouseEvent.chartY])
+            rulerX + tickLength, mouseEvent.chartY])
           .attr({
-            "stroke-width": 2,
+            "stroke-width": tickWidth,
             stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
           })
           .add(that.vars.ruler.rulerGroup)
           .toFront();
 
           value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor);
-          chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6),
+          chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision),
             textX, mouseEvent.chartY)
           .attr(textAttr)
           .add(that.vars.ruler.rulerGroup);
