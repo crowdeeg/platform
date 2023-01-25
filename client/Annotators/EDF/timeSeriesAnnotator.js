@@ -785,7 +785,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                             </div>\
                         </div> \
                         <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
-                            <b> Annotations: </b>&nbsp\
+                            <b> Annotations/Alignment: </b>&nbsp\
                             <button type="button" id="annotation_save" class="btn btn-default fa fa-save" ></button>&nbsp\
                             <button type="button" id="annotation_download" class="btn btn-default fa fa-download" ></button>&nbsp\
                             <button type="button" id="annotation_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
@@ -850,7 +850,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             </div> \
             <div style="display: flex; margin-bottom: 20px; margin-left: 30px; margin-right: 20px; flex-flow: row" class="preferences_panel"> \
                 <b> Preferences: </b>&nbsp\
-                <button type="button" id="preferences_save" class="btn btn-default fa fa-save" ></button>&nbsp\
+                <button type="button" id="preferences_save" class="btn btn-default fa fa-save"></button>&nbsp\
                 <button type="button" id="preferences_download" class="btn btn-default fa fa-download" ></button>&nbsp\
                 <button type="button" id="preferences_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
                 <input type="file" accept=".json" id="PreferencesFile">\
@@ -2710,18 +2710,34 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     element
       .find("#preferences_upload")
       .click(function () {
-        that._parsePreferencesJsonFile();
+        try{
+          that._parsePreferencesJsonFile();
+          window.alert("Upload Successful. Please click the save button to view the changes.");
+        } catch(error){
+          window.alert("An error occured: " + error + ". Please try uploading a different file");
+        }
+        
       });
 
+    
     element
       .find("#preferences_save")
       .click(function () {
-        console.log(that.options.context.preferences.uploadedPreferences);
-        that._savePreferences(that.options.context.preferences.uploadedPreferences);
-        //console.log(that.options.context.preferences.annotatorConfig);
-        //reload the screen so we can actually view the preferences
-        location.reload();
+        console.log(Object.keys(that.options.context.preferences.uploadedPreferences.scalingFactors).length);
+        console.log(Object.keys(that.vars.originalScalingFactors).length);
+        //if the scaling factors length of the uploaded file does not match the scaling 
+        //factors of the chart, they they are not compatible
+        if(that.options.context.preferences.uploadedPreferences.scalingFactors != null){
+          if(Object.keys(that.options.context.preferences.uploadedPreferences.scalingFactors).length != Object.keys(that.vars.originalScalingFactors).length){
+            window.alert("The preferences file you uploaded is not compatible with the chart (number of channels do not match). Please choose another file.");
+          } else {
+            that._savePreferences(that.options.context.preferences.uploadedPreferences);
+            //reload the screen so we can view the changes
+            location.reload();
+          }
+        }
       });
+      
   },
 
   _isInCrosshairWindow: function (crosshair) {
