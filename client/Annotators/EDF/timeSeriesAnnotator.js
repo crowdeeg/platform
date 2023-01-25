@@ -1526,7 +1526,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     //console.log("_setup.that:", that);
     that._adaptContent();
-    that._setupAnnotationManager();
+    that._updateAnnotationManager();
     that._setupTimer();
     that._setupFeaturePanel();
     that._setupNavigationPanel();
@@ -2927,6 +2927,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.previousAnnotationLabelBox = feature;
         }
         that._saveFeatureAnnotation(annotation);
+        that._setupAnnotationManager();
       }
 
       // var featureClassButton = $(that.element)
@@ -6417,6 +6418,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
           element.mouseout(event => {
             that._saveFeatureAnnotation(annotation);
+            that._setupAnnotationManager();
             element.off('mouseout');
             element.off('mouseup');
           });
@@ -6858,6 +6860,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.previousAnnotationLabelBox = annotationLabel;
         }
         that._saveFeatureAnnotation(annotation);
+        that._setupAnnotationManager();
         that.vars.chart.tooltip.label.show();
         //console.log('CCCCCCCCCCCCCCCCCCCCCC');
       }
@@ -10366,22 +10369,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return false;
   },
 
-  _setupAnnotationManager:function(){
+  // Annotation Manager is always running in the backgroud in case you click view/delete so
+  // we make a new function to improve the speed after making annotations
+  _updateAnnotationManager:function(){
     that = this;
-    annotations = that._getAnnotationsOnly();
-    console.log("setting up annotation manager");
+    let annotations = that._getAnnotationsOnly();
+    console.log("updating annotation manager");
     let container = that.element.find(".annotation_manager_container");
     container.empty();
     let selectContainer = $(
       '<div class="annotation_managerselect_panel"><select></select></div>'
     ).appendTo(that.element.find(".annotation_manager_container"));
     let select = selectContainer.find("select");
-    annotations.forEach((annotation,i)=>{
-      let s = "id: " + annotation.id + ", annotationLabel " + annotation.metadata.annotationLabel + ", start: " + annotation.position.start + ", end: " + annotation.position.end
-      select.append(`<option value=${annotation.id}` +
-      ">" +
-      s+
-      "</option>");
+    annotations.sort((a,b)=> {return a.position.start - b.position.start}).forEach((annotation,i)=>{
+      if(annotation.metadata.annotationLabel != null){
+        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + annotation.position.start
+        select.append(`<option value=${annotation.id}` +
+        ">" +
+        s+
+        "</option>");
+        }
     })
     select.material_select();
 
@@ -10408,6 +10415,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           tbviewed = annotation;
         }
       })
+      console.log("gggggg");
       var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
 
       that._switchToWindow(
@@ -10417,6 +10425,64 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       )
 
     })
+    return;
+  },
+
+  _setupAnnotationManager:function(){
+    that = this;
+    let annotations = that._getAnnotationsOnly();
+    console.log("setting up annotation manager");
+    let container = that.element.find(".annotation_manager_container");
+    container.empty();
+    let selectContainer = $(
+      '<div class="annotation_managerselect_panel"><select></select></div>'
+    ).appendTo(that.element.find(".annotation_manager_container"));
+    let select = selectContainer.find("select");
+    annotations.sort((a,b)=> {return a.position.start - b.position.start}).forEach((annotation,i)=>{
+      if(annotation.metadata.annotationLabel != null){
+        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + annotation.position.start
+        select.append(`<option value=${annotation.id}` +
+        ">" +
+        s+
+        "</option>");
+        }
+    })
+    select.material_select();
+
+    $(that.element).find(".annotation_manager_delete_btn").click(function(){
+      console.log("annotation manager delete button");
+      let i = select.val();
+      var tbdeleted;
+      annotations.forEach((annotation)=>{
+        if(annotation.id == i){
+          tbdeleted = annotation;
+        }
+      })
+      console.log(tbdeleted);
+      that._nukeAnnotation2(tbdeleted);
+      that._getAnnotations();
+    })
+
+    $(that.element).find(".annotation_manager_view_btn").click(function(){
+      console.log("clicked annotation manager view button");
+      let id = select.val();
+      var tbviewed;
+      annotations.forEach((annotation)=>{
+        if(annotation.id == id){
+          tbviewed = annotation;
+        }
+      })
+      console.log("here1");
+      var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
+
+      that._switchToWindow(
+        that.options.allRecordings,
+        parseFloat(tbviewed.position.start),
+        nextWindowSizeInSeconds
+      )
+
+    })
+    return;
 
 
   },
