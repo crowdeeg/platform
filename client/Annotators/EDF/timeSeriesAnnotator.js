@@ -278,6 +278,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     showBackwardButton: true,
     showForwardButton: true,
     showFastForwardButton: true,
+    showRulerButton: true,
     showShortcuts: false,
     showLogoutButton: false,
     showAnnotationTime: false,
@@ -513,6 +514,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       crosshairMode: false,
       crosshairPosition: [],
       crosshair: undefined,
+      rulerMode: 0,
+      rulerPoints: [],
+      ruler: {},
       recordingMetadata: {},
       recordingLengthInSeconds: 0,
       numberOfAnnotationsInCurrentWindow: 0,
@@ -668,6 +672,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       ' \
             <div class="graph_container"> \
                 <div class="graph"></div> \
+                <div class="alert alert-info" id="graph-alert" style="display: none"></div>\
                 <div class = "annotation_manager_big_div">\
                 <div style = "margin-bottom:10px" class = "annotation_manager_container">\
               </div>\
@@ -798,6 +803,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                                 </button> \
                                 <button type="button" class="btn btn-default backToLastActiveWindow" aria-label="Back to Last Active Window"> \
                                     <span class="fa fa-repeat" aria-hidden="true"></span> \
+                                </button> \
+                                <button type="button" class="btn btn-default ruler" aria-label="Ruler"> \
+                                  Ruler\
                                 </button> \
                                 <button type="button" class="btn btn-default fastBackward" aria-label="Fast Backward"> \
                                     <span class="fa fa-fast-backward" aria-hidden="true"></span> \
@@ -2413,6 +2421,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that._shiftChart(-that.options.windowJumpSizeFastForwardBackward);
         });
     }
+    if (that.options.showRulerButton) {
+      $(that.element)
+        .find(".ruler")
+        .click(function () {
+          if (that.vars.rulerMode) {
+            that._destroyRuler();
+            that._setRulerMode(0);
+          } else {
+            that._setRulerMode(1);
+          }
+        });
+    }
     $(that.element)
       .find(".gainUp")
       .click(function () {
@@ -2795,6 +2815,226 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         })
         .add(that.vars.crosshair);
     });
+  },
+
+  _setRulerPoint(mouseEvent) {
+    if (that.vars.rulerMode === 1) {
+      if (!that.vars.rulerPoints.length) {
+        if (mouseEvent.point) {
+          that.vars.ruler.channelIndex = mouseEvent.point.series.index;
+        } else {
+          return;
+        }
+      }
+
+      if (that.vars.rulerPoints.length > 1) {
+        let firstY = that.vars.rulerPoints[0][1];
+        let lastY = that.vars.rulerPoints[that.vars.rulerPoints.length - 1][1];
+
+        if (firstY < lastY) {
+          if (lastY < mouseEvent.chartY) {
+            that.vars.rulerPoints.push([mouseEvent.chartX, mouseEvent.chartY]);
+          }
+        } else {
+          if (lastY > mouseEvent.chartY) {
+            that.vars.rulerPoints.push([mouseEvent.chartX, mouseEvent.chartY]);
+          }
+        }
+      } else {
+        if (!that.vars.rulerPoints.length) {
+          that._renderGraphAlert("Click to extend ruler. Escape to reset.");
+        } else if (that.vars.rulerPoints.length === 1) {
+          that._renderGraphAlert("Click to extend ruler. Middle mouse to move ruler. Escape to reset.");
+        }
+        that.vars.rulerPoints.push([mouseEvent.chartX, mouseEvent.chartY]);
+      }
+    }
+  },
+
+  _setRulerMode(rulerMode) {
+    var that = this;
+    that.vars.rulerMode = rulerMode;
+    switch(rulerMode) {
+      case 0:
+        that._renderGraphAlert(null);
+        that.vars.rulerPoints = [];
+        that._destroyRuler();
+        break;
+      case 1:
+        that._renderGraphAlert("Click on a point to draw a ruler. Escape to exit ruler mode.");
+        break;
+      case 2:
+        that._renderGraphAlert("Middle mouse button to place ruler. Escape to reset.");
+        break;
+      case 3:
+        that._renderGraphAlert("Middle mouse button to move ruler. Escape to reset.");
+        break;
+      default:
+        break;
+    }
+  },
+
+  /* Draw the ruler based on that.vars.rulerPoints. If mouseEvent is defined,
+     the ruler is 'extended' vertically to that point's y position. */
+  _displayRuler(mouseEvent) {
+    var that = this;
+    that._destroyRuler();
+    let rulerPoints = that.vars.rulerPoints;
+
+    if (!rulerPoints.length) return;
+    if (!that.vars.rulerMode) return;
+
+    if (!mouseEvent.chartX) {
+      that.vars.chart.pointer.normalize(mouseEvent);
+    }
+
+    let chart = that.vars.chart;
+
+    let channelIndex = that.vars.ruler.channelIndex;
+    let flipFactor = that._getFlipFactorForChannel(that.vars.currentWindowData.channels[channelIndex]);
+    let axis = that._getAxis("y");
+    let series = that.vars.chart.series[channelIndex];
+
+    let realData = series.realyData.slice(1, -1);
+    let maxRealData = Math.max(...realData);
+    let minRealData = Math.min(...realData);
+    let data = series.yData.slice(1, -1);
+    let maxData = Math.max(...data);
+    let minData = Math.min(...data);
+    let scale = (maxRealData - minRealData) / (maxData - minData);
+
+    let yOffset = 0;
+    if (that.vars.rulerMode === 2) {
+      xOffset = mouseEvent.chartX - rulerPoints[0][0];
+      yOffset = mouseEvent.chartY - rulerPoints[0][1];
+    }
+
+    mouseEvent = mouseEvent ? chart.pointer.normalize(mouseEvent) : undefined;
+    that.vars.ruler.rulerGroup = chart.renderer.g().add().toFront();
+    let rulerX = mouseEvent && that.vars.rulerMode !== 3 ? mouseEvent.chartX : rulerPoints[0][0];
+    // Constant offset to make ruler more visible.
+    rulerX = rulerX - 14;
+    let rulerWidth = 7;
+    let textX = rulerX - 52;
+    let firstY = rulerPoints[0][1];
+    let value = undefined;
+
+    let textAttr = {
+      stroke: "#000066",
+      fill: "#000066"
+    };
+
+    for (let i = 0; i < rulerPoints.length - 1; i++) {
+      // Vertical line.
+      chart.renderer.path(["M", rulerX, rulerPoints[i][1] + yOffset, "L",
+          rulerX, rulerPoints[i + 1][1] + yOffset])
+        .attr({
+          "stroke-width": rulerWidth,
+          stroke: i % 2 ? "green" : "red"
+        })
+        .add(that.vars.ruler.rulerGroup)
+        .toFront();
+
+      // Horizontal tick.
+      chart.renderer.path(["M", rulerX - (rulerWidth / 2), rulerPoints[i][1] + yOffset, "L",
+        rulerX + 7, rulerPoints[i][1] + yOffset])
+      .attr({
+        "stroke-width": 2,
+        stroke: i % 2 ? "green" : "red"
+      })
+      .add(that.vars.ruler.rulerGroup)
+      .toFront();
+
+      // Ruler text
+      value = ((axis.toValue(rulerPoints[i][1]) - axis.toValue(firstY)) * scale / flipFactor);
+      chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6), 
+        textX, rulerPoints[i][1] + yOffset)
+      .attr(textAttr)
+      .add(that.vars.ruler.rulerGroup);
+    }
+
+    let lastY = rulerPoints[rulerPoints.length - 1][1];
+
+    chart.renderer.path(["M", rulerX - (rulerWidth / 2), lastY + yOffset, "L",
+      rulerX + 7, lastY + yOffset])
+    .attr({
+      "stroke-width": 2,
+      stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
+    })
+    .add(that.vars.ruler.rulerGroup)
+    .toFront();
+
+    value = ((axis.toValue(lastY) - axis.toValue(firstY)) * scale / flipFactor);
+    chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6),
+      textX, lastY + yOffset)
+      .attr(textAttr)
+      .add(that.vars.ruler.rulerGroup);
+
+    // Extend Ruler to mouseY
+    if (that.vars.rulerMode === 1) {
+      if (firstY < lastY) {
+        if (lastY + yOffset < mouseEvent.chartY) {
+          chart.renderer.path(["M", rulerX, lastY + yOffset, "L",
+            rulerX, mouseEvent.chartY + yOffset])
+          .attr({
+            "stroke-width": rulerWidth,
+            "stroke-linecap": "butt",
+            stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
+          })
+          .add(that.vars.ruler.rulerGroup)
+          .toFront();
+
+          chart.renderer.path(["M", rulerX - (rulerWidth / 2), mouseEvent.chartY + yOffset, "L",
+            rulerX + 7, mouseEvent.chartY + yOffset])
+          .attr({
+            "stroke-width": 2,
+            stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
+          })
+          .add(that.vars.ruler.rulerGroup)
+          .toFront();
+
+          value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor);
+          chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6),
+            textX, mouseEvent.chartY + yOffset)
+          .attr(textAttr)
+          .add(that.vars.ruler.rulerGroup);
+        }
+      } else {
+        if (lastY + yOffset > mouseEvent.chartY || rulerPoints.length === 1) {
+          chart.renderer.path(["M", rulerX, lastY + yOffset, "L",
+            rulerX, mouseEvent.chartY])
+          .attr({
+            "stroke-width": rulerWidth,
+            stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
+          })
+          .add(that.vars.ruler.rulerGroup)
+          .toFront();
+
+          chart.renderer.path(["M", rulerX - (rulerWidth / 2), mouseEvent.chartY, "L",
+            rulerX + 7, mouseEvent.chartY])
+          .attr({
+            "stroke-width": 2,
+            stroke: (rulerPoints.length - 1) % 2 ? "green" : "red"
+          })
+          .add(that.vars.ruler.rulerGroup)
+          .toFront();
+
+          value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor);
+          chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(5) : value.toPrecision(6),
+            textX, mouseEvent.chartY)
+          .attr(textAttr)
+          .add(that.vars.ruler.rulerGroup);
+        }
+      }
+    }
+  },
+
+  _destroyRuler() {
+    var that = this;
+    if (that.vars.ruler.rulerGroup) {
+      that.vars.ruler.rulerGroup.destroy();
+      that.vars.ruler.rulerGroup = undefined;
+    }
   },
 
   //checks what the dataId is of the top/bottom channels when aligning 2 channels
@@ -4668,7 +4908,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // gets the recording end in seconds snapped to the nearest second
     var recordingEndInSecondsSnapped = that._getRecordingEndInSecondsSnapped();
 
-
     return channels.map(function (channel, c) {
       // for each channel, we get the channel name (channel)
       // and the channel index (c)
@@ -4892,6 +5131,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               that._setupLabelHighlighting();
               that._setupYAxisLinesAndLabels();
             },
+            click: function(event) {
+              if (that.vars.rulerPoints.length) {
+                that._setRulerPoint(event);
+              }
+            }
           },
           //TODO: change how chart zooms, does not work well with annotations
           // zoomType: "xy",
@@ -4981,6 +5225,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   that.vars.annotationCrosshairCurrPosition = ({ ...crosshairPosition });
                   that._setCrosshair(crosshairPosition);
 
+                  // We also set the point when clicking the chart 
+                  // - note the chart event is only fired if the point event isn't.
+                  that._setRulerPoint(e);
                 },
                 // workaround to trigger click event handler on point under boost mode
                 // https://github.com/highcharts/highcharts/issues/14067
@@ -5157,6 +5404,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       );
     }
     that._setupYAxisLinesAndLabels();
+    graph.on("mousemove", (e) => {
+      if (that.vars.rulerMode) {
+        that._displayRuler(e);
+      }
+    });
+    graph.on("mousedown", (e) => {
+      if (e.button === 1 && that.vars.rulerPoints.length > 1) {
+        if (that.vars.rulerMode === 2) {
+          e.preventDefault();
+          that._setRulerMode(3);
+          that.vars.chart.pointer.normalize(e);
+          let offsetX = e.chartX - that.vars.rulerPoints[0][0];
+          let offsetY = e.chartY - that.vars.rulerPoints[0][1];
+          that.vars.rulerPoints = that.vars.rulerPoints.map((point) => {
+            return [point[0] + offsetX, point[1] + offsetY];
+          });
+        } else if (that.vars.rulerMode) {
+          e.preventDefault();
+          that._setRulerMode(2);
+        }
+      }
+    });
+    $("body").on("keydown", (e) => {
+      if (that.vars.rulerMode) {
+        if (e.key === "Escape") {
+          if (that.vars.rulerMode === 1 && !that.vars.rulerPoints.length) {
+            that._setRulerMode(0);
+          } else {
+            that._setRulerMode(1);
+            that.vars.rulerPoints = [];
+            that._destroyRuler(e);
+          }
+        }
+      }
+    });
     console.log("proper init");
   },
 
@@ -5235,6 +5517,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var m = Math.floor(s / 60);
     s -= m * 60;
     return h + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); //zero padding on minutes and seconds
+  },
+
+  _renderGraphAlert: function (alertText) {
+    let alert = $("#graph-alert");
+    if (!alertText) {
+      alert.hide();
+      return;
+    }
+
+    alert.show();
+    alert.html(alertText);
   },
 
   _renderAlignmentAlert: function () {
