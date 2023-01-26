@@ -1526,7 +1526,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     //console.log("_setup.that:", that);
     that._adaptContent();
-    that._setupAnnotationManager();
+    that._updateAnnotationManagerSelect();
     that._startAnnotationManagerEvents();
     that._setupTimer();
     that._setupFeaturePanel();
@@ -2928,7 +2928,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.previousAnnotationLabelBox = feature;
         }
         that._saveFeatureAnnotation(annotation);
-        that._setupAnnotationManager();
+        that._updateAnnotationManagerSelect();
       }
 
       // var featureClassButton = $(that.element)
@@ -6419,7 +6419,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
           element.mouseout(event => {
             that._saveFeatureAnnotation(annotation);
-            that._setupAnnotationManager();
+            that._updateAnnotationManagerSelect();
             element.off('mouseout');
             element.off('mouseup');
           });
@@ -6861,7 +6861,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.previousAnnotationLabelBox = annotationLabel;
         }
         that._saveFeatureAnnotation(annotation);
-        that._setupAnnotationManager();
+        that._updateAnnotationManagerSelect();
         that.vars.chart.tooltip.label.show();
         //console.log('CCCCCCCCCCCCCCCCCCCCCC');
       }
@@ -9477,7 +9477,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         }
       );
-      that._setupAnnotationManager();
+      that._updateAnnotationManagerSelect();
       // that.vars.annotationIDSet.add(annotationDocument.id);
 
       that._updateMarkAssignmentAsCompletedButtonState();
@@ -9579,7 +9579,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         return;
       }
     });
-    that._setupAnnotationManager();
+    that._updateAnnotationManagerSelect();
   },
 
   _incrementNumberOfAnnotationsInCurrentWindow: function (increment) {
@@ -10142,7 +10142,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     for (let i = 0; i < annotationsId.length; i++) {
       newAnnotations[i].id = annotationsId[i];
     }
-    that._setupAnnotationManager();
+    that._updateAnnotationManagerSelect();
     that._updateMarkAssignmentAsCompletedButtonState();
 
     for (let i = 0; i < newAnnotations.length; i++) {
@@ -10371,6 +10371,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _startAnnotationManagerEvents: function(){
+    // here we separate the jQuery elements so that they are not being duplicated for each function call
+    // Thus this is only called ONCE at the begginning where we set everything up
     that = this;
     $(that.element).find(".annotation_manager_delete_btn").click(function(){
       console.log("annotation manager delete button");
@@ -10380,7 +10382,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       console.log(i);
       var tbdeleted;
-      //deletes all of em
       if(tbdeleted = annotations.find((el) => el.id == i)){
         console.log("heere")
         console.log(tbdeleted);
@@ -10389,18 +10390,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else {
         console.log("couldnt delete");
       }
-      /*
-      annotations.forEach((annotation)=>{
-        console.log(annotation.id);
-        if(annotation.id == i){
-          tbdeleted = annotation;
-        }
-      })
-      console.log("heere")
-      console.log(tbdeleted);
-      that._nukeAnnotation2(tbdeleted);
-      that._getAnnotations();
-      */
     })
 
     $(that.element).find(".annotation_manager_view_btn").click(function(){
@@ -10419,25 +10408,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else{
         console.log("couldnt view");
       }
-      /*
-      annotations.forEach((annotation)=>{
-        if(annotation.id == id){
-          tbviewed = annotation;
-        }
-      })
-      console.log("here1");
-      var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
-
-      that._switchToWindow(
-        that.options.allRecordings,
-        parseFloat(tbviewed.position.start),
-        nextWindowSizeInSeconds
-      )
-      */
     })
   },
 
-  _setupAnnotationManager:function(){
+  _updateAnnotationManagerSelect:function(){
     that = this;
     let annotations = that._getAnnotationsOnly();
     console.log("setting up annotation manager");
@@ -10449,7 +10423,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let select = selectContainer.find("select");
     annotations.sort((a,b)=> {return a.position.start - b.position.start}).forEach((annotation,i)=>{
       if(annotation.metadata.annotationLabel != null){
-        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + annotation.position.start
+        // counldnt call a separate function so I added the time formatting here
+        var sec = annotation.position.start;
+        var h = Math.floor(sec / 3600);
+        sec -= h * 3600;
+        var m = Math.floor(sec / 60);
+        sec -= m * 60;
+        sec = Math.round(sec);
+        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + h + ":" + (m < 10 ? "0" + m : m) + ":" + (sec < 10 ? "0" + sec : sec)
         select.append(`<option value=${annotation.id}` +
         ">" +
         s+
