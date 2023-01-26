@@ -1527,6 +1527,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("_setup.that:", that);
     that._adaptContent();
     that._setupAnnotationManager();
+    that._startAnnotationManagerEvents();
     that._setupTimer();
     that._setupFeaturePanel();
     that._setupNavigationPanel();
@@ -10369,6 +10370,73 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return false;
   },
 
+  _startAnnotationManagerEvents: function(){
+    that = this;
+    $(that.element).find(".annotation_manager_delete_btn").click(function(){
+      console.log("annotation manager delete button");
+      let annotations = that._getAnnotationsOnly();
+      //let i = select.val();
+      let i = $(that.element).find(".annotation_managerselect_panel :selected").val();
+
+      console.log(i);
+      var tbdeleted;
+      //deletes all of em
+      if(tbdeleted = annotations.find((el) => el.id == i)){
+        console.log("heere")
+        console.log(tbdeleted);
+        that._nukeAnnotation2(tbdeleted);
+        that._getAnnotations();
+      } else {
+        console.log("couldnt delete");
+      }
+      /*
+      annotations.forEach((annotation)=>{
+        console.log(annotation.id);
+        if(annotation.id == i){
+          tbdeleted = annotation;
+        }
+      })
+      console.log("heere")
+      console.log(tbdeleted);
+      that._nukeAnnotation2(tbdeleted);
+      that._getAnnotations();
+      */
+    })
+
+    $(that.element).find(".annotation_manager_view_btn").click(function(){
+      console.log("clicked annotation manager view button");
+      let annotations = that._getAnnotationsOnly();
+      let i = $(that.element).find(".annotation_managerselect_panel :selected").val();
+      var tbviewed;
+      if(tbviewed = annotations.find((el) => el.id == i)){
+        var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
+
+        that._switchToWindow(
+          that.options.allRecordings,
+          parseFloat(tbviewed.position.start),
+          nextWindowSizeInSeconds
+        )
+      } else{
+        console.log("couldnt view");
+      }
+      /*
+      annotations.forEach((annotation)=>{
+        if(annotation.id == id){
+          tbviewed = annotation;
+        }
+      })
+      console.log("here1");
+      var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
+
+      that._switchToWindow(
+        that.options.allRecordings,
+        parseFloat(tbviewed.position.start),
+        nextWindowSizeInSeconds
+      )
+      */
+    })
+  },
+
   _setupAnnotationManager:function(){
     that = this;
     let annotations = that._getAnnotationsOnly();
@@ -10390,10 +10458,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     })
     select.material_select();
 
-    $(that.element).find(".annotation_managerselect_panel").click(function(){
-      console.log(select.val());
-    })
-
+    /*
     $(that.element).find(".annotation_manager_delete_btn").click(function(){
       console.log("annotation manager delete button");
       //let i = select.val();
@@ -10404,11 +10469,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //deletes all of em
       if(tbdeleted = annotations.find((el) => el.id == i)){
         console.log("heere")
-      console.log(tbdeleted);
-      that._nukeAnnotation2(tbdeleted);
-      that._getAnnotations();
+        console.log(tbdeleted);
+        that._nukeAnnotation2(tbdeleted);
+        that._getAnnotations();
+      } else {
+        console.log("couldnt delete");
       }
-      /*
+      
       annotations.forEach((annotation)=>{
         console.log(annotation.id);
         if(annotation.id == i){
@@ -10419,7 +10486,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(tbdeleted);
       that._nukeAnnotation2(tbdeleted);
       that._getAnnotations();
-      */
+      
     })
 
     $(that.element).find(".annotation_manager_view_btn").click(function(){
@@ -10444,6 +10511,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       )
 
     })
+    */
     return;
 
 
