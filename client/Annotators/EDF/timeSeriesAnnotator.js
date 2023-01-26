@@ -1526,7 +1526,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     //console.log("_setup.that:", that);
     that._adaptContent();
-    that._updateAnnotationManager();
+    that._setupAnnotationManager();
     that._setupTimer();
     that._setupFeaturePanel();
     that._setupNavigationPanel();
@@ -1843,7 +1843,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     if (!that.vars.printedBox) {
       that.vars.printedBox = true;
-      that.__setupAnnotationChoice();
+      that._setupAnnotationChoice();
     }
     var selection = that.options.boxAnnotationUserSelection || [];
     selection.forEach((boxAnnotation, t) => {
@@ -10369,65 +10369,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return false;
   },
 
-  // Annotation Manager is always running in the backgroud in case you click view/delete so
-  // we make a new function to improve the speed after making annotations
-  _updateAnnotationManager:function(){
-    that = this;
-    let annotations = that._getAnnotationsOnly();
-    console.log("updating annotation manager");
-    let container = that.element.find(".annotation_manager_container");
-    container.empty();
-    let selectContainer = $(
-      '<div class="annotation_managerselect_panel"><select></select></div>'
-    ).appendTo(that.element.find(".annotation_manager_container"));
-    let select = selectContainer.find("select");
-    annotations.sort((a,b)=> {return a.position.start - b.position.start}).forEach((annotation,i)=>{
-      if(annotation.metadata.annotationLabel != null){
-        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + annotation.position.start
-        select.append(`<option value=${annotation.id}` +
-        ">" +
-        s+
-        "</option>");
-        }
-    })
-    select.material_select();
-
-    $(that.element).find(".annotation_manager_delete_btn").click(function(){
-      console.log("annotation manager delete button");
-      let i = select.val();
-      var tbdeleted;
-      annotations.forEach((annotation)=>{
-        if(annotation.id == i){
-          tbdeleted = annotation;
-        }
-      })
-      console.log(tbdeleted);
-      that._nukeAnnotation2(tbdeleted);
-      that._getAnnotations();
-    })
-
-    $(that.element).find(".annotation_manager_view_btn").click(function(){
-      console.log("clicked annotation manager view button");
-      let id = select.val();
-      var tbviewed;
-      annotations.forEach((annotation)=>{
-        if(annotation.id == id){
-          tbviewed = annotation;
-        }
-      })
-      console.log("gggggg");
-      var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
-
-      that._switchToWindow(
-        that.options.allRecordings,
-        parseFloat(tbviewed.position.start),
-        nextWindowSizeInSeconds
-      )
-
-    })
-    return;
-  },
-
   _setupAnnotationManager:function(){
     that = this;
     let annotations = that._getAnnotationsOnly();
@@ -10449,24 +10390,45 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     })
     select.material_select();
 
+    $(that.element).find(".annotation_managerselect_panel").click(function(){
+      console.log(select.val());
+    })
+
     $(that.element).find(".annotation_manager_delete_btn").click(function(){
       console.log("annotation manager delete button");
-      let i = select.val();
+      //let i = select.val();
+      let i = $(that.element).find(".annotation_managerselect_panel :selected").val();
+
+      console.log(i);
       var tbdeleted;
+      //deletes all of em
+      if(tbdeleted = annotations.find((el) => el.id == i)){
+        console.log("heere")
+      console.log(tbdeleted);
+      that._nukeAnnotation2(tbdeleted);
+      that._getAnnotations();
+      }
+      /*
       annotations.forEach((annotation)=>{
+        console.log(annotation.id);
         if(annotation.id == i){
           tbdeleted = annotation;
         }
       })
+      console.log("heere")
       console.log(tbdeleted);
       that._nukeAnnotation2(tbdeleted);
       that._getAnnotations();
+      */
     })
 
     $(that.element).find(".annotation_manager_view_btn").click(function(){
       console.log("clicked annotation manager view button");
       let id = select.val();
       var tbviewed;
+      if(tbviewed = annotations.find((el) => el.id == i)){
+        
+      }
       annotations.forEach((annotation)=>{
         if(annotation.id == id){
           tbviewed = annotation;
