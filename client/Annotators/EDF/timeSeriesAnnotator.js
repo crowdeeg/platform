@@ -2885,7 +2885,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (!rulerPoints.length) return;
     if (!that.vars.rulerMode) return;
 
-    if (!mouseEvent.chartX) {
+    if (mouseEvent && !mouseEvent.chartX) {
       that.vars.chart.pointer.normalize(mouseEvent);
     }
 
@@ -2903,9 +2903,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let maxData = Math.max(...data);
     let minData = Math.min(...data);
     let scale = (maxRealData - minRealData) / (maxData - minData);
+    let polarity = 1;
+    if (that.vars.polarity.hasOwnProperty(channelIndex)) {
+      polarity = that.vars.polarity[channelIndex];
+    }
 
     let yOffset = 0;
-    if (that.vars.rulerMode === 2) {
+    if (mouseEvent && that.vars.rulerMode === 2) {
       xOffset = mouseEvent.chartX - rulerPoints[0][0];
       yOffset = mouseEvent.chartY - rulerPoints[0][1];
     }
@@ -2950,7 +2954,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .toFront();
 
       // Ruler text
-      value = ((axis.toValue(rulerPoints[i][1]) - axis.toValue(firstY)) * scale / flipFactor);
+      value = ((axis.toValue(rulerPoints[i][1]) - axis.toValue(firstY)) * scale / flipFactor * polarity);
       chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision), 
         textX, rulerPoints[i][1] + yOffset)
       .attr(textAttr)
@@ -2968,14 +2972,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     .add(that.vars.ruler.rulerGroup)
     .toFront();
 
-    value = ((axis.toValue(lastY) - axis.toValue(firstY)) * scale / flipFactor);
+    value = ((axis.toValue(lastY) - axis.toValue(firstY)) * scale / flipFactor * polarity);
     chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision),
       textX, lastY + yOffset)
       .attr(textAttr)
       .add(that.vars.ruler.rulerGroup);
 
     // Extend Ruler to mouseY
-    if (that.vars.rulerMode === 1) {
+    if (mouseEvent && that.vars.rulerMode === 1) {
       if (firstY < lastY) {
         if (lastY + yOffset < mouseEvent.chartY) {
           chart.renderer.path(["M", rulerX, lastY + yOffset, "L",
@@ -2997,7 +3001,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           .add(that.vars.ruler.rulerGroup)
           .toFront();
 
-          value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor);
+          value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor * polarity);
           chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision),
             textX, mouseEvent.chartY + yOffset)
           .attr(textAttr)
@@ -3023,7 +3027,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           .add(that.vars.ruler.rulerGroup)
           .toFront();
 
-          value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor);
+          value = ((axis.toValue(mouseEvent.chartY) - axis.toValue(firstY)) * scale / flipFactor * polarity);
           chart.renderer.text(Math.abs(value) < 1 ? value.toFixed(precision - 1) : value.toPrecision(precision),
             textX, mouseEvent.chartY)
           .attr(textAttr)
@@ -5135,6 +5139,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             redraw: function (event) {
               that._setupLabelHighlighting();
               that._setupYAxisLinesAndLabels();
+              if (that.vars.rulerMode) {
+                that._displayRuler(null);
+              }
             },
             click: function(event) {
               if (that.vars.rulerPoints.length) {
@@ -8498,15 +8505,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     console.log(`movement = ${movement}`);
     // console.log(that.vars.chart.series[index].yData);
-    that.vars.chart.series[index].yData.forEach((point, idx) => {
+    let newData = that.vars.chart.series[index].yData.map((point, idx) => {
       if (point !== zeroPosition) {
-        that.vars.chart.series[index].yData[idx] =
-          // some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
-          // to get an accurate percentage scaling
+        // some math that checks if the point is above or below the zero position and then scaling that value, then readding it to zeroposition
+        // to get an accurate percentage scaling
 
-          zeroPosition + movement + (point - zeroPosition - movement) * -1;
+        return [that.vars.chart.series[index].xData[idx], zeroPosition + movement + (point - zeroPosition - movement) * -1];
+      } else {
+        return [that.vars.chart.series[index].xData[idx], point];
       }
     });
+
+    that.vars.chart.series[index].setData(newData, false, false, false);
 
     if (that.vars.recordPolarity) {
       if (that.vars.polarity.hasOwnProperty(index)) {
