@@ -3667,7 +3667,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
         // console.log(errorData);
-        console.log(that.options.graphPopulated)
         if (
           windowAvailable &&
           windowStartTime == that.vars.currentWindowStart && that.options.graphPopulated
@@ -4508,11 +4507,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var original_series = [];
 
-    that.options.graphPopulated = true;
-
-    // if the chart object does not yet exist, because the user is loading the page for the first time
-    // or refreshing the page, then it's necessary to initialize the plot area
-    if (!that.vars.chart) {
+    if(!that.options.graphPopulated && !that.vars.chart){
+      // if the chart object does not yet exist, because the user is loading the page for the first time
+      // or refreshing the page, then it's necessary to initialize the plot area
       // if this is the first pageload, then we'll need to load the entire
       console.time("_initGraph");
       that._initGraph(that.vars.currentWindowData);
@@ -4526,31 +4523,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.y_limit_lower[i] = -200;
         that.options.y_limit_upper[i] = 200;
       }
+
+      console.log(that.vars.scalingFactors);
+      console.log("here we scale all channels to screen");
+      that._scaleAllToScreenWithNoSaveForInit();
       //mask all the channels based on preferences
       that.options.maskedChannels.forEach((i) => {
         that._maskChannelWithIndex(i);
       });
       
-    
-      console.log(that.vars.scalingFactors);
-      console.log("here we scale all channels to screen");
-      that._scaleAllToScreen();
       for(let i = 0;i<that.vars.chart.series.length;i++){
         original_series[i] = that.vars.chart.series[i].yData;
-  
+
       }
       that.vars.chart.original_series = original_series;
 
-      //limit each channel that needs to be
-      if(that.options.context.preferences.annotatorConfig.limitedYAxis != null){
-        that.options.context.preferences.annotatorConfig.limitedYAxis.forEach((item)=> {
-          that._limitYAxisByIndex(item.index, item.lowerlimit, item.upperlimit, that.vars.chart.original_series);
-        });
-      }
       //once we set up the original data, update some values based on our preferences for this file
       // add scaling factors (amplitude stuff)
       if(that.options.context.preferences.annotatorConfig.scalingFactors != null){
-        console.log("LLLLLLLLLLLLLLLLLLLLLLLLLLLLl")
+        //console.log("LLLLLLLLLLLLLLLLLLLLLLLLLLLLl")
         console.log(that.options.context.preferences.annotatorConfig.scalingFactors);
         that.vars.scalingFactors = that.options.context.preferences.annotatorConfig.scalingFactors;
       }
@@ -4559,14 +4550,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that.options.context.preferences.annotatorConfig.translations != null){
         that.vars.translation = that.options.context.preferences.annotatorConfig.translations;
       }
+
+      //limit each channel that needs to be
+      if(that.options.context.preferences.annotatorConfig.limitedYAxis != null){
+        that.options.context.preferences.annotatorConfig.limitedYAxis.forEach((item)=> {
+          that._limitYAxisByIndex(item.index, item.lowerlimit, item.upperlimit, that.vars.chart.original_series);
+        });
+      }
+
+      
       //console.log(that.vars.scalingFactors);
       that.vars.chart.redraw();
       //console.log("init scal factors")
       //console.log(this.vars.scalingFactors);
       that._addChangePointLabelFixed();
       // see http://jsfiddle.net/ajxyuax2/1/ 
-    }
 
+    }
+    that.options.graphPopulated = true;
+    
     $(that.element).find(".align_btn").click(function(){
       if(that._isChannelSelected){
         let index = that.vars.selectedChannelIndex;
@@ -4709,6 +4711,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
         // set the scaling factor to the original one and save it
         that.vars.scalingFactors[i] = that.vars.originalScalingFactors[i];
+        console.log(that.vars.originalScalingFactors);
         that._savePreferences({
           scalingFactors: that.vars.scalingFactors,
         })
@@ -4745,6 +4748,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         
       }
     });
+    // need to call this to get the scaling factors right. Putting the code starting at the "extremes"
+    // currently causes the channels to blow up, but calling the function is ok
+    // Note doesnt really slow anything down since there are no more jQuery in _populateGraph
+    that._populateGraph();
+
+    
   },
   
 
@@ -8673,6 +8682,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(that);
   },
 
+  _scaleAllToScreenWithNoSaveForInit: function () {
+    // scales all channels to the screen
+    var that = this;
+
+    that._defaultAmplitude;
+    that.vars.allChannels.forEach((channel, idx) => {
+      that._scaleToScreen(idx);
+      console.log(that.vars.scalingFactors[idx]);
+    });
+    that.vars.originalScalingFactors = that.vars.scalingFactors;
+  },
+
   _scaleAllToScreen: function () {
     // scales all channels to the screen
     var that = this;
@@ -8680,8 +8701,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._defaultAmplitude;
     that.vars.allChannels.forEach((channel, idx) => {
       that._scaleToScreen(idx);
+      console.log(that.vars.scalingFactors[idx]);
     });
     that.vars.originalScalingFactors = that.vars.scalingFactors;
+    console.log(that.vars.originalScalingFactors);
+    that._savePreferences({
+      scalingFactors: that.vars.scalingFactors,
+    });
   },
 
   _scaleToScreen: function (index) {
