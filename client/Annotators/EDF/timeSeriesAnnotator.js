@@ -4530,6 +4530,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(that.vars.scalingFactors);
       console.log("here we scale all channels to screen");
       that._scaleAllToScreenWithNoSaveForInit();
+
+      //console.log(that.options.maskedChannels);
+      //console.log(that.options.context.preferences.annotatorConfig.maskedChannels);
       //mask all the channels based on preferences
       that.options.maskedChannels.forEach((i) => {
         that.vars.chart.series[i].hide();
@@ -4559,6 +4562,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.context.preferences.annotatorConfig.limitedYAxis.forEach((item)=> {
           that._limitYAxisByIndex(item.index, item.lowerlimit, item.upperlimit, that.vars.chart.original_series);
         });
+      }
+
+      //Get which channels are reversed
+      if(that.options.context.preferences.annotatorConfig.polarity != null){
+        that.vars.polarity = that.options.context.preferences.annotatorConfig.polarity;
       }
 
       
@@ -8586,8 +8594,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (that.vars.recordPolarity) {
       if (that.vars.polarity.hasOwnProperty(index)) {
         delete that.vars.polarity[index];
+        that._savePreferences({
+          polarity: that.vars.polarity,
+        });
       } else {
         that.vars.polarity[index] = -1;
+        that._savePreferences({
+          polarity: that.vars.polarity,
+        });
       }
     }
   },
