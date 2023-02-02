@@ -4562,6 +4562,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.context.preferences.annotatorConfig.limitedYAxis.forEach((item)=> {
           that._limitYAxisByIndex(item.index, item.lowerlimit, item.upperlimit, that.vars.chart.original_series);
         });
+        that.options.y_axis_limited_values = that.options.context.preferences.annotatorConfig.limitedYAxis;
       }
 
       //Get which channels are reversed
@@ -4648,14 +4649,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var upperlimit = document.querySelector('#ylimit_upper_input').value;
         that.options.y_limit_upper[i] = upperlimit;
         
+        console.log(that.options.y_axis_limited_values);
         //save the limit values in our preferences
-        if(that.options.y_axis_limited_values.filter(el => el.index == i) < 1){
-          that.options.y_axis_limited_values.push({"index":i, "lowerlimit": lowerlimit, "upperlimit":upperlimit});
-          that._savePreferences({
-            limitedYAxis: that.options.y_axis_limited_values,
-          })
-        }
-
+        var newLimited = that.options.y_axis_limited_values.filter(function(el){
+          return el.index != i;
+        })
+        newLimited.push({"index":i, "lowerlimit": lowerlimit, "upperlimit":upperlimit});
+        that.options.y_axis_limited_values = newLimited;
+        that._savePreferences({
+          limitedYAxis: that.options.y_axis_limited_values,
+        })
+      
 
         for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
 
@@ -4751,7 +4755,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         })
 
         // if the index is limited, remove it from our list of limited vals and save
-        that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(el => el.index != i);
+        that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(function(el){
+          return el.index != i;
+        });
+        console.log(that.options.y_axis_limited_values);
         that._savePreferences({
           limitedYAxis: that.options.y_axis_limited_values,
         })
