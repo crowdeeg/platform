@@ -2063,6 +2063,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         });
         timescaleSetting.options[select.prop("selectedIndex")].default = true;
         that.vars.xAxisScaleInSeconds = +select.val();
+        console.log(that.vars.currentWindowStart);
         that._reloadCurrentWindow();
         //console.log("timescale here");
       });
@@ -5325,10 +5326,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           adaptToUpdatedData: true,
           height: 20,
           margin: 25,
+          stickToMax: true,
           handles: {
             enabled: false,
           },
           xAxis: {
+            min: 0,
+            max: that.vars.recordingLengthInSeconds,
             labels: {
               formatter: that._formatXAxisLabel,
               style: {
@@ -5358,7 +5362,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             step: that.vars.xAxisScaleInSeconds / 6,
             formatter: that._formatXAxisLabel,
           },
-          tickInterval: 1,
+          tickInterval: that.vars.xAxisScaleInSeconds < 3600 ? 1 : that.vars.xAxisScaleInSeconds,
           minorTickInterval: 0.5,
           min: that.vars.currentWindowStart,
           max: that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
