@@ -159,7 +159,6 @@ let deleteFile = (fileName) => {
       console.log(fileName);
       Patients.remove({_id:patient_id});
     }
-
     fileId = fileId.trim();
     console.log(fileId);
 
@@ -174,6 +173,18 @@ let deleteFile = (fileName) => {
   });
 };
 
+let deleteAssignments = (dataId) => {
+  return new Promise((resolve, reject) => {
+    Meteor.call('deleteFromAssignments', dataId, function(res, err){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      resolve();
+    });
+  });
+};
 
 Template.Data.events({
   'click .btn.local': function () {
@@ -1119,6 +1130,8 @@ Template.deleteButton.events({
   
       const file_name = alldata["name"];
       deleteFile(file_name);
+      deleteAssignments(dataId);
+
 
       try{
         Data.remove(dataId);

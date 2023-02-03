@@ -708,6 +708,17 @@ Meteor.methods({
 
     
   },
+  "deleteFromAssignments"(dataId){
+    return new Promise((resolve, reject) => {
+      Assignments.remove({dataFiles: {$eq: dataId}}, (err)=> {
+        if(err){
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  },
   "get.file.exists"(fileId){
     return new Promise((resolve, reject) => {
       EDFFile.then(result =>{
