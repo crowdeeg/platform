@@ -171,6 +171,10 @@
   overflow: visible;
 }
 
+.dropdown-select-check {
+  float: right;
+}
+
 dialog .input-field input {
   opacity: 1;
   cursor: auto;

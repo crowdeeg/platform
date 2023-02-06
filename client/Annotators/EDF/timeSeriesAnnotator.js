@@ -674,18 +674,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               <div class="container">\
                 <div class="row">\
                   <div class="graph-menus col s12">\
-                    <a class="dropdown-button btn" href="#" data-activates="axisdropdown">Axis</a>\
-                    <a class="dropdown-button btn" href="#" data-activates="annotationdropdown">Annotation</a>\
+                    <a class="dropdown-button btn" href="#" data-activates="channel-dropdown">Channel</a>\
+                    <a class="dropdown-button btn" href="#" data-activates="annotation-dropdown">Annotation</a>\
+                    <a class="dropdown-button btn" href="#" data-activates="display-dropdown">Display</a>\
+                    <a class="dropdown-button btn" href="#" data-activates="metadata-dropdown">Metadata</a>\
                   </div>\
                 </div>\
-                <ul id="axisdropdown" class="dropdown-content dropdown-menu">\
+                <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a class="y_mask_btn">Mask Channel</a></li>\
                   <li><a class="y_unmask_btn">Restore Masked Channels</a></li>\
                   <li><a id="limit-y-dialog-open">Limit Y-Axis</a></li>\
                   <li><a class="restore_btn">Restore Y-Axis Limits</a></li>\
-                  <li><a id="alignment_select" class="dropdown-button dropdown-submenu" href="#" data-activates="alignmentsubmenu">Align</a></li>\
+                  <li><a id="alignment_select" class="dropdown-button dropdown-submenu" href="#" data-activates="alignment-submenu">Align</a></li>\
                 </ul>\
-                <ul id="alignmentsubmenu" class="dropdown-content">\
+                <ul id="alignment-submenu" class="dropdown-content">\
                   <li><a class="align-option" href="#!" option=0>Top</a></li>\
                   <li><a class="align-option" href="#!" option=1>Middle</a></li>\
                   <li><a class="align-option" href="#!" option=2>Bottom</a></li>\
@@ -708,11 +710,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </form>\
                   </div>\
                 </div>\
-                <ul id="annotationdropdown" class="dropdown-content dropdown-menu">\
-                  <li><a id="annotation_filter" class="dropdown-button dropdown-submenu" href="#" data-activates="annotationfiltersubmenu">Filter</a></li>\
+                <ul id="annotation-dropdown" class="dropdown-content dropdown-menu">\
+                  <li><a id="annotation-filter" class="dropdown-button dropdown-submenu" href="#" data-activates="annotation-filter-submenu">Filter</a></li>\
+                  <li><a id="annotation-display" class="dropdown-button dropdown-submenu" href="#" data-activates="annotation-display-submenu">User</a></li>\
                 </ul>\
-                <ul id="annotationfiltersubmenu" class="dropdown-content dropdown-select">\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="all">All</a></li>\
+                <ul id="annotation-filter-submenu" class="dropdown-content dropdown-select">\
+                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="all">All<span class="dropdown-select-check"><i class="fa fa-check"></i></span></a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Obstructive Apnea">Obstructive Apnea</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Central Apnea">Central Apnea</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Obstructive Hypoapnea">Obstructive Hypoapnea</a></li>\
@@ -724,6 +727,33 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Mixed Apnea">Mixed Apnea</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Mixed Hypoapnea">Mixed Hypoapnea</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="(unanalyzable)">(unanalyzable)</a></li>\
+                </ul>\
+                <ul id="annotation-display-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
+                  <li><a id="display-notch" class="dropdown-button dropdown-submenu" href="#" data-activates="display-notch-submenu">Filter</a></li>\
+                  <li><a id="display-timescale" class="dropdown-button dropdown-submenu" href="#" data-activates="display-timescale-submenu">Timescale</a></li>\
+                  <li><a id="display-montage" class="dropdown-button dropdown-submenu" href="#" data-activates="display-montage-submenu">Montage</a></li>\
+                </ul>\
+                <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="display-timescale-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="display-montage-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="metadata-dropdown" class="dropdown-content dropdown-menu">\
+                  <li><a class="dropdown-button dropdown-submenu" href="#" data-activates="metadata-annotations-alignment-submenu">Annotations/Alignment</a></li>\
+                  <li><a class="dropdown-button dropdown-submenu" href="#" data-activates="metadata-preferences-submenu">Preferences</a></li>\
+                </ul>\
+                <ul id="metadata-annotations-alignment-submenu" class="dropdown-content">\
+                  <li><a id="annotation_save" href="#!">Save</a></li>\
+                  <li><a id="annotation_download" href="#!">Download</a></li>\
+                  <li><a id="annotation_upload" href="#!">Upload</a></li>\
+                </ul>\
+                <ul id="metadata-preferences-submenu" class="dropdown-content dropdown-select">\
+                  <li><a id="preferences_save" href="#!">Save</a></li>\
+                  <li><a id="preferences_download" href="#!">Download</a></li>\
+                  <li><a id="preferences_upload" href="#!">Upload</a></li>\
                 </ul>\
               </div>\
               <div class="graph"></div> \
@@ -1563,7 +1593,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupPreferencesPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
-    that._setupGraphMenus();
     that
       ._getRecordingMetadata()
       .then(that._setupDownsampledRecording) // downsample the recording if loading for the first time
@@ -1655,9 +1684,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(".dropdown-select").find(".dropdown-select-option").on("click", (e) => {
-      $(e.target).closest(".dropdown-select").find(".badge").remove();
+      $(e.target).closest(".dropdown-select").find(".dropdown-select-check").remove();
 
-      $(e.target).append(`<span class="badge">1</span>`);
+      $(e.target).append(`<span class="dropdown-select-check"><i class="fa fa-check"></i></span>`);
     });
   },
 
@@ -1803,36 +1832,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (!that._getMontages()) {
       return;
     }
-    var selectContainer = $("<div><select></select></div>").appendTo(
-      that.element.find(".montage_panel")
-    );
-    var select = selectContainer.find("select");
+    var dropdown = $("#display-montage-submenu");
     that._getMontages().forEach(function (montage) {
       var selectedString = "";
       if (montage == that.vars.currentMontage) {
-        selectedString = ' selected="selected"';
+        selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
       }
-      select.append(
-        '<option value="' +
-        montage +
-        '"' +
-        selectedString +
-        ">" +
-        montage +
-        "</option>"
+      dropdown.append(
+        `<li><a class="display-montage-option dropdown-select-option" href="#!" option=${montage}>${montage}${selectedString}</a></li>`
       );
     });
-    select.material_select();
-    //console.log("_setupMontageSelector before change");
-    select.change(function () {
-      // console.log("_setupMontageSelector onchange");
-      that.vars.currentMontage = select.val();
+
+    $(".display-montage-option").on("click", (e) => {
+      that.vars.currentMontage = e.target.attributes.option.value;
       that._savePreferences({
         defaultMontage: that.vars.currentMontage,
       });
       that._reinitChart();
     });
-    //console.log("Finish _setupMontageSelector function");
   },
   //start of setting the .
   /*
@@ -1863,52 +1880,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (!filterSettings) {
         return;
       }
-      var selectContainer = $(
-        '<div class="select_panel"><select></select></div>'
-      ).appendTo(that.element.find(".frequency_filter_panel"));
-      var select = selectContainer.find("select");
+      var dropdown = $("#display-notch-submenu");
 
-      filterSettings.forEach(function (filterSetting) {
+      filterSettings.forEach(function (filterSetting, i) {
         var selectedString = "";
         if (filterSetting.default) {
-          selectedString = ' selected="selected"';
+          selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
+          filterSetting.default = true;
+          that.vars.frequencyFilters[f].selectedValue = filterSetting.value;
         }
-        select.append(
-          '<option value="' +
-          filterSetting.value +
-          '"' +
-          selectedString +
-          ">" +
-          frequencyFilter.title +
-          ": " +
-          filterSetting.name +
-          "</option>"
+        dropdown.append(
+          `<li><a class="annotation-display-option dropdown-select-option" href="#!" option=${filterSetting.value} filterIndex=${f} settingIndex=${i}>${frequencyFilter.title}: ${filterSetting.name}${selectedString}</a></li>`
         );
       });
-      select.material_select();
-      select.change(function () {
-        //console.log("freqFilter onchange");
-        filterSettings.forEach(function (filterSetting) {
-          delete filterSetting.default;
-        });
-        filterSettings[select.prop("selectedIndex")].default = true;
-        that._savePreferences({
-          frequencyFilters: frequencyFilters,
-        });
-        that.vars.frequencyFilters[f].selectedValue = select.val();
-        that._reloadCurrentWindow();
-        //console.log("freqFilter here");
+    });
+
+    $(".annotation-display-option").on("click", (e) => {
+      let filterIndex = e.target.attributes.filterIndex.value;
+      let settingIndex = e.target.attributes.settingIndex.value;
+      let frequencyFilter = that.options.frequencyFilters[filterIndex];
+      frequencyFilter.options.forEach(function (filterSetting) {
+        delete filterSetting.default;
       });
-      select.change();
+      frequencyFilter.options[settingIndex].default = true;
+      that._savePreferences({
+        frequencyFilters: that.options.frequencyFilters,
+      });
+      that.vars.frequencyFilters[filterIndex].selectedValue = e.target.attributes.option.value;
+      that._reloadCurrentWindow();
+      //console.log("freqFilter here");
     });
   },
 
   _setupAnnotationDisplayType: function () {
     var that = this;
     //that.vars.printedBox = true;
-    $(".frequency_filter_panel").after(
-      $('<div style="margin-bottom: 20px" class="user_selection_panel"></div>')
-    );
     that.options.boxAnnotationUserSelection[0].options = [];
     var temp = that.options.boxAnnotationUserSelection;
     temp[0].options.push(
@@ -1956,47 +1962,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var selection = that.options.boxAnnotationUserSelection || [];
     selection.forEach((boxAnnotation, t) => {
       var boxAnnotationSettings = boxAnnotation.options;
-      var selectContainer = $(
-        '<div class="select_panel"><select></select></div>'
-      ).appendTo(that.element.find(".user_selection_panel"));
-      var select = selectContainer.find("select");
+      var dropdown = $("#annotation-display-submenu");
 
       boxAnnotationSettings.forEach(function (boxAnnotationSetting) {
-        var selectedString = "";
+        let selectedString = "";
         if (boxAnnotationSetting.default) {
-          selectedString = ' selected="selected"';
+          selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
         }
-        select.append(
-          '<option value="' +
-          boxAnnotationSetting.value +
-          '"' +
-          selectedString +
-          ">" +
-          boxAnnotation.title +
-          ": " +
-          boxAnnotationSetting.name +
-          "</option>"
+        dropdown.append(
+          `<li><a class="annotation-display-option dropdown-select-option" href="#!" option="${boxAnnotationSetting.value}">${boxAnnotation.title}: ${boxAnnotationSetting.name}${selectedString}</a></li>`
         );
-        if (
-          boxAnnotationSetting.value == "my" &&
-          Roles.userIsInRole(Meteor.userId(), "admin")
-        ) {
-          select.append(
-            '<optgroup id="otherUsers" label="Other Users"></optgroup>'
-          );
-        }
       });
+    });
 
-      select.material_select();
-      select.change(function () {
-        that.options.features.showAllBoxAnnotations = select.val();
-        that.vars.annotationsLoaded = false;
-        that.vars.annotationsCache = [];
+    $(".annotation-display-option").on("click", (e) => {
+      that.options.features.showAllBoxAnnotations = e.target.attributes.option.value;
+      that.vars.annotationsLoaded = false;
+      that.vars.annotationsCache = [];
 
-        that._removeAnnotationBox();
+      that._removeAnnotationBox();
 
-      });
-      select.change();
     });
   },
 
@@ -2074,84 +2059,52 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let that = this;
     let timescales = that.options.xAxisTimescales || [];
     console.log(timescales);
-    timescales.forEach((timescaleSetting) => {
-      let selectContainer = $(
-        '<div class="select_panel"><select></select></div>'
-      ).appendTo(that.element.find(".timescale_panel"));
-      let select = selectContainer.find("select");
+    let defaultOptionIndex = null;
+    timescales.forEach((timescaleSetting, index) => {
+      let dropdown = $("#display-timescale-submenu");
       /*
       timescaleSetting.options.push({
         name:"full recording",
         value: that.vars.recordingLengthInSeconds
       });
       */
-      let defaultOptionIndex = null;
-      if(that.options.context.preferences.annotatorConfig.timescaleSetting ==null){
-        timescaleSetting.options.forEach((timescale, t) => {
-          let selectedString = "";
-          //console.log(timescale);
-  
-          if (timescale.value === 60) {
-            selectedString = ' selected="selected"';
-            defaultOptionIndex = t;
-          }
-          
-          select.append(
-            `<option value=${timescale.value}` +
-            selectedString +
-            ">" +
-            timescaleSetting.title +
-            ": " +
-            timescale.name +
-            "</option>"
-          );
-          console.log(select);
-        });
-      } else {
-        timescaleSetting.options.forEach((timescale, t) => {
-          let selectedString = "";
-          
-          if(that.options.context.preferences.annotatorConfig.timescaleSetting != null){
-            if (timescale.value === that.options.context.preferences.annotatorConfig.timescaleSetting.value) {
-              selectedString = ' selected="selected"';
-              defaultOptionIndex = t;
-            }
-          }
-          
-          select.append(
-            `<option value=${timescale.value}` +
-            selectedString +
-            ">" +
-            timescaleSetting.title +
-            ": " +
-            timescale.name +
-            "</option>"
-          );
-          //console.log(select);
-        });
+      let timescaleDefault = 60;
+
+      if (that.options.context.preferences.annotatorConfig.timescaleSetting != null) {
+        timescaleDefault = that.options.context.preferences.annotatorConfig.timescaleSetting.value;
       }
-      
 
-      console.log(that.vars.recordingLengthInSeconds);
-      //console.log(defaultOptionIndex);
+      timescaleSetting.options.forEach((timescale, t) => {
+        let selectedString = "";
+        //console.log(timescale);
 
-      select.material_select();
-      select.change(function () {
-        //console.log("timescale onchange");
-        if (defaultOptionIndex){
-          delete timescaleSetting.options[defaultOptionIndex].default;
+        if (timescale.value === timescaleDefault) {
+          selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
+          defaultOptionIndex = t;
+          timescale.default = true;
+          that.vars.xAxisScaleInSeconds = +timescale.value;
         }
-
-        console.log(timescaleSetting.options[select.prop("selectedIndex")]);
-        that._savePreferences({
-          timescaleSetting: timescaleSetting.options[select.prop("selectedIndex")],
-        });
-        timescaleSetting.options[select.prop("selectedIndex")].default = true;
-        that.vars.xAxisScaleInSeconds = +select.val();
-        that._reloadCurrentWindow();
-        //console.log("timescale here");
+        
+        dropdown.append(
+          `<li><a class="display-timescale-option dropdown-select-option" href="#!" option=${timescale.value} timescaleIndex=${index} settingIndex=${t}>${timescaleSetting.title}: ${timescale.name}${selectedString}</a></li>`
+        );
       });
-      select.change();
+    });
+
+    $(".display-timescale-option").on("click", (e) => {
+      let timescaleIndex = e.target.attributes.timescaleIndex.value;
+      let settingIndex = e.target.attributes.settingIndex.value;
+      let timescaleSetting = that.options.xAxisTimescales[timescaleIndex];
+      if (defaultOptionIndex){
+        delete timescaleSetting.options[defaultOptionIndex].default;
+      }
+
+      that._savePreferences({
+        timescaleSetting: timescaleSetting.options[settingIndex],
+      });
+      timescaleSetting.options[settingIndex].default = true;
+      that.vars.xAxisScaleInSeconds = +e.target.attributes.option.value;
+      that._reloadCurrentWindow();
     });
   },
 
@@ -2334,6 +2287,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("Finish _setupAnnotationChoice");
     that._setupAnnotationDisplayType();
     //console.log("Finish _setupAnnotationDisplayType");
+    that._setupGraphMenus();
 
     //console.log("before ifs");
     if (that.options.experiment.running) {
@@ -3732,6 +3686,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       }
     }
+
     //console.log(that);
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
@@ -4592,6 +4547,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _setupGraphFunctions: function(){
+    console.log("Setup graph func");
     /* plot all of the points to the chart */
     var that = this;
     var original_series = [];
@@ -9543,12 +9499,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
     that._displayAnnotations(annotations);
     
-    $(that.element).find(".annotation-filter-option").click(function(e){
+    $(that.element).find(".annotation-filter-option").off(".filter-option");
+
+    $(that.element).find(".annotation-filter-option").on("click.filter-option", function(e){
       var type = e.target.attributes.option.value;
       var filtered_lst = [];
       if(type == "all"){
         that._displayAnnotations(annotations);
-
       }
       else{
         annotations.forEach((item)=>{
@@ -9559,7 +9516,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         })
         that._displayAnnotations(filtered_lst);
       }
-    })
+    });
   },
 
   _getVisibleAnnotations: function (annotations) {
