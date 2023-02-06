@@ -431,6 +431,7 @@ Meteor.startup(() => {
         },
       });
       task = Tasks.findOne(taskId);
+      return taskId;
       //console.log('Created Task "' + taskName + '" (' + taskId + ')');
     }
 
@@ -507,11 +508,13 @@ Meteor.startup(() => {
     }
 
     if (psgFilePath) {
-      addTask(recordingFileFolder, "PSG", [psgFilePath]);
+      var taskId = addTask(recordingFileFolder, "PSG", [psgFilePath]);
+      Data.update({name: "PSG.edf"}, {$set: {defaultTask: taskId}});
     }
 
     if (anneFilePath) {
-      addTask(recordingFileFolder, "ANNE", [anneFilePath]);
+      var taskId = addTask(recordingFileFolder, "ANNE", [anneFilePath]);
+      Data.update({name: "ANNE.edf"}, {$set: {defaultTask: taskId}});
     }
 
   });

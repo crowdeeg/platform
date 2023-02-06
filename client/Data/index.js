@@ -174,6 +174,9 @@ let deleteFile = (fileName) => {
 };
 
 let deleteAssignments = (dataId) => {
+  let tasks = Assignments.find({}).fetch();
+  console.log(dataId);
+  console.log(tasks);
   return new Promise((resolve, reject) => {
     Meteor.call('deleteFromAssignments', dataId, function(res, err){
       if (err){
@@ -217,9 +220,52 @@ Template.Data.events({
 
       promise.then(result => {
         console.log(result);
-        patientId = Patients.insert({
+        var patientId = Patients.insert({
           id: "Unspecified Patient - " + input,
         });
+        if(taskId = Tasks.findOne({name: "edf annotation from template: " + input})){
+          // Data object creation
+          console.log("here");
+          console.log(taskId);
+          var dataDocument = {
+            name: input,
+            type: "EDF",
+            source: "Other",
+            patient: patientId,
+            path: recordingPath,
+            metadata: { wfdbdesc: result },
+            defaultTask: taskId._id,
+          }
+          var dataId = Data.insert(dataDocument);
+          console.log(dataId);
+          let signalNameSet = getSignalNameSet(result);
+          let signalNameString = [...signalNameSet].join(' ');
+
+          dataDictionary[dataId] = signalNameString;
+        } else {
+          let signalNameSet = getSignalNameSet(result);
+          let signalNameString = [...signalNameSet].join(' ');
+          let taskDocument = assembleTaskObj(signalNameSet, "Other", input);
+          console.log(taskDocument);
+          taskID = Tasks.insert(taskDocument);
+          console.log(taskID);
+
+          taskDictionary[signalNameString] = taskID;
+          // Data object creation
+          var dataDocument = {
+            name: input,
+            type: "EDF",
+            source: "Other",
+            patient: patientId,
+            path: recordingPath,
+            metadata: { wfdbdesc: result },
+            defaultTask: taskID,
+          };
+          var dataId = Data.insert(dataDocument);
+          console.log(dataId);
+          dataDictionary[dataId] = signalNameString;
+        }
+        /*
         // Data object creation
         var dataDocument = {
           name: input,
@@ -239,15 +285,17 @@ Template.Data.events({
         dataDictionary[dataId] = signalNameString;
 
         let temp = taskDictionary[signalNameString];
+        console.log(signalNameString);
 
         if (!temp) {
-          let taskDocument = assembleTaskObj(signalNameSet, "Other", input);
+          let taskDocument = assembleTaskObj(signalNameSet, "Other", input, dataId);
           console.log(taskDocument);
           let taskID = Tasks.insert(taskDocument);
           console.log(taskID);
 
           taskDictionary[signalNameString] = taskID
         }
+        */
         filesSuccessfullyUploaded++;
         // filesSuccessfullyUploadedString += 'inpu + "\n";
         uploadsEnded++;
@@ -390,9 +438,53 @@ Template.Data.events({
   
                   promise.then(result => {
                     console.log(result);
-                    patientId = Patients.insert({
+                    var patientId = Patients.insert({
                       id: "Unspecified Patient - " + fileObj.name,
                     });
+
+                    if(taskId = Tasks.findOne({name: "edf annotation from template: " + fileObj.name})){
+                      // Data object creation
+                      console.log("here");
+                      console.log(taskId);
+                      var dataDocument = {
+                        name: fileObj.name,
+                        type: "EDF",
+                        source: "Other",
+                        patient: patientId,
+                        path: recordingPath,
+                        metadata: { wfdbdesc: result },
+                        defaultTask: taskId._id,
+                      }
+                      var dataId = Data.insert(dataDocument);
+                      console.log(dataId);
+                      let signalNameSet = getSignalNameSet(result);
+                      let signalNameString = [...signalNameSet].join(' ');
+  
+                      dataDictionary[dataId] = signalNameString;
+                    } else {
+                      let signalNameSet = getSignalNameSet(result);
+                      let signalNameString = [...signalNameSet].join(' ');
+                      let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
+                      console.log(taskDocument);
+                      taskID = Tasks.insert(taskDocument);
+                      console.log(taskID);
+  
+                      taskDictionary[signalNameString] = taskID;
+                      // Data object creation
+                      var dataDocument = {
+                        name: fileObj.name,
+                        type: "EDF",
+                        source: "Other",
+                        patient: patientId,
+                        path: recordingPath,
+                        metadata: { wfdbdesc: result },
+                        defaultTask: taskID,
+                      };
+                      var dataId = Data.insert(dataDocument);
+                      console.log(dataId);
+                      dataDictionary[dataId] = signalNameString;
+                    }
+                    /*
                     // Data object creation
                     var dataDocument = {
                       name: fileObj.name,
@@ -412,15 +504,22 @@ Template.Data.events({
                     dataDictionary[dataId] = signalNameString;
   
                     let temp = taskDictionary[signalNameString];
+                    console.log(signalNameString);
+                    console.log(taskDictionary);
   
                     if (!temp) {
-                      let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
-                      console.log(taskDocument);
-                      let taskID = Tasks.insert(taskDocument);
-                      console.log(taskID);
-  
-                      taskDictionary[signalNameString] = taskID
+                      if(taskId = Tasks.findOne({name: "edf annotation from template: " + fileObj.name})){
+                        taskDictionary[signalNameString] = taskId;
+                      } else {
+                        let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name, dataId);
+                        console.log(taskDocument);
+                        taskID = Tasks.insert(taskDocument);
+                        console.log(taskID);
+    
+                        taskDictionary[signalNameString] = taskID;
+                      }
                     }
+                    */
                     filesSuccessfullyUploaded++;
                     filesSuccessfullyUploadedString += fileObj.name + "\n";
                     uploadsEnded++;
@@ -936,8 +1035,8 @@ Template.Data.events({
       // console.log(dataId);
       if (signalNameString) {
         let taskId = taskDictionary[signalNameString];
-        // console.log(taskId);
-        // console.log(taskDictionary);
+        console.log(taskId);
+        console.log(taskDictionary);
         if (taskId) {
           const task = Tasks.findOne(taskId);
           // console.log(task);
@@ -1016,7 +1115,7 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
         render:function(val){
           const data = Data.find({_id: val}).fetch();
           let numAssignmentsCompleted = 0;
-          data.forEach((d) => {
+          data.forEach((d) => {fetch
             numAssignmentsCompleted = d.numAssignmentsCompleted()
           })
           return numAssignmentsCompleted;
@@ -1066,22 +1165,37 @@ Template.selected.events({
     console.log(Template.Data);
     if (isSelected) {
       const data = Data.findOne(dataId);
+      console.log(data);
       selectedData[dataId] = data;
+      let taskId = data.defaultTask;
+      if (taskId) {
+        const task = Tasks.findOne(taskId);
+        // console.log(task);
+        selectedTaskG.set(task);
+      } else if ((Tasks.findOne({name: "edf annotation from template: " + data.name}))){
+        const task = Tasks.findOne({name: "edf annotation from template: " + data.name});
+        data.defaultTask = task;
+        selectedTaskG.set(task);
+        console.log(data);
+      }
 
-      let signalNameString = dataDictionary[dataId];
+      //let signalNameString = dataDictionary[dataId];
+      //console.log(dataDictionary);
       // console.log(signalNameString);
       // console.log(dataDictionary);
       // console.log(dataId);
+      /*
       if (signalNameString) {
         let taskId = taskDictionary[signalNameString];
-        // console.log(taskId);
-        // console.log(taskDictionary);
+        console.log(taskId);
+        console.log(taskDictionary);
         if (taskId) {
           const task = Tasks.findOne(taskId);
           // console.log(task);
           selectedTaskG.set(task);
         }
       }
+      */
       let user = Meteor.user();
 
       console.log(user);
@@ -1110,7 +1224,6 @@ Template.deleteButton.events({
     
     //const target = $(event.target);
     //console.log(target);
-    console.log('looooooooooooooooooooooooooooooooooooool')
     console.log(this);
     console.log(this.id);
     //const dataId = target.data('id');
@@ -1131,6 +1244,7 @@ Template.deleteButton.events({
       const file_name = alldata["name"];
       deleteFile(file_name);
       deleteAssignments(dataId);
+      console.log(taskDictionary);
 
 
       try{
