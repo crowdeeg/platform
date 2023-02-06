@@ -867,6 +867,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <button type="button" id="preferences_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
                 <input type="file" accept=".json" id="PreferencesFile">\
             </div> \
+            <div style="display: flex; justify-content: center; margin-bottom: 20px" class="done_button_container">\
+              <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
+              Done\
+              </button> \
+            </div>\
         ';
     $(that.element).html(content);
   },
@@ -1556,6 +1561,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupSleepStagePanel();
     that._setupTimeSyncPanel();
     that._setupIOPanel();
+    that._setupDoneButton();
     that._setupPreferencesPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
@@ -2693,6 +2699,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // adding [+/-] hh:mm:ss option and [shift left/right] buttons
         }
       });
+  },
+
+  _setupDoneButton: function (){
+    var that = this;
+    var element = $(that.element);
+    console.log(that);
+    element.find("#done_button").click(function (){
+      Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Completed"}});
+      window.location.href='/';
+    });
   },
 
   _setupIOPanel: function () {
