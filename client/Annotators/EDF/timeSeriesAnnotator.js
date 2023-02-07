@@ -674,23 +674,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               <div class="container">\
                 <div class="row">\
                   <div class="graph-menus col s12">\
-                    <a class="dropdown-button btn" href="#" data-activates="channel-dropdown">Channel</a>\
-                    <a class="dropdown-button btn" href="#" data-activates="annotation-dropdown">Annotation</a>\
-                    <a class="dropdown-button btn" href="#" data-activates="display-dropdown">Display</a>\
-                    <a class="dropdown-button btn" href="#" data-activates="metadata-dropdown">Metadata</a>\
+                    <a class="dropdown-button btn" data-activates="channel-dropdown">Channel</a>\
+                    <a class="dropdown-button btn" data-activates="annotation-dropdown">Annotation</a>\
+                    <a class="dropdown-button btn" data-activates="display-dropdown">Display</a>\
+                    <a class="dropdown-button btn" data-activates="metadata-dropdown">Metadata</a>\
                   </div>\
                 </div>\
                 <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
-                  <li><a class="y_mask_btn">Mask Channel</a></li>\
-                  <li><a class="y_unmask_btn">Restore Masked Channels</a></li>\
-                  <li><a id="limit-y-dialog-open">Limit Y-Axis</a></li>\
-                  <li><a class="restore_btn">Restore Y-Axis Limits</a></li>\
-                  <li><a id="alignment_select" class="dropdown-button dropdown-submenu" href="#" data-activates="alignment-submenu">Align</a></li>\
+                  <li><a class="y-mask-btn">Mask Channel</a></li>\
+                  <li><a class="y-unmask-btn">Restore Masked Channels</a></li>\
+                  <li><a class="limit-y-dialog-open">Limit Y-Axis</a></li>\
+                  <li><a class="restore-btn">Restore Y-Axis Limits</a></li>\
+                  <li class="divider"></li>\
+                  <li><a id="alignment-select" class="dropdown-button dropdown-submenu" data-activates="alignment-submenu">Align</a></li>\
+                  <li class="divider"></li>\
+                  <li><a class="scale-to-screen-btn">Scale To Screen</a></li>\
+                  <li><a class="scale-all-to-screen-btn">Scale All to Screen</a></li>\
+                  <li><a class="channel-dialog-open">Channel Menu</a></li>\
                 </ul>\
                 <ul id="alignment-submenu" class="dropdown-content">\
-                  <li><a class="align-option" href="#!" option=0>Top</a></li>\
-                  <li><a class="align-option" href="#!" option=1>Middle</a></li>\
-                  <li><a class="align-option" href="#!" option=2>Bottom</a></li>\
+                  <li><a class="align-option" option=0>Top</a></li>\
+                  <li><a class="align-option" option=1>Middle</a></li>\
+                  <li><a class="align-option" option=2>Bottom</a></li>\
                 </ul>\
                 <div id="limit-y-dialog">\
                   <div class="row">\
@@ -710,30 +715,70 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </form>\
                   </div>\
                 </div>\
+                <div id="channel-dialog">\
+                  <div class="row">\
+                    <form action="#" class="col s12">\
+                      <div class="row">\
+                        <h5>Scale Options:</h5>\
+                      </div>\
+                      <div class="row">\
+                        <button type="button" class="scale-increase-btn btn btn-default row-btn col s2">+</button>\
+                        <button type="button" class="scale-decrease-btn btn btn-default row-btn col s2">-</button>\
+                        <button type="button" class="scale-default-btn btn btn-default row-btn col s4 offset-s1">Default</button>\
+                      </div>\
+                      <div class="row">\
+                        <button type="button" class="scale-to-screen-btn btn btn-default row-btn col s6">Scale To Screen</button>\
+                      </div>\
+                      <div class="row">\
+                        <span class="percent-input col s4">\
+                            <input type="number" id="scale-percent-input" class="validate" min=0 max=1000 value=100></input>\
+                            <span>%</span>\
+                        </span>\
+                        <button type="button" class="scale-percent-btn btn btn-default row-btn col s6">Scale By Percent</button>\
+                      </div>\
+                      <div class="row">\
+                        <button type="button" class="reverse-polarity-btn btn btn-default row-btn col s6">Reverse Polarity</button>\
+                      </div>\
+                      <div class="row">\
+                        <h5>Shift Channel:</h5>\
+                      </div>\
+                      <div class="row">\
+                        <button type="button" class="shift-up-btn btn btn-default row-btn col s2">&uarr;</button>\
+                        <button type="button" class="shift-down-btn btn btn-default row-btn col s2">&darr;</button>\
+                      </div>\
+                      <div class="row">\
+                        <span class="col s2">Align:</span>\
+                        <button id="channel-dialog-align-top" type="button" class="align-option btn btn-default row-btn col s3" option=0>Top</button>\
+                        <button type="button" class="align-option btn btn-default row-btn col s3" option=1>Middle</button>\
+                        <button type="button" class="align-option btn btn-default row-btn col s3" option=2>Bottom</button>\
+                      </div>\
+                    </form>\
+                  </div>\
+                </div>\
                 <ul id="annotation-dropdown" class="dropdown-content dropdown-menu">\
-                  <li><a id="annotation-filter" class="dropdown-button dropdown-submenu" href="#" data-activates="annotation-filter-submenu">Filter</a></li>\
-                  <li><a id="annotation-display" class="dropdown-button dropdown-submenu" href="#" data-activates="annotation-display-submenu">User</a></li>\
+                  <li><a id="annotation-filter" class="dropdown-button dropdown-submenu" data-activates="annotation-filter-submenu">Filter</a></li>\
+                  <li><a id="annotation-display" class="dropdown-button dropdown-submenu" data-activates="annotation-display-submenu">User</a></li>\
                 </ul>\
                 <ul id="annotation-filter-submenu" class="dropdown-content dropdown-select">\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="all">All<span class="dropdown-select-check"><i class="fa fa-check"></i></span></a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Obstructive Apnea">Obstructive Apnea</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Central Apnea">Central Apnea</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Obstructive Hypoapnea">Obstructive Hypoapnea</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Central Hypoapnea">Central Hypoapnea</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Flow Limitation">Flow Limitation</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Cortical Arousal">Cortical Arousal</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Automatic Arousal">Autonomic Arousal</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Desat. Event">Desat. Event</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Mixed Apnea">Mixed Apnea</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="Mixed Hypoapnea">Mixed Hypoapnea</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" href="#!" option="(unanalyzable)">(unanalyzable)</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="all">All<span class="dropdown-select-check"><i class="fa fa-check"></i></span></a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Obstructive Apnea">Obstructive Apnea</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Central Apnea">Central Apnea</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Obstructive Hypoapnea">Obstructive Hypoapnea</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Central Hypoapnea">Central Hypoapnea</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Flow Limitation">Flow Limitation</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Cortical Arousal">Cortical Arousal</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Automatic Arousal">Autonomic Arousal</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Desat. Event">Desat. Event</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Mixed Apnea">Mixed Apnea</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Mixed Hypoapnea">Mixed Hypoapnea</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="(unanalyzable)">(unanalyzable)</a></li>\
                 </ul>\
                 <ul id="annotation-display-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
-                  <li><a id="display-notch" class="dropdown-button dropdown-submenu" href="#" data-activates="display-notch-submenu">Filter</a></li>\
-                  <li><a id="display-timescale" class="dropdown-button dropdown-submenu" href="#" data-activates="display-timescale-submenu">Timescale</a></li>\
-                  <li><a id="display-montage" class="dropdown-button dropdown-submenu" href="#" data-activates="display-montage-submenu">Montage</a></li>\
+                  <li><a id="display-notch" class="dropdown-button dropdown-submenu" data-activates="display-notch-submenu">Filter</a></li>\
+                  <li><a id="display-timescale" class="dropdown-button dropdown-submenu" data-activates="display-timescale-submenu">Timescale</a></li>\
+                  <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
@@ -742,19 +787,53 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="display-montage-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="metadata-dropdown" class="dropdown-content dropdown-menu">\
-                  <li><a class="dropdown-button dropdown-submenu" href="#" data-activates="metadata-annotations-alignment-submenu">Annotations/Alignment</a></li>\
-                  <li><a class="dropdown-button dropdown-submenu" href="#" data-activates="metadata-preferences-submenu">Preferences</a></li>\
+                  <li><a class="dropdown-button dropdown-submenu" data-activates="metadata-annotations-alignment-submenu">Annotations/Alignment</a></li>\
+                  <li><a class="dropdown-button dropdown-submenu" data-activates="metadata-preferences-submenu">Preferences</a></li>\
                 </ul>\
                 <ul id="metadata-annotations-alignment-submenu" class="dropdown-content">\
-                  <li><a id="annotation_save" href="#!">Save</a></li>\
-                  <li><a id="annotation_download" href="#!">Download</a></li>\
-                  <li><a id="annotation_upload" href="#!">Upload</a></li>\
+                  <li><a id="annotation-save">Save</a></li>\
+                  <li><a id="annotation-download">Download</a></li>\
+                  <li><a class="annotation-upload-dialog-open">Upload</a></li>\
                 </ul>\
                 <ul id="metadata-preferences-submenu" class="dropdown-content dropdown-select">\
-                  <li><a id="preferences_save" href="#!">Save</a></li>\
-                  <li><a id="preferences_download" href="#!">Download</a></li>\
-                  <li><a id="preferences_upload" href="#!">Upload</a></li>\
+                  <li><a id="preferences-save">Save</a></li>\
+                  <li><a id="preferences-download">Download</a></li>\
+                  <li><a class="preferences-upload-dialog-open">Upload</a></li>\
                 </ul>\
+                <div id="annotation-upload-dialog">\
+                  <div class="row">\
+                    <form action="#" class="col s12">\
+                      <div class="row">\
+                        <div class="file-field input-field">\
+                          <div class="btn">\
+                            <span>Annotation/Alignment File</span>\
+                            <input id="annotation-upload-file" type="file" accept=".csv, .json" multiple>\
+                          </div>\
+                          <div class="file-path-wrapper">\
+                            <input class="file-path" type="text">\
+                          </div>\
+                        </div>\
+                      </div>\
+                    </form>\
+                  </div>\
+                </div>\
+                <div id="preferences-upload-dialog">\
+                  <div class="row">\
+                    <form action="#" class="col s12">\
+                      <div class="row">\
+                        <div class="file-field input-field">\
+                          <div class="btn">\
+                            <span>Preference File</span>\
+                            <input id="preferences-upload-file" type="file" accept=".csv, .json" multiple>\
+                          </div>\
+                          <div class="file-path-wrapper">\
+                            <input class="file-path" type="text">\
+                          </div>\
+                        </div>\
+                      </div>\
+                    </form>\
+                  </div>\
+                </div>\
               </div>\
               <div class="graph"></div> \
               <div class="alert alert-info" id="graph-alert" style="display: none"></div>\
@@ -802,37 +881,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                           <span aria-hidden="true">Reset</span> \
                           </button> \
                       </div> \
-                      <div style="margin-bottom: 20px" class="montage_panel select_panel"></div> \
                       <div style="margin-bottom: 20px" class="annotation_type_select_panel"></div> \
-                      <div style="margin-bottom: 20px" class="frequency_filter_panel"></div> \
-                      <div style="margin-bottom: 20px" class="timescale_panel"></div> \
                       <div style="margin-bottom: 20px" class="timesync_panel"> \
                           <button type="button" class="btn btn-default timesync" disabled>Sync</button> \
-                      </div> \
-                      <div class="amplitude_adjustment_container"> \
-                          <div class="amplitude_adjustment_panel">\
-                              <p class=channel_name></p> \
-                              <p class=time_sync></p> \
-                              <button id="increase" type="button" class="btn btn-default amplitude_adjustment_button" disabled>+</button> \
-                              <button id="decrease" type="button" class="btn btn-default amplitude_adjustment_button" disabled>-</button> \
-                              <button id="default" type="button" class="btn btn-default amplitude_adjustment_button" disabled>RESET ALL</button> \
-                              <form id="scaleform" class="form-horizontal">\
-                                <input type="text" class="form-control" id="scaleinput" placeholder="CUSTOM SCALE (%)" disabled>\
-                                <input type="submit" style="display: none" />\
-                              </form>\
-                              <button id="scaletoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE TO SCREEN</button> \
-                              <button id="scalealltoscreen" type="button" class="btn btn-default amplitude_adjustment_button" disabled>SCALE  ALL TO SCREEN</button> \
-                              <button id="reversepolarity" type="button" class="btn btn-default amplitude_adjustment_button" disabled>REVERSE POLARITY</button> \
-                              <button id="moveup" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&uarr;</button> \
-                              <button id="movedown" type="button" class="btn btn-default amplitude_adjustment_button" disabled>&darr;</button> \
-                          </div>\
-                      </div> \
-                      <div style="margin-bottom: 20px; margin-left: 20px; margin-right: 20px" class="io_panel"> \
-                          <b> Annotations/Alignment: </b>&nbsp\
-                          <button type="button" id="annotation_save" class="btn btn-default fa fa-save" ></button>&nbsp\
-                          <button type="button" id="annotation_download" class="btn btn-default fa fa-download" ></button>&nbsp\
-                          <button type="button" id="annotation_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
-                          <input type="file" accept=".csv, .json" multiple id="File">\
                       </div> \
                       <div style="margin-bottom: 20px" class="navigation_panel"> \
                               <button type="button" class="btn btn-default bookmarkCurrentPage" disabled aria-label="Bookmark Current Page"> \
@@ -893,13 +944,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       </div> \
                   </div> \
               </div> \
-          </div> \
-          <div style="display: flex; margin-bottom: 20px; margin-left: 30px; margin-right: 20px; flex-flow: row" class="preferences_panel"> \
-              <b> Preferences: </b>&nbsp\
-              <button type="button" id="preferences_save" class="btn btn-default fa fa-save"></button>&nbsp\
-              <button type="button" id="preferences_download" class="btn btn-default fa fa-download" ></button>&nbsp\
-              <button type="button" id="preferences_upload" class="btn btn-default fa fa-upload" ></button>&nbsp\
-              <input type="file" accept=".json" id="PreferencesFile">\
           </div> \
         ';
     $(that.element).html(content);
@@ -1593,6 +1637,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupPreferencesPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
+    that._setupAmplitudeAdjustmentMenu();
     that
       ._getRecordingMetadata()
       .then(that._setupDownsampledRecording) // downsample the recording if loading for the first time
@@ -1671,7 +1716,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       title: "Set Y Limits"
     });
 
-    $("#limit-y-dialog-open").on("click", () => {
+    $(".limit-y-dialog-open").on("click", () => {
       console.log("click");
       $("#limit-y-dialog").dialog("open");
     });
@@ -1839,7 +1884,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
       }
       dropdown.append(
-        `<li><a class="display-montage-option dropdown-select-option" href="#!" option=${montage}>${montage}${selectedString}</a></li>`
+        `<li><a class="display-montage-option dropdown-select-option" option=${montage}>${montage}${selectedString}</a></li>`
       );
     });
 
@@ -1890,7 +1935,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.frequencyFilters[f].selectedValue = filterSetting.value;
         }
         dropdown.append(
-          `<li><a class="annotation-display-option dropdown-select-option" href="#!" option=${filterSetting.value} filterIndex=${f} settingIndex=${i}>${frequencyFilter.title}: ${filterSetting.name}${selectedString}</a></li>`
+          `<li><a class="annotation-display-option dropdown-select-option" option=${filterSetting.value} filterIndex=${f} settingIndex=${i}>${frequencyFilter.title}: ${filterSetting.name}${selectedString}</a></li>`
         );
       });
     });
@@ -1970,7 +2015,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
         }
         dropdown.append(
-          `<li><a class="annotation-display-option dropdown-select-option" href="#!" option="${boxAnnotationSetting.value}">${boxAnnotation.title}: ${boxAnnotationSetting.name}${selectedString}</a></li>`
+          `<li><a class="annotation-display-option dropdown-select-option" option="${boxAnnotationSetting.value}">${boxAnnotation.title}: ${boxAnnotationSetting.name}${selectedString}</a></li>`
         );
       });
     });
@@ -2086,7 +2131,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
         
         dropdown.append(
-          `<li><a class="display-timescale-option dropdown-select-option" href="#!" option=${timescale.value} timescaleIndex=${index} settingIndex=${t}>${timescaleSetting.title}: ${timescale.name}${selectedString}</a></li>`
+          `<li><a class="display-timescale-option dropdown-select-option" option=${timescale.value} timescaleIndex=${index} settingIndex=${t}>${timescaleSetting.title}: ${timescale.name}${selectedString}</a></li>`
         );
       });
     });
@@ -2739,20 +2784,32 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var element = $(that.element);
 
     element
-      .find("#annotation_download")
+      .find("#annotation-download")
       .click(function () {
         that._downloadCSV();
         that._downloadJSON();
       });
 
-    element
-      .find("#annotation_upload")
-      .click(function () {
-        that._parseFile();
-      });
+    $("#annotation-upload-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Ok",
+        click: () => {
+          $("#annotation-upload-dialog").dialog("close");
+
+          that._parseFile();
+        }
+      }],
+      minWidth: $("#annotation-upload-dialog .file-field").width(),
+      title: "Upload Annotation/Alignment"
+    });
+
+    $(".annotation-upload-dialog-open").on("click", () => {
+      $("#annotation-upload-dialog").dialog("open");
+    });
 
     element
-      .find("#annotation_save")
+      .find("#annotation-save")
       .click(function () {
         console.log(that.vars.chart.annotations.allItems);
         that.vars.chart.annotations.allItems.forEach(annotation => that._saveFeatureAnnotation(annotation));
@@ -2766,26 +2823,36 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(element);
 
     element
-      .find("#preferences_download")
+      .find("#preferences-download")
       .click(function () {
         that._downloadPreferencesJSON();
       });
 
-    element
-      .find("#preferences_upload")
-      .click(function () {
-        try{
-          that._parsePreferencesJsonFile();
-          window.alert("Upload Successful. Please click the save button to view the changes.");
-        } catch(error){
-          window.alert("An error occured: " + error + ". Please try uploading a different file");
-        }
-        
-      });
+    $("#preferences-upload-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Ok",
+        click: () => {
+          $("#preferences-upload-dialog").dialog("close");
 
+          try{
+            that._parsePreferencesJsonFile();
+            window.alert("Upload Successful. Please click the save button to view the changes.");
+          } catch(error){
+            window.alert("An error occured: " + error + ". Please try uploading a different file");
+          }
+        }
+      }],
+      minWidth: $("#preferences-upload-dialog .file-field").width(),
+      title: "Upload Preferences"
+    });
+
+    $(".preferences-upload-dialog-open").on("click", () => {
+      $("#preferences-upload-dialog").dialog("open");
+    });
     
     element
-      .find("#preferences_save")
+      .find("#preferences-save")
       .click(function () {
         console.log(Object.keys(that.options.context.preferences.uploadedPreferences.scalingFactors).length);
         console.log(Object.keys(that.vars.originalScalingFactors).length);
@@ -4614,7 +4681,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     that.options.graphPopulated = true;
     
-    $(that.element).find(".align-option").click(function(e){
+    $(".align-option").click(function(e){
+      console.log("Click");
       if(that._isChannelSelected()){
         let index = that.vars.selectedChannelIndex;
         let option = e.target.attributes.option.value;
@@ -4653,12 +4721,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
 
-    $(that.element).find(".y_mask_btn").click(function(){
+    $(that.element).find(".y-mask-btn").click(function(){
       if(that._isChannelSelected()){
         that._maskChannelSelected();
       }
     });
-    $(that.element).find(".y_unmask_btn").click(function(){
+    $(that.element).find(".y-unmask-btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
         that._maskChannelWithIndex(channelIndex, false);
@@ -4667,7 +4735,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._populateGraph();
     });
 
-    $(that.element).find(".restore_btn").click(function () {
+    $(that.element).find(".restore-btn").click(function () {
       if(that._isChannelSelected()){
         let i = that.vars.selectedChannelIndex;
 
@@ -4690,7 +4758,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         console.log(that.vars.originalScalingFactors);
         that._savePreferences({
           scalingFactors: that.vars.scalingFactors,
-        })
+        });
 
 
         // remove any translation if there are any
@@ -8394,121 +8462,120 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         .find('.channel-label[data-index="' + index + '"]')
         .addClass("selected");
     }
-
-    if (that._isChannelSelected() === true) {
-      // checks if a channel is selected
-      // renders the amplitude adjustment menu given the channel index
-      that._renderAmplitudeAdjustmentMenu(that.vars.selectedChannelIndex);
-      const channelName = this.vars.currentWindowData.channels[index].name;
-      //console.log("test");
-    }
   },
 
-  _renderAmplitudeAdjustmentMenu: function (index) {
+  _setupAmplitudeAdjustmentMenu: function () {
     var that = this;
+    // gets the relevant elements from the DOM
 
-    // checks if a channel is selected
-    if (that._isChannelSelected !== undefined) {
-      // gets the relevant elements from the DOM
+    const amplitudeAdjustmentButtons = $(".amplitude_adjustment_button");
+    const increaseButton = $(".scale-increase-btn");
+    const decreaseButton = $(".scale-decrease-btn");
+    const defaultButton = $(".scale-default-btn");
+    const scaleButton = $(".scale-percent-btn");
+    const scaleinput = $("#scale-percent-input");
+    const scaleToScreen = $(".scale-to-screen-btn");
+    const scaleAllToScreen = $(".scale-all-to-screen-btn");
 
-      const amplitudeAdjustmentButtons = $(".amplitude_adjustment_button");
-      const increaseButton = $("#increase");
-      const decreaseButton = $("#decrease");
-      const defaultButton = $("#default");
-      const scaleform = $("#scaleform");
-      const scaleinput = $("#scaleinput");
-      const scaleToScreen = $("#scaletoscreen");
-      const scaleAllToScreen = $("#scalealltoscreen");
+    const reversePolarity = $(".reverse-polarity-btn");
+    const moveUp = $(".shift-up-btn");
+    const moveDown = $(".shift-down-btn");
 
-      const reversePolarity = $("#reversepolarity");
-      const moveUp = $("#moveup");
-      const moveDown = $("#movedown");
+    // gets the selected channel's name
+    // const channelName = that.vars.currentWindowData.channels[index].name;
 
-      // gets the selected channel's name
-      const channelName = that.vars.currentWindowData.channels[index].name;
+    //activate the buttons
+    $(amplitudeAdjustmentButtons).prop("disabled", false);
+    $(amplitudeAdjustmentButtons).addClass(".active");
+    $(scaleinput).prop("disabled", false);
 
-      // render the channel name on screen inside amplitude adjustment container
-      $(".channel_name").text("Channel Selected: " + channelName);
+    // sets the increase button's onclick function
+    $(increaseButton)
+      .off()
+      .on("click", function () {
+        that._increaseAmplitude(that.vars.selectedChannelIndex);
+        console.log("increasing amplitude");
+        that.vars.chart.redraw();
+      });
 
-      //activate the buttons
-      $(amplitudeAdjustmentButtons).prop("disabled", false);
-      $(amplitudeAdjustmentButtons).addClass(".active");
-      $(scaleinput).prop("disabled", false);
+    // sets the decrease button's onclick function
+    $(decreaseButton)
+      .off()
+      .on("click", function () {
+        that._decreaseAmplitude(that.vars.selectedChannelIndex);
+        console.log("decreasing amplitude");
+        that.vars.chart.redraw(); //redraws the chart with the scaled data
+      });
 
-      // sets the increase button's onclick function
-      $(increaseButton)
-        .off()
-        .on("click", function () {
-          that._increaseAmplitude(index);
-          console.log("increasing amplitude");
-          that.vars.chart.redraw();
-        });
+    // sets the default button's onclick function
+    $(defaultButton)
+      .off()
+      .on("click", function () {
+        that._defaultAmplitude(that.vars.selectedChannelIndex);
+        that.vars.chart.redraw(); //redraws the chart with the scaled data
+      });
 
-      // sets the decrease button's onclick function
-      $(decreaseButton)
-        .off()
-        .on("click", function () {
-          that._decreaseAmplitude(index);
-          console.log("decreasing amplitude");
-          that.vars.chart.redraw(); //redraws the chart with the scaled data
-        });
+    // sets the scaleform's onsubmit function
+    $(scaleButton)
+      .on("click", function (event) {
+        event.preventDefault();
+        const scaleValue = $(scaleinput).val() - 100;
+        that._customAmplitude(that.vars.selectedChannelIndex, scaleValue);
+        //gets a custom scale value
+        that.vars.chart.redraw();
+      });
 
-      // sets the default button's onclick function
-      $(defaultButton)
-        .off()
-        .on("click", function () {
-          that._defaultAmplitude(index);
-          console.log("defaulting amplitude");
-          that.vars.chart.redraw(); //redraws the chart with the scaled data
-        });
+    // sets the scale to screen button's onclick function
+    $(scaleToScreen)
+      .off()
+      .on("click", function () {
+        that._scaleToScreen(that.vars.selectedChannelIndex);
+        that.vars.chart.redraw(); //redraws the chart with the scaled data
+      });
 
-      // sets the scaleform's onsubmit function
-      $(scaleform)
-        .off()
-        .on("submit", function (event) {
-          event.preventDefault();
-          const scaleValue = $(scaleinput).val();
-          that._customAmplitude(index, scaleValue);
-          //gets a custom scale value
-          that.vars.chart.redraw();
-        });
+    $(scaleAllToScreen)
+      .off()
+      .on("click", function () {
+        that._scaleAllToScreen();
+        that.vars.chart.redraw(); //redraws the chart with the scaled data
+      });
 
-      // sets the scale to screen button's onclick function
-      $(scaleToScreen)
-        .off()
-        .on("click", function () {
-          that._scaleToScreen(index);
-          that.vars.chart.redraw(); //redraws the chart with the scaled data
-        });
+    $(reversePolarity)
+      .off()
+      .on("click", function () {
+        that._reversePolarity(that.vars.selectedChannelIndex);
+        that.vars.chart.redraw(); //redraws the chart with the reversed polarity
+      });
 
-      $(scaleAllToScreen)
-        .off()
-        .on("click", function () {
-          that._scaleAllToScreen();
-          that.vars.chart.redraw(); //redraws the chart with the scaled data
-        });
+    $(moveUp)
+      .off()
+      .on("click", function () {
+        that._moveUp(that.vars.selectedChannelIndex);
+        that.vars.chart.redraw(); //redraws the chart with the moved channel
+      });
 
-      $(reversePolarity)
-        .off()
-        .on("click", function () {
-          that._reversePolarity(index);
-          that.vars.chart.redraw(); //redraws the chart with the reversed polarity
-        });
+    $(moveDown)
+      .off()
+      .on("click", function () {
+        that._moveDown(that.vars.selectedChannelIndex);
+        that.vars.chart.redraw(); //redraws the chart with the moved channel
+      });
+    
+    $("#channel-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Close",
+        click: () => {
+          $("#channel-dialog").dialog("close");
+        }
+      }],
+      minWidth: 500,
+      title: "Channel Options"
+    });
 
-      $(moveUp)
-        .off()
-        .on("click", function () {
-          that._moveUp(index);
-          that.vars.chart.redraw(); //redraws the chart with the moved channel
-        });
-
-      $(moveDown)
-        .off()
-        .on("click", function () {
-          that._moveDown(index);
-          that.vars.chart.redraw(); //redraws the chart with the moved channel
-        });
-    }
+    $(".channel-dialog-open").on("click", () => {
+      $("#channel-dialog").dialog("open");
+    });
   },
 
   _reversePolarity: function (index) {
@@ -8673,7 +8740,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // scales all channels to the screen
     var that = this;
 
-    that._defaultAmplitude;
     that.vars.allChannels.forEach((channel, idx) => {
       that._scaleToScreen(idx);
       console.log(that.vars.scalingFactors[idx]);
@@ -8685,7 +8751,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // scales all channels to the screen
     var that = this;
 
-    that._defaultAmplitude;
     that.vars.allChannels.forEach((channel, idx) => {
       that._scaleToScreen(idx);
       console.log(that.vars.scalingFactors[idx]);
@@ -8854,27 +8919,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return sum*1.0/j;
   },
 
-  _defaultAmplitude: function () {
+  _defaultAmplitude: function (channelIndex) {
     // resets the amplitude to the default one by clearing all scalingFactors that were set when we scaled previously
     // (if we used any scaling features before we store it in the scalingFactors variable)
     var that = this;
-    if (that._isChannelSelected() === true) {
-      that.vars.scalingFactors = {}; // clears the scalingFactors object
-      that.vars.polarity = {};
-      that.vars.translation = {};
-      that._reloadCurrentWindow(); // reloads the current window
-
-      // OLD CODE:
-      // // checks if a channel is selected
-      // channel = that.vars.allChannels[index];
-
-      // // dont really know what this does, 95% sure will have to change it later
-      // that.vars.valueOptions = 0;
-      // that.vars.channelAmplitudeOnChange = {
-      // 	name: channel.name,
-      // 	dataId: channel.dataId,
-      // };
-    }
+    that.vars.scalingFactors[channelIndex] = that.vars.originalScalingFactors[channelIndex]; // clears the scalingFactors object
+    that._savePreferences({
+      scalingFactors: that.vars.scalingFactors,
+    });
+    that._reloadCurrentWindow(); // reloads the current window
   },
 
   _unselectChannels: function () {
@@ -10458,7 +10511,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _parsePreferencesJsonFile(){
     var that = this;
-    const jsonFile = document.getElementById("PreferencesFile");
+    const jsonFile = document.getElementById("preferences-upload-file");
     console.log(jsonFile.files);
     // since we only allow 1 file in the input, we can just take the first index
     var input = jsonFile.files[0];
@@ -10478,7 +10531,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _parseFile: function () {
     var that = this;
-    const csvFile = document.getElementById("File");
+    const csvFile = document.getElementById("annotation-upload-file");
     console.log(csvFile.files);
 
     var alignmentLoaded = false;
