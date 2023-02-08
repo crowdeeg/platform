@@ -4577,11 +4577,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   // Shifts the yData based on a given distance when computing top, middle or bottom alignment
   _alignYData: function (index, distance) {
     var that = this;
-    for(let j = 0;j<that.vars.chart.series[index].yData.length;j++){
-      if (typeof(that.vars.chart.series[index].yData[j]) == "number"){
-        that.vars.chart.series[index].yData[j] -= distance;
+    let newData = that.vars.chart.series[index].yData.map((value, i) => {
+      if (typeof(value) == "number"){
+        return [that.vars.chart.series[index].xData[i], value - distance];
+      } else {
+        return [that.vars.chart.series[index].xData[i], value];
       }
-    }
+    });
+
+    that.vars.chart.series[index].setData(newData);
   },
 
   //same as the normal limiting but based on index for the purpose of preferences
