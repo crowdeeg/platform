@@ -4641,14 +4641,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that._isChannelSelected()){
         that._maskChannelSelected();
       }
+      that._flushAnnotations();
+      that._getAnnotations(
+        that.vars.currentWindowRecording,
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+      );
     })
     $(that.element).find(".y_unmask_btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
-        that._maskChannelWithIndex(channelIndex, false);
+        that._unmaskChannelWithIndex(channelIndex);
       });
-
       that._populateGraph();
+      that._flushAnnotations();
+      that._getAnnotations(
+        that.vars.currentWindowRecording,
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+      );
     })
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected()){
@@ -7576,7 +7587,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       "white-space": "nowrap"
     });
 
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);;
 
     annotationElement.append(htmlContext);
     const height = 26;
@@ -7637,7 +7648,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     textarea.val(annotation.metadata.annotationLabel);
 
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);;
 
     annotationElement.append(htmlContext);
     const height = 26;
@@ -7742,7 +7753,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         if (width < 0) {
           width = 0.001;
         }
-
         return {
           shape: {
             xValue: annotation.options.xValue,
@@ -7767,7 +7777,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     annotationElement.append(htmlContext);
 
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);;
 
     const height = 10;
     const width = 10;
@@ -7793,7 +7803,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _updateControlPoint: function (annotation) {
     var that = this;
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
 
     const height = 10;
     const width = 10;
@@ -7883,7 +7893,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var label = annotation.metadata.annotationLabel;
     const height = 26;
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
     // console.log(label);
     var element = $(`#${annotation.metadata.id}Right`);
     element.val(label);
@@ -8022,6 +8032,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotation.metadata.annotationLabel != "undefined" &&
       annotation.metadata.annotationLabel != "(unanalyzable)" &&
       annotation.metadata.channelIndices.length != that.vars.allChannels.length) {
+        console.log("ALALALALALAL");
+        console.log(annotation.metadata.channelIndices);
+        console.log(that._getBorderTopForChannelIndex(0));
+        console.log(that.options.graph.channelSpacing * annotation.metadata.channelIndices.length);
+        console.log(that.options.graph.channelSpacing);
       annotation.metadata.channelIndices = that.vars.allChannels.map((element, index) => index);
       annotation.update({
         xValue: annotation.options.xValue,
@@ -8029,7 +8044,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         shape: {
           params: {
             width: annotation.options.shape.params.width,
-            height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
+            height: that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length),
           },
         },
       })
@@ -9472,7 +9487,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotations: [],
     };
     var annotations;
-
     if (Roles.userIsInRole(Meteor.userId(), "admin")) {
       // Devil's bargin quick fix: assume the user only wants his own annotations
 
@@ -9946,7 +9960,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
             var { height, yValue } =
               that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
-
 
             newAnnotation.update({
               xValue: start_time,
@@ -11209,9 +11222,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._maskChannelWithIndex(i);
   },
 
+  _unmaskChannelWithIndex: function(i){
+    let that = this;
+    let maskedIndex = that.options.maskedChannels.findIndex((el) => el == i);
+    that.vars.chart.series[i].show();
+    that.options.maskedChannels.splice(maskedIndex, 1);
+    that._savePreferences({
+      maskedChannels: that.options.maskedChannels,
+    });
+  },
+
   // Toggles the masking of the channel with the given index, refreshing the graph if refreeshGraph is true or undefined.
   _maskChannelWithIndex: function (i, refreshGraph) {
     let that = this;
+    //console.log(refreshGraph);
     
     if (refreshGraph == null) {
       refreshGraph = true;
@@ -11219,16 +11243,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     let maskedIndex = that.options.maskedChannels.findIndex((el) => el == i);
     if(maskedIndex == -1){
+     // console.log("hey");
       that.vars.chart.series[i].hide();
+      console.log(that.vars.chart.series[i]);
       that.options.maskedChannels.push(i);
     } else {
-      that.vars.chart.series[i].show();
-      that.options.maskedChannels.splice(maskedIndex, 1);
+     // console.log("sup");
+      //that.vars.chart.series[i].show();
+      //that.options.maskedChannels.splice(maskedIndex, 1);
     }
 
     if (refreshGraph) {
       that._populateGraph();
     }
+    //console.log(that.options.maskedChannels);
     
     that._savePreferences({
       maskedChannels: that.options.maskedChannels,
