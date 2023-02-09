@@ -761,6 +761,7 @@ Meteor.methods({
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
     let count = 0;
+    let maskedChannels = options.maskedChannels;
 
     // this is the original version of codes which display all channels specified in the options:
     let channelsDisplayed = options.channels_displayed;
@@ -792,6 +793,7 @@ Meteor.methods({
     //   );
     //   channelsDisplayed[recording.source] = channelDisplayed.split(' ').slice(1, -1)
     // })
+    /*
     allRecordings.map((recording) => {
       const channelDisplayed = Data.findOne(
         recording._id
@@ -800,14 +802,15 @@ Meteor.methods({
         "-s"
       );
       channelsDisplayed[recording.source] = channelDisplayed
+      
     })
+    */
     allRecordings = allRecordings.map((recording) => {
       channelsDisplayed[recording.source] = Data.findOne(
         recording._id
       ).metadata.wfdbdesc.Groups[0].Signals.map(
         (signal) => "'" + signal.Description + "'"
       );
-
       recording.channelsDisplayedParsed = parseChannelsDisplayed(
         channelsDisplayed[recording.source],
         recording._id

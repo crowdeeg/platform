@@ -3971,6 +3971,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     optionsPadded.start_time = Math.max(0, optionsPadded.start_time);
 
+    optionsPadded.maskedChannels = that.options.maskedChannels;
+
     const numSecondsPaddedBefore =
       options.start_time - optionsPadded.start_time;
 
@@ -3983,7 +3985,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._isInNoTimelockMode() ||
       optionsPadded.window_length >
       300 + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter;
-
     Meteor.call("get.edf.data", optionsPadded, (error, data) => {
       if (error) {
         //console.log(error.message);
@@ -4645,7 +4646,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $(that.element).find(".y_unmask_btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
-        that._maskChannelWithIndex(channelIndex, false);
+        that._unmaskChannelWithIndex(channelIndex);
       });
 
       that._populateGraph();
@@ -4839,13 +4840,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     
     // checks if the object is empty
     if (!that._objectIsEmpty(that.vars.scalingFactors)) {
-      for (const index in that.vars.scalingFactors) {
-        that._customAmplitude(
-          index,
-          100 * (that.vars.scalingFactors[index] - 1)
-        );
-        // console.log("scaling after page change");
-        // console.log(that.vars.chart.series[index].yData);
+      for (var index in that.vars.scalingFactors) {
+        index = Number(index);
+        if(that.options.maskedChannels.indexOf(index) == -1){
+          that._customAmplitude(
+            index,
+            100 * (that.vars.scalingFactors[index] - 1)
+          );
+          // console.log("scaling after page change");
+          // console.log(that.vars.chart.series[index].yData);
+        }
+        
       }
 
     }
@@ -4853,14 +4858,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(this.vars.chart.series);
 
     if (!that._objectIsEmpty(that.vars.translation)) {
-      for (const index in that.vars.translation) {
-        that._customTranslation(index, that.vars.translation[index]);
+      for (var index in that.vars.translation) {
+        index = Number(index);
+        if(that.options.maskedChannels.indexOf(index) == -1){
+          that._customTranslation(index, that.vars.translation[index]);
+        }
       }
     }
 
     if (!that._objectIsEmpty(that.vars.polarity)) {
-      for (const index in that.vars.polarity) {
-        that._reversePolarity(index);
+      for (var index in that.vars.polarity) {
+        index = Number(index);
+        if(that.options.maskedChannels.indexOf(index) == -1){
+          that._reversePolarity(index);
+        }
       }
     }
 
@@ -4872,7 +4883,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.scalingFactors = that.options.context.preferences.annotatorConfig.scalingFactors;
     }
     //console.log("first after");
-    that.vars.chart.redraw(); // efficiently redraw the entire window in one go
+    //that.vars.chart.redraw(); // efficiently redraw the entire window in one go
     //console.log(that);
 
     // use the chart start/end so that data and annotations can never
@@ -4888,16 +4899,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.options.maskedChannels.forEach((channelIndex) => {
       that.vars.chart.series[channelIndex].hide();
     });
-    that.vars.chart.redraw();
+    //that.vars.chart.redraw();
 
     for (let i = 0;i< that.options.y_axis_limited.length;i++){
-      if (that.options.y_axis_limited[i]) {
+      if (that.options.y_axis_limited[i] && that.options.maskedChannels.indexOf(i) == -1) {
         that._limitYData(i);
       }
-      that.vars.chart.redraw();
       //console.log(i + "redraw after")
       //console.log(that);
     }
+    that.vars.chart.redraw();
     //console.log(that.vars.scalingFactors);
     //console.log(this.vars.chart.series);
   },
@@ -5011,8 +5022,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // for each channel, we get the channel name (channel)
       // and the channel index (c)
 
-      // if it is not masked go as normal, if it is update everything, then empty yData
-      if(series[c].yData.length != 0){
+      // if it is not masked go as normal
+      if(that.options.maskedChannels.indexOf(c) == -1){
         // using them, we get the flipfactor and gain
         
         var flipFactor = that._getFlipFactorForChannel(channel);
@@ -5051,9 +5062,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // stores in the series that we input into the funciton, at index c
         series[c].setData(seriesData, false, false, false);
         series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
-      } else {
+      } //else {
         // using them, we get the flipfactor and gain
-        
+        /*
         var flipFactor = that._getFlipFactorForChannel(channel);
         
         var gain = that._getGainForChannelIndex(c);
@@ -5090,7 +5101,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
         series[c].yData = [];
         //console.log(channel);
-      }
+        */
+      //}
       
     });
   },
@@ -11209,9 +11221,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._maskChannelWithIndex(i);
   },
 
+  _unmaskChannelWithIndex: function(i){
+    let that = this;
+    let maskedIndex = that.options.maskedChannels.findIndex((el) => el == i);
+    that.vars.chart.series[i].show();
+    that.options.maskedChannels.splice(maskedIndex, 1);
+    that._savePreferences({
+      maskedChannels: that.options.maskedChannels,
+    });
+  },
+
   // Toggles the masking of the channel with the given index, refreshing the graph if refreeshGraph is true or undefined.
   _maskChannelWithIndex: function (i, refreshGraph) {
     let that = this;
+    //console.log(refreshGraph);
     
     if (refreshGraph == null) {
       refreshGraph = true;
@@ -11219,16 +11242,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     let maskedIndex = that.options.maskedChannels.findIndex((el) => el == i);
     if(maskedIndex == -1){
+     // console.log("hey");
       that.vars.chart.series[i].hide();
+      console.log(that.vars.chart.series[i]);
       that.options.maskedChannels.push(i);
     } else {
-      that.vars.chart.series[i].show();
-      that.options.maskedChannels.splice(maskedIndex, 1);
+     // console.log("sup");
+      //that.vars.chart.series[i].show();
+      //that.options.maskedChannels.splice(maskedIndex, 1);
     }
 
     if (refreshGraph) {
       that._populateGraph();
     }
+    //console.log(that.options.maskedChannels);
     
     that._savePreferences({
       maskedChannels: that.options.maskedChannels,
