@@ -688,7 +688,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <button type = "button" class = "btn y_mask_btn">MASK CHANNEL</button>\
                 </div>\
                 <div style = "margin-bottom: 10 px" class = "y_mask_btn_container">\
-                  <button type = "button" class = "btn y_unmask_btn">RESTORE MASKED CHANNELS</button>\
+                  <button type = "button" class = "btn y_unmask-btn">RESTORE MASKED CHANNELS</button>\
                 </div>\
                 <div style="margin-bottom: 10px" class= "ylimit_btn_container">\
                   <button type = "button" class = "btn restore_btn">RESTORE Y-AXIS LIMITS</button>\
@@ -4648,7 +4648,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
       );
     });
-    $(that.element).find(".y_unmask_btn").click(function(){
+    $(that.element).find(".y_unmask-btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
@@ -4661,6 +4661,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
       );
     });
+    
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected()){
         //console.log("hehe");
