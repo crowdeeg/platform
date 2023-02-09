@@ -165,6 +165,7 @@
 
 .dropdown-menu {
   overflow: visible;
+  min-width: 80;
 }
 
 .dropdown-select-check {
