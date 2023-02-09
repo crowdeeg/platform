@@ -944,6 +944,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       </div> \
                   </div> \
               </div> \
+              <div style="display: flex; justify-content: center; margin-bottom: 20px" class="done_button_container">\
+                <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
+                Done\
+                </button> \
+              </div>\
           </div> \
         ';
     $(that.element).html(content);
@@ -1634,6 +1639,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupSleepStagePanel();
     that._setupTimeSyncPanel();
     that._setupIOPanel();
+    that._setupDoneButton();
     that._setupPreferencesPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
@@ -1683,12 +1689,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that.options.y_limit_upper[i] = upperlimit;
             
             //save the limit values in our preferences
-            if(that.options.y_axis_limited_values.filter(el => el.index == i) < 1){
-              that.options.y_axis_limited_values.push({"index":i, "lowerlimit": lowerlimit, "upperlimit":upperlimit});
-              that._savePreferences({
-                limitedYAxis: that.options.y_axis_limited_values,
-              })
-            }
+            var newLimited = that.options.y_axis_limited_values.filter(function(el){
+              return el.index != i;
+            });
+            newLimited.push({"index":i, "lowerlimit": lowerlimit, "upperlimit":upperlimit});
+            that.options.y_axis_limited_values = newLimited;
+            that._savePreferences({
+              limitedYAxis: that.options.y_axis_limited_values,
+            });
     
             for (let j = 0; j < that.vars.chart.series[i].yData.length; j++) {
               if ((that.vars.chart.series[i].realyData[j]) >= lowerlimit && (that.vars.chart.series[i].realyData[j]) <= upperlimit) {
@@ -1716,8 +1724,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       title: "Set Y Limits"
     });
 
-    $(".limit-y-dialog-open").on("click", () => {
-      console.log("click");
+    $(".limit-y-dialog-open").off("click.limitdialog").on("click.limitdialog", () => {
       $("#limit-y-dialog").dialog("open");
     });
 
@@ -1728,7 +1735,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       hover: true
     });
 
-    $(".dropdown-select").find(".dropdown-select-option").on("click", (e) => {
+    $(".dropdown-select").find(".dropdown-select-option").off("click.dropdownselect").on("click.dropdownselect", (e) => {
       $(e.target).closest(".dropdown-select").find(".dropdown-select-check").remove();
 
       $(e.target).append(`<span class="dropdown-select-check"><i class="fa fa-check"></i></span>`);
@@ -1888,7 +1895,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       );
     });
 
-    $(".display-montage-option").on("click", (e) => {
+    $(".display-montage-option").off("click.montageoption").on("click.montageoption", (e) => {
       that.vars.currentMontage = e.target.attributes.option.value;
       that._savePreferences({
         defaultMontage: that.vars.currentMontage,
@@ -1940,7 +1947,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
 
-    $(".annotation-display-option").on("click", (e) => {
+    $(".annotation-display-option").off("click.freqfilter").on("click.freqfilter", (e) => {
       let filterIndex = e.target.attributes.filterIndex.value;
       let settingIndex = e.target.attributes.settingIndex.value;
       let frequencyFilter = that.options.frequencyFilters[filterIndex];
@@ -2020,7 +2027,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
 
-    $(".annotation-display-option").on("click", (e) => {
+    $(".annotation-display-option").off("click.annotationoption").on("click.annotationoption", (e) => {
       that.options.features.showAllBoxAnnotations = e.target.attributes.option.value;
       that.vars.annotationsLoaded = false;
       that.vars.annotationsCache = [];
@@ -2136,7 +2143,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
 
-    $(".display-timescale-option").on("click", (e) => {
+    $(".display-timescale-option").off("click.timescaleoption").on("click.timescaleoption", (e) => {
       let timescaleIndex = e.target.attributes.timescaleIndex.value;
       let settingIndex = e.target.attributes.settingIndex.value;
       let timescaleSetting = that.options.xAxisTimescales[timescaleIndex];
@@ -2778,6 +2785,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
   },
 
+  _setupDoneButton: function (){
+    var that = this;
+    var element = $(that.element);
+    console.log(that);
+    element.find("#done_button").click(function (){
+      Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Completed"}});
+      window.location.href='/';
+    });
+  },
+
   _setupIOPanel: function () {
     var that = this;
 
@@ -2804,7 +2821,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       title: "Upload Annotation/Alignment"
     });
 
-    $(".annotation-upload-dialog-open").on("click", () => {
+    $(".annotation-upload-dialog-open").off("click.uploaddialog").on("click.uploaddialog", () => {
       $("#annotation-upload-dialog").dialog("open");
     });
 
@@ -2847,7 +2864,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       title: "Upload Preferences"
     });
 
-    $(".preferences-upload-dialog-open").on("click", () => {
+    $(".preferences-upload-dialog-open").off("click.uploaddialog").on("click.uploaddialog", () => {
       $("#preferences-upload-dialog").dialog("open");
     });
     
@@ -4643,6 +4660,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(that.vars.scalingFactors);
       console.log("here we scale all channels to screen");
       that._scaleAllToScreenWithNoSaveForInit();
+
+      //console.log(that.options.maskedChannels);
+      //console.log(that.options.context.preferences.annotatorConfig.maskedChannels);
       //mask all the channels based on preferences
       that.options.maskedChannels.forEach((i) => {
         that.vars.chart.series[i].hide();
@@ -4672,6 +4692,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.context.preferences.annotatorConfig.limitedYAxis.forEach((item)=> {
           that._limitYAxisByIndex(item.index, item.lowerlimit, item.upperlimit, that.vars.chart.original_series);
         });
+        that.options.y_axis_limited_values = that.options.context.preferences.annotatorConfig.limitedYAxis;
+      }
+
+      //Get which channels are reversed
+      if(that.options.context.preferences.annotatorConfig.polarity != null){
+        that.vars.polarity = that.options.context.preferences.annotatorConfig.polarity;
       }
 
       
@@ -4774,7 +4800,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         });
 
         // if the index is limited, remove it from our list of limited vals and save
-        that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(el => el.index != i);
+        that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(function(el){
+          return el.index != i;
+        });
+        console.log(that.options.y_axis_limited_values);
         that._savePreferences({
           limitedYAxis: that.options.y_axis_limited_values,
         });
@@ -5356,10 +5385,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           adaptToUpdatedData: true,
           height: 20,
           margin: 25,
+          stickToMax: true,
           handles: {
             enabled: false,
           },
           xAxis: {
+            min: 0,
+            max: that.vars.recordingLengthInSeconds,
             labels: {
               formatter: that._formatXAxisLabel,
               style: {
@@ -5389,7 +5421,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             step: that.vars.xAxisScaleInSeconds / 6,
             formatter: that._formatXAxisLabel,
           },
-          tickInterval: 1,
+          tickInterval: that.vars.xAxisScaleInSeconds < 3600 ? 1 : that.vars.xAxisScaleInSeconds,
           minorTickInterval: 0.5,
           min: that.vars.currentWindowStart,
           max: that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
@@ -8477,7 +8509,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const decreaseButton = $(".scale-decrease-btn");
     const defaultButton = $(".scale-default-btn");
     const scaleButton = $(".scale-percent-btn");
-    const scaleinput = $("#scale-percent-input");
     const scaleToScreen = $(".scale-to-screen-btn");
     const scaleAllToScreen = $(".scale-all-to-screen-btn");
 
@@ -8485,18 +8516,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const moveUp = $(".shift-up-btn");
     const moveDown = $(".shift-down-btn");
 
-    // gets the selected channel's name
-    // const channelName = that.vars.currentWindowData.channels[index].name;
-
-    //activate the buttons
-    $(amplitudeAdjustmentButtons).prop("disabled", false);
-    $(amplitudeAdjustmentButtons).addClass(".active");
-    $(scaleinput).prop("disabled", false);
-
     // sets the increase button's onclick function
     $(increaseButton)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._increaseAmplitude(that.vars.selectedChannelIndex);
         console.log("increasing amplitude");
         that.vars.chart.redraw();
@@ -8504,8 +8527,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // sets the decrease button's onclick function
     $(decreaseButton)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._decreaseAmplitude(that.vars.selectedChannelIndex);
         console.log("decreasing amplitude");
         that.vars.chart.redraw(); //redraws the chart with the scaled data
@@ -8513,17 +8536,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // sets the default button's onclick function
     $(defaultButton)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._defaultAmplitude(that.vars.selectedChannelIndex);
         that.vars.chart.redraw(); //redraws the chart with the scaled data
       });
 
     // sets the scaleform's onsubmit function
     $(scaleButton)
-      .on("click", function (event) {
+      .off("click.scale")
+      .on("click.scale", function (event) {
         event.preventDefault();
-        const scaleValue = $(scaleinput).val() - 100;
+        const scaleValue = $("#scale-percent-input").val() - 100;
         that._customAmplitude(that.vars.selectedChannelIndex, scaleValue);
         //gets a custom scale value
         that.vars.chart.redraw();
@@ -8531,36 +8555,36 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     // sets the scale to screen button's onclick function
     $(scaleToScreen)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._scaleToScreen(that.vars.selectedChannelIndex);
         that.vars.chart.redraw(); //redraws the chart with the scaled data
       });
 
     $(scaleAllToScreen)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._scaleAllToScreen();
         that.vars.chart.redraw(); //redraws the chart with the scaled data
       });
 
     $(reversePolarity)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._reversePolarity(that.vars.selectedChannelIndex);
         that.vars.chart.redraw(); //redraws the chart with the reversed polarity
       });
 
     $(moveUp)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._moveUp(that.vars.selectedChannelIndex);
         that.vars.chart.redraw(); //redraws the chart with the moved channel
       });
 
     $(moveDown)
-      .off()
-      .on("click", function () {
+      .off("click.scale")
+      .on("click.scale", function () {
         that._moveDown(that.vars.selectedChannelIndex);
         that.vars.chart.redraw(); //redraws the chart with the moved channel
       });
@@ -8577,7 +8601,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       title: "Channel Options"
     });
 
-    $(".channel-dialog-open").on("click", () => {
+    $(".channel-dialog-open").off("click.channeldialog").on("click.channeldialog", () => {
       $("#channel-dialog").dialog("open");
     });
   },
@@ -8616,8 +8640,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (that.vars.recordPolarity) {
       if (that.vars.polarity.hasOwnProperty(index)) {
         delete that.vars.polarity[index];
+        that._savePreferences({
+          polarity: that.vars.polarity,
+        });
       } else {
         that.vars.polarity[index] = -1;
+        that._savePreferences({
+          polarity: that.vars.polarity,
+        });
       }
     }
   },

@@ -374,6 +374,9 @@ Schemas.Data = new SimpleSchema({
     },
     type: SchemaHelpers.dataType,
     source: SchemaHelpers.dataSource,
+    defaultTask: SchemaHelpers.fromCollection(Tasks, {
+        optional: true,
+    }),
     patient: {
         type: String,
         label: 'Name',
