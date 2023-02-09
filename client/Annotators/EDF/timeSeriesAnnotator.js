@@ -4647,7 +4647,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.currentWindowStart,
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
       );
-    })
+    });
     $(that.element).find(".y_unmask_btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
@@ -4660,7 +4660,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.vars.currentWindowStart,
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
       );
-    })
+    });
     $(that.element).find(".ylimit_btn").click(function () {
       if(that._isChannelSelected()){
         //console.log("hehe");
