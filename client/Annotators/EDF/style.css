@@ -195,10 +195,13 @@ dialog .input-field input {
   text-align: center;
 }
 
-/* Here */
 .y-axis-options-container{
   display:flex;
   width:100%;
+}
+
+#annotation-manager-dialog {
+  padding: 10px 45px;
 }
 
 .annotation_manager_big_div{
@@ -214,7 +217,6 @@ dialog .input-field input {
   flex:1;
 }
 
-/* Here */
 .y-axis-options-container div {
   padding-left:10px;
   padding-right:10px;

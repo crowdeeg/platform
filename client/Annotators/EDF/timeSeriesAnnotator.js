@@ -758,6 +758,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="annotation-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a id="annotation-filter" class="dropdown-button dropdown-submenu" data-activates="annotation-filter-submenu">Filter</a></li>\
                   <li><a id="annotation-display" class="dropdown-button dropdown-submenu" data-activates="annotation-display-submenu">User</a></li>\
+                  <li><a class="annotation-manager-dialog-open">Annotation Manager</a></li>\
                 </ul>\
                 <ul id="annotation-filter-submenu" class="dropdown-content dropdown-select">\
                   <li><a class="annotation-filter-option dropdown-select-option" option="all">All<span class="dropdown-select-check"><i class="fa fa-check"></i></span></a></li>\
@@ -775,6 +776,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 </ul>\
                 <ul id="annotation-display-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
+                <div id="annotation-manager-dialog">\
+                  <div class="row">\
+                    <table class="annotation-manager-table highlight">\
+                      <thead>\
+                        <tr>\
+                          <th class="annotation-manager-table-header-label">Label</th>\
+                          <th class="annotation-manager-table-header-time">Time</th>\
+                          <th class="annotation-manager-table-header-comment">Comment</th>\
+                          <th class="annotation-manager-table-header-select">Select</th>\
+                        </tr>\
+                      </thead>\
+                      <tbody class="annotation-manager-table-body">\
+                      </tbody>\
+                    </table>\
+                  </div>\
+                  <div class="row">\
+                    <div class="input-field col s12">\
+                      <input type="text" id="annotation-manager-table-search">\
+                      <label for="annotation-manager-table-search">Search:</label>\
+                    </div>\
+                  </div>\
+                </div>\
                 <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a id="display-notch" class="dropdown-button dropdown-submenu" data-activates="display-notch-submenu">Filter</a></li>\
                   <li><a id="display-timescale" class="dropdown-button dropdown-submenu" data-activates="display-timescale-submenu">Timescale</a></li>\
@@ -1739,6 +1762,27 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(e.target).closest(".dropdown-select").find(".dropdown-select-check").remove();
 
       $(e.target).append(`<span class="dropdown-select-check"><i class="fa fa-check"></i></span>`);
+    });
+
+    $("#annotation-manager-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Close",
+        click: () => {
+          $("#annotation-manager-dialog").dialog("close");
+        }
+      }],
+      title: "Annotation Manager",
+      width: "auto"
+    });
+
+    $(".annotation-manager-dialog-open").off("click.annotationmanager").on("click.annotationmanager", () => {
+      that._populateAnnotationManagerTable(that._getAnnotationsOnly());
+      $("#annotation-manager-dialog").dialog("open");
+    });
+
+    $("#annotation-manager-table-search").off("input.annotationmanager").on("input.annotationmanager", (e) => {
+      that._filterAnnotationManagerTable(e.target.value);
     });
   },
 
@@ -9455,7 +9499,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       correctAnswers
     );
 
-
     if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
       var data = that.vars.annotationsCache[cacheKey] || {
         annotations: [],
@@ -9473,9 +9516,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       );
       return;
     }
-    that.vars.annotationsCache[cacheKey] = {
-      annotations: [],
-    };
+
     var annotations;
 
     if (Roles.userIsInRole(Meteor.userId(), "admin")) {
@@ -11104,8 +11145,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     })
   },
 
+  _getDisplayTime: function(sec) {
+    let h = Math.floor(sec / 3600);
+    sec -= h * 3600;
+    let m = Math.floor(sec / 60);
+    sec -= m * 60;
+    sec = Math.round(sec);
+
+    return h + ":" + (m < 10 ? "0" + m : m) + ":" + (sec < 10 ? "0" + sec : sec)
+  },
+
   _updateAnnotationManagerSelect:function(){
-    that = this;
+    var that = this;
     let annotations = that._getAnnotationsOnly();
     console.log("setting up annotation manager");
     let container = that.element.find(".annotation_manager_container");
@@ -11116,14 +11167,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let select = selectContainer.find("select");
     annotations.sort((a,b)=> {return a.position.start - b.position.start}).forEach((annotation,i)=>{
       if(annotation.metadata.annotationLabel != null){
-        // counldnt call a separate function so I added the time formatting here
         var sec = annotation.position.start;
-        var h = Math.floor(sec / 3600);
-        sec -= h * 3600;
-        var m = Math.floor(sec / 60);
-        sec -= m * 60;
-        sec = Math.round(sec);
-        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + h + ":" + (m < 10 ? "0" + m : m) + ":" + (sec < 10 ? "0" + sec : sec)
+        
+        let s = "Label: " + annotation.metadata.annotationLabel + ", Starting Position: " + that._getDisplayTime(sec);
         select.append(`<option value=${annotation.id}` +
         ">" +
         s+
@@ -11189,6 +11235,59 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return;
 
 
+  },
+
+  _populateAnnotationManagerTable: function(annotations, sortFunc) {
+    var that = this;
+    let tableBody = $(".annotation-manager-table-body");
+    tableBody.empty();
+
+    if (!sortFunc) {
+      sortFunc = (a,b)=> {return a.position.start - b.position.start};
+    }
+
+    annotations.sort(sortFunc).forEach((annotation,i)=>{
+      if(annotation.metadata.annotationLabel != null){
+        
+        tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id} startPosition=${annotation.position.start}>
+          <td class="annotation-name">${annotation.metadata.annotationLabel}</td>
+          <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
+          <td class="annotation-comment">${annotation.metadata.comment}</td>
+          <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" /><label for="annotation-manager-select-${i}">Select</label></p></td>
+        </tr>`);
+      }
+    });
+
+    $(".annotation-manager-table-row").on("click", (e) => {
+      let startPosition = $(e.currentTarget).attr("startPosition");
+      let nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
+
+      that._switchToWindow(
+        that.options.allRecordings,
+        parseFloat(startPosition),
+        nextWindowSizeInSeconds
+      );
+    });
+  },
+
+  _filterAnnotationManagerTable: function(filter) {
+    var that = this;
+    let tableBody = $(".annotation-manager-table-body");
+    filter = filter.toUpperCase();
+
+    if (filter) {
+      $(tableBody).find("tr").each((i, element) => {
+        let nameElement = $(element).find(".annotation-name");
+        let searchText = $(nameElement).text();
+        if (searchText.toUpperCase().indexOf(filter) > -1) {
+          $(element).show();
+        } else {
+          $(element).hide();
+        }
+      });
+    } else {
+      tableBody.find("tr").show();
+    }
   },
 
   _nukeAnnotation2: function (annotation) {
