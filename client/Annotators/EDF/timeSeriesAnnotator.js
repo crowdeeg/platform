@@ -4762,6 +4762,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
       });
+
+      
+      
+      
+      that._populateGraph();
     });
 
     $(that.element).find(".restore-btn").click(function () {
