@@ -4756,26 +4756,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that._isChannelSelected()){
         that._maskChannelSelected();
       }
-      that._flushAnnotations();
-      that._getAnnotations(
-        that.vars.currentWindowRecording,
-        that.vars.currentWindowStart,
-        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-      );
     });
     $(that.element).find(".y-unmask-btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
       });
-
-      that._populateGraph();
-      that._flushAnnotations();
-      that._getAnnotations(
-        that.vars.currentWindowRecording,
-        that.vars.currentWindowStart,
-        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-      );
     });
 
     $(that.element).find(".restore-btn").click(function () {
