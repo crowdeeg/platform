@@ -673,40 +673,36 @@ function indexOfChannel(channelArray, index, dataId) {
   return channelArray.findIndex(isChannel, { name: index, dataId: dataId });
 }
 
-const edfFileSync = Meteor.wrapAsync()
-
 Meteor.methods({
 
-  "removeFile"(id){
-    
-    EDFFile.then(result =>{
-      id = id.replace(/\s+/g, '');
-      id = id.replace(/\W/g, '');
-      console.log("ID: " + id);
-      return new Promise((resolve, reject) => {
-        const recordingPath = `/uploaded/${id}.edf`;
-        Data.remove({ path: recordingPath }, (err) => {
-          if (err) {
-            reject(err);
+  "removeFile"(fileName){
+    return new Promise((resolve, reject) => {
+      EDFFile.then(result =>{
+        let dataId = Data.findOne({ name: fileName, path: { $nin: ["/physionet/edfx/PSG.edf", "/physionet/edfx/ANNE.edf"]}})._id;
+        Assignments.remove({dataFiles: {$eq: dataId}}, (err)=> {
+          if(err){
+            reject();
           } else {
-            result.remove({_id:id},function(error){
-              if (error){
-                console.error("File wasn't removed, error: " + error.reason)
-                console.log("here1");
-                reject(error);
-              }
-              else{
-                console.info("File successfully removed");
-                console.log("here2");
-                resolve();
+            Data.remove({ _id: dataId}, (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                result.remove({name: fileName},function(error){
+                  if (error){
+                    console.error("File wasn't removed, error: " + error.reason)
+                    reject(error);
+                  }
+                  else{
+                    console.info("File successfully removed");
+                    resolve(dataId);
+                  }
+                });
               }
             });
           }
         });
       });
-    })
-
-    
+    });
   },
   "deleteFromAssignments"(dataId){
     return new Promise((resolve, reject) => {
@@ -719,10 +715,10 @@ Meteor.methods({
       });
     });
   },
-  "get.file.exists"(fileId){
+  "get.file.exists"(fileName){
     return new Promise((resolve, reject) => {
       EDFFile.then(result =>{
-        let file = result.findOne({ _id: fileId });
+        let file = result.findOne({ name: fileName });
         if (file) {
           resolve(true);
         } else {

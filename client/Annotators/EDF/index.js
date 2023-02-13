@@ -53,13 +53,14 @@ Template.AnnotatorEDF.onRendered(function() {
 	let config = $.extend({}, this.data.task.annotatorConfig);
 	config = $.extend(config, this.data.preferences.annotatorConfig);
 	//console.log("here");
+    console.log("Dataset:", this.data.dataset);
 	config = $.extend(config, {
 		recordingName: this.data.dataset.reduce((combined, data) => {
-			let dataPathSegments = data.path.split("/");
+			// let dataPathSegments = data.path.split("/");
 			if (!combined.length)
-				return dataPathSegments[dataPathSegments.length - 1];
+				return data.name // dataPathSegments[dataPathSegments.length - 1];
 			return (
-				combined + " + " + dataPathSegments[dataPathSegments.length - 1]
+				combined + " + " + data.name // dataPathSegments[dataPathSegments.length - 1]
 			);
 		}, ""),
 		allRecordings: this.data.dataset.map((data) => {
