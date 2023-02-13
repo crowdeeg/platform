@@ -93,25 +93,7 @@
 .floating-panel .row {
   margin-bottom: 0;
 }
-.restore_btn {
-  text-decoration: none;
-    color: #fff;
-    background-color: #26a69a;
-    text-align: center;
-    letter-spacing: .5px;
-    transition: .2s ease-out;
-    cursor: pointer;
-}
 
-.ylimit_btn {
-  text-decoration: none;
-    color: #fff;
-    background-color: #26a69a;
-    text-align: center;
-    letter-spacing: .5px;
-    transition: .2s ease-out;
-    cursor: pointer;
-}
 .annotator-container {
   padding: 0;
   margin: 0;
@@ -181,10 +163,39 @@
   height: 37px;
 }
 
-.montage_panel {
-  width: 270px;
+.dropdown-menu {
+  overflow: visible;
+  min-width: 80;
 }
 
+.dropdown-select-check {
+  float: right;
+}
+
+dialog .input-field input {
+  opacity: 1;
+  cursor: auto;
+}
+
+.row-btn {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.percent-input {
+  display: flex;
+}
+
+.percent-input > input[type=number] {
+  margin: 0px;
+}
+
+.percent-input span {
+  align-self: center;
+  text-align: center;
+}
+
+/* Here */
 .y-axis-options-container{
   display:flex;
   width:100%;
@@ -202,12 +213,11 @@
 .annotation_manager_delete_btn_container{
   flex:1;
 }
+
+/* Here */
 .y-axis-options-container div {
   padding-left:10px;
   padding-right:10px;
-}
-.ylimit_btn_container {
-  flex:1;
 }
 
 .ylimit_lower {
@@ -220,16 +230,6 @@
 
 .alignment_options{
   flex:0.5;
-}
-
-.frequency_filter_panel {
-  display: inline-block;
-  float: left;
-  margin: 0;
-}
-
-.frequency_filter_panel .select_panel {
-  width: 110px;
 }
 
 .user_selection_panel {
@@ -258,15 +258,6 @@
 .annotation_type_select_panel .optgroup {
   text-align: center;
   font-weight: normal;
-}
-
-.timescale_panel {
-  float: left;
-  margin: 0;
-}
-
-.timescale_panel .select_panel {
-  width: 180px;
 }
 
 .timesync_panel {
@@ -739,31 +730,4 @@
     margin-left: 0.5rem;
     margin-right: 0.5rem;
 }
-
-
-.amplitude_adjustment_container{
-  float: left;
-  margin-left: 1em;
-  margin-right: 1em;
-  width: 100%;
-}
-
-.amplitude_adjustment_panel{
-  float: right;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.amplitude_adjustment_button{
-  float: right;
-  margin-left: 0.2rem;
-  margin-right: 0.2rem;
-}
-
-
-
-
-
 

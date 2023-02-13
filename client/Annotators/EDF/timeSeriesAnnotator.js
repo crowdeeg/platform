@@ -8539,10 +8539,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const scaleToScreen = $(".scale-to-screen-btn");
     const scaleAllToScreen = $(".scale-all-to-screen-btn");
 
-    const reversePolarity = $(".reverse-polarity-btn");
-    const moveUp = $(".shift-up-btn");
-    const moveDown = $(".shift-down-btn");
 
+    cconst moveUp = $(".shift-up-btn");
+    const moveDown = $(".shift-down-btn");
     // sets the increase button's onclick function
     $(increaseButton)
       .off("click.scale")
