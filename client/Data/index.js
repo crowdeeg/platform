@@ -314,7 +314,6 @@ Template.Data.events({
     const folderFiles = document.getElementById("Folder");
 
     let allFilesUnfiltered = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase() === "edf"));
-    console.log(allFilesUnfiltered);
     const allFiles = allFilesUnfiltered.filter((file, i) => {
       return allFilesUnfiltered.findIndex((e) => {
         return e.name === file.name;

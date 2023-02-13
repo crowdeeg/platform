@@ -3628,7 +3628,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _switchToWindow: function (allRecordings, start_time, window_length) {
-    console.log("Switching", allRecordings);
     // the main funciton called when navigating to another window
     var that = this;
     //console.log("_switchToWindow.that:", that);
@@ -5210,7 +5209,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     graph.append(
       '<div id="' + that.vars.graphID + '" style="margin: 0 auto"></div>'
     );
-    console.log("Recording name:", that.options.recordingName);
 
     var classificationSummaryContainer =
       that._getClassificationSummaryElement();
@@ -8254,7 +8252,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       a.metadata.annotationLabel != "undefined" &&
       a.metadata.annotationLabel != "(data missing)");
 
-      console.log("Set cache:", annotations);
     that.vars.universalChangePointAnnotationsCache = annotations;
     return annotations;
   },
@@ -9617,7 +9614,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var type = e.target.attributes.option.value;
       var filtered_lst = [];
       if(type == "all"){
-        console.log(annotations);
         that._displayAnnotations(annotations);
       }
       else{
