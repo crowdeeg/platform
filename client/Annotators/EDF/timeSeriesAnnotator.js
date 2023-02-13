@@ -4757,28 +4757,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._maskChannelSelected();
       }
       that._flushAnnotations();
-        that._getAnnotations(
-          that.vars.currentWindowRecording,
-          that.vars.currentWindowStart,
-          that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-        );
+      that._getAnnotations(
+        that.vars.currentWindowRecording,
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+      );
     });
     $(that.element).find(".y-unmask-btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
       });
-
-      
-      
-      
       that._populateGraph();
       that._flushAnnotations();
-        that._getAnnotations(
-          that.vars.currentWindowRecording,
-          that.vars.currentWindowStart,
-          that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-        );
+      that._getAnnotations(
+        that.vars.currentWindowRecording,
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+      );
     });
 
     $(that.element).find(".restore-btn").click(function () {
@@ -6616,7 +6612,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     htmlContext
       .attr({
         width: `${annotation.group.element.getBBox().width}`,
-        height: `${annotation.metadata.channelIndices.length * that.options.graph.channelSpacing}`,
+        height: `${that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length)}`,
         // x: 0,
         // y: 20,
         zIndex: 10,
@@ -7848,7 +7844,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _updateControlPoint: function (annotation) {
     var that = this;
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
 
     const height = 10;
     const width = 10;
@@ -8151,7 +8147,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           shape: {
             params: {
               width: annotation.options.xValue - parseFloat(element.position.start),
-              height:  that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length),
+              height: that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length),
             },
           },
         })
@@ -8539,9 +8535,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const scaleToScreen = $(".scale-to-screen-btn");
     const scaleAllToScreen = $(".scale-all-to-screen-btn");
 
-
-    cconst moveUp = $(".shift-up-btn");
+    const reversePolarity = $(".reverse-polarity-btn");
+    const moveUp = $(".shift-up-btn");
     const moveDown = $(".shift-down-btn");
+
     // sets the increase button's onclick function
     $(increaseButton)
       .off("click.scale")
