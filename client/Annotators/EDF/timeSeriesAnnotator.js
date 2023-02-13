@@ -4756,14 +4756,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that._isChannelSelected()){
         that._maskChannelSelected();
       }
+      that._flushAnnotations();
+      that._getAnnotations(
+        that.vars.currentWindowRecording,
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+      );
     });
     $(that.element).find(".y-unmask-btn").click(function(){
       let maskedChannels = [...that.options.maskedChannels];
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
       });
-
       that._populateGraph();
+      that._flushAnnotations();
+      that._getAnnotations(
+        that.vars.currentWindowRecording,
+        that.vars.currentWindowStart,
+        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+      );
     });
 
     $(that.element).find(".restore-btn").click(function () {
@@ -6491,7 +6502,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets the minimum and maximum channel indicies
     var channelIndexMin = Math.min(...channelIndices);
-    var channelIndexMax = Math.max(...channelIndices);
+    var channelIndexMax = Math.max(...channelIndices) - that.options.maskedChannels.length;
 
     var height =
       (Math.abs(channelIndexMax - channelIndexMin) + 1) *
@@ -6601,7 +6612,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     htmlContext
       .attr({
         width: `${annotation.group.element.getBBox().width}`,
-        height: `${annotation.metadata.channelIndices.length * that.options.graph.channelSpacing}`,
+        height: `${that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length)}`,
         // x: 0,
         // y: 20,
         zIndex: 10,
@@ -7616,7 +7627,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       "white-space": "nowrap"
     });
 
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
 
     annotationElement.append(htmlContext);
     const height = 26;
@@ -7677,7 +7688,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     textarea.val(annotation.metadata.annotationLabel);
 
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
 
     annotationElement.append(htmlContext);
     const height = 26;
@@ -7807,7 +7818,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     annotationElement.append(htmlContext);
 
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
 
     const height = 10;
     const width = 10;
@@ -7833,7 +7844,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _updateControlPoint: function (annotation) {
     var that = this;
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
 
     const height = 10;
     const width = 10;
@@ -7923,7 +7934,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var label = annotation.metadata.annotationLabel;
     const height = 26;
-    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * annotation.metadata.channelIndices.length;
+    var annotationHeight = that._convertValueToPixelsLength(that.options.graph.channelSpacing) * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length);
     // console.log(label);
     var element = $(`#${annotation.metadata.id}Right`);
     element.val(label);
@@ -8069,7 +8080,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         shape: {
           params: {
             width: annotation.options.shape.params.width,
-            height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
+            height: that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length),
           },
         },
       })
@@ -8136,7 +8147,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           shape: {
             params: {
               width: annotation.options.xValue - parseFloat(element.position.start),
-              height: that.options.graph.channelSpacing * annotation.metadata.channelIndices.length,
+              height: that.options.graph.channelSpacing * (annotation.metadata.channelIndices.length - that.options.maskedChannels.length),
             },
           },
         })
