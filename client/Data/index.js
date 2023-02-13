@@ -1093,7 +1093,7 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
             path = d.path;
             name = d.name;
           });
-          let pathEnd = path.lastIndexOf("/");
+          let pathEnd = path != null ? path.lastIndexOf("/") : -1;
           return pathEnd === -1 ? name : path.substring(0, pathEnd + 1) + name;
         }},
       {data: "metadata.wfdbdesc.Length", title: "Length",
