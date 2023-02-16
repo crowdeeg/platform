@@ -11373,7 +11373,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _filterAnnotationManagerTable: function(filter, startIndex, numElements) {
     var that = this;
-    if (!startIndex) {
+    if (startIndex == null) {
       startIndex = 0;
     }
     if (!numElements) {
