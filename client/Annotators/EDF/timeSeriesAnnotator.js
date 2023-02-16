@@ -496,6 +496,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       universalChangePointAnnotationsCache: [],
       activeAnnotations: [],
       annotationsLoaded: true,
+      annotationManagerSortFunc: null,
       selectedChannelIndex: undefined,
       currentWindowData: null,
       currentWindowStart: 0,
@@ -777,25 +778,30 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="annotation-display-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <div id="annotation-manager-dialog">\
-                  <div class="row">\
+                  <div class="annotation-manager-row row">\
                     <table class="annotation-manager-table highlight">\
                       <thead>\
                         <tr>\
-                          <th class="annotation-manager-table-header-label">Label</th>\
-                          <th class="annotation-manager-table-header-time">Time</th>\
-                          <th class="annotation-manager-table-header-comment">Comment</th>\
-                          <th class="annotation-manager-table-header-select">Select</th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-label">Label</th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-comment">Comment</th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-select">Select</th>\
                         </tr>\
                       </thead>\
                       <tbody class="annotation-manager-table-body">\
                       </tbody>\
                     </table>\
                   </div>\
-                  <div class="row">\
-                    <div class="input-field col s12">\
-                      <input type="text" id="annotation-manager-table-search">\
+                  <div class="annotation-manager-row row">\
+                    <ul class="annotation-manager-table-pagination pagination">\
+                    </ul>\
+                  </div>\
+                  <div class="annotation-manager-row row">\
+                    <div class="input-field col s8">\
+                      <input type="text" id="annotation-manager-table-search" class="col s12">\
                       <label for="annotation-manager-table-search">Search:</label>\
                     </div>\
+                    <button id="annotation-manager-table-delete" class="btn red col s4">Delete</button>\
                   </div>\
                 </div>\
                 <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
@@ -1776,13 +1782,60 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "auto"
     });
 
+    $(".annotation-manager-table-header-sort").off("click.sortheader").on("click.sortheader", (e) => {
+      $(e.currentTarget).closest("thead").find(".sort-arrow").remove();
+      $(e.currentTarget).closest("thead").find(".annotation-manager-table-header").not($(e.currentTarget)).removeProp("sortDirection");
+
+      if ($(e.currentTarget).prop("sortDirection") === "down") {
+        $(e.currentTarget).prop("sortDirection", "up");
+        $(e.currentTarget).append(`<span class="sort-arrow"><i class="fa fa-arrow-up"></i></span>`);
+      } else {
+        $(e.currentTarget).prop("sortDirection", "down");
+        $(e.currentTarget).append(`<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span>`);
+      }
+    });
+
     $(".annotation-manager-dialog-open").off("click.annotationmanager").on("click.annotationmanager", () => {
       that._populateAnnotationManagerTable(that._getAnnotationsOnly());
+
+      $("#annotation-manager-table-delete").removeClass("disabled").addClass("disabled");
+
       $("#annotation-manager-dialog").dialog("open");
     });
 
     $("#annotation-manager-table-search").off("input.annotationmanager").on("input.annotationmanager", (e) => {
-      that._filterAnnotationManagerTable(e.target.value);
+      that._filterAnnotationManagerTable($(e.currentTarget).val(), 0, 8);
+    });
+
+    $(".annotation-manager-table-header-label").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {
+          let labelComp = ("" + b.metadata.annotationLabel).localeCompare(a.metadata.annotationLabel)
+          return labelComp === 0 ? a.position.start - b.position.start : labelComp;
+        });
+      } else {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {
+          let labelComp = ("" + a.metadata.annotationLabel).localeCompare(b.metadata.annotationLabel)
+          return labelComp === 0 ? a.position.start - b.position.start : labelComp;
+        });
+      }
+    });
+
+    $(".annotation-manager-table-header-time").prop("sortDirection", "down");
+    $(".annotation-manager-table-header-time").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return b.position.start - a.position.start});
+      } else {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return a.position.start - b.position.start});
+      }
+    });
+
+    $(".annotation-manager-table-header-comment").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (b.metadata.comment == null ? "" : "" + b.metadata.comment).localeCompare(a.metadata.comment == null ? "" : "" + a.metadata.comment));
+      } else {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (a.metadata.comment == null ? "" : "" + a.metadata.comment).localeCompare(b.metadata.comment == null ? "" : "" + b.metadata.comment));
+      }
     });
   },
 
@@ -9645,6 +9698,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._displayAnnotations(filtered_lst);
       }
     });
+
+    return annotations;
   },
 
   _getVisibleAnnotations: function (annotations) {
@@ -9921,6 +9976,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     while (oldAnnotations && oldAnnotations.length > 0) {
       oldAnnotations[0].destroy();
     }
+    that.vars.universalChangePointAnnotationsCache = [];
 
     annotations
       .sort((a, b) => {
@@ -10164,6 +10220,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       that._updateMarkAssignmentAsCompletedButtonState();
       updateCache(annotationDocument);
+      if ($("#annotation-manager-dialog").dialog("isOpen")) {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly());
+      }
     } else {
       // console.log("here");
 
@@ -10211,12 +10270,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           if (annotationDocument) {
             annotationDocument.id = annotationDocument._id;
             updateCache(annotationDocument);
+            if ($("#annotation-manager-dialog").dialog("isOpen")) {
+              that._populateAnnotationManagerTable(that._getAnnotationsOnly());
+            }
           }
 
         }
       );
       that._updateMarkAssignmentAsCompletedButtonState();
     }
+
     function updateCache(annotation) {
       var key = that._getAnnotationsCacheKey(
         recording_name,
@@ -10886,6 +10949,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
 
+    if ($("#annotation-manager-dialog").dialog("isOpen")) {
+      that._populateAnnotationManagerTable(that._getAnnotationsOnly());
+    }
+
     function updateCache(annotation, savedAnnotation) {
       var key = that._getAnnotationsCacheKey(
         that.vars.currentWindowRecording,
@@ -11237,28 +11304,40 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
+  _getAnnotationManagerSortFunc() {
+
+  },
+
   _populateAnnotationManagerTable: function(annotations, sortFunc) {
     var that = this;
     let tableBody = $(".annotation-manager-table-body");
     tableBody.empty();
+    $("#annotation-manager-table-delete").removeClass("disabled").addClass("disabled");
 
     if (!sortFunc) {
-      sortFunc = (a,b)=> {return a.position.start - b.position.start};
+      if (!that.vars.annotationManagerSortFunc) {
+        sortFunc = (a,b) => {return a.position.start - b.position.start};
+      } else {
+        sortFunc = that.vars.annotationManagerSortFunc;
+      }
     }
+    that.vars.annotationManagerSortFunc = sortFunc;
 
     annotations.sort(sortFunc).forEach((annotation,i)=>{
       if(annotation.metadata.annotationLabel != null){
         
-        tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id} startPosition=${annotation.position.start}>
-          <td class="annotation-name">${annotation.metadata.annotationLabel}</td>
+        tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id}>
+          <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
-          <td class="annotation-comment">${annotation.metadata.comment}</td>
-          <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" /><label for="annotation-manager-select-${i}">Select</label></p></td>
+          <td class="annotation-comment">${annotation.metadata.comment != undefined ? annotation.metadata.comment : ""}</td>
+          <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" /><label for="annotation-manager-select-${i}"></label></p></td>
         </tr>`);
       }
     });
 
-    $(".annotation-manager-table-row").on("click", (e) => {
+    that._filterAnnotationManagerTable($("#annotation-manager-table-search").val(), 0, 8);
+
+    $(".annotation-manager-table-row .annotation-name").off("click.annotationmanager").on("click.annotationmanager", (e) => {
       let startPosition = $(e.currentTarget).attr("startPosition");
       let nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
 
@@ -11268,33 +11347,76 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         nextWindowSizeInSeconds
       );
     });
+
+    $(".annotation-manager-table-row .annotation-select input").off("change.annotationmanager").on("change.annotationmanager", (e) => {
+      if ($(".annotation-manager-table-row .annotation-select input:checked").length === 0) {
+        $("#annotation-manager-table-delete").removeClass("disabled").addClass("disabled");
+      } else {
+        $("#annotation-manager-table-delete").removeClass("disabled");
+      }
+    });
+
+    $("#annotation-manager-table-delete").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      let annotations = that._getAnnotationsOnly();
+      let ids = $(".annotation-manager-table-row .annotation-select input:checked").closest(".annotation-manager-table-row").map((i, element) => {
+        return $(element).attr("annotationId");
+      }).get();
+
+      annotations.filter((annotation) => ids.includes(annotation.id)).forEach((annotation) => {
+        that._nukeAnnotation2(annotation);
+      });
+
+      let newAnnotations = that._getAnnotations();
+      that._populateAnnotationManagerTable(newAnnotations, sortFunc);
+    });
   },
 
-  _filterAnnotationManagerTable: function(filter) {
+  _filterAnnotationManagerTable: function(filter, startIndex, numElements) {
     var that = this;
+    if (!startIndex) {
+      startIndex = 0;
+    }
+    if (!numElements) {
+      numElements = 8;
+    }
+
     let tableBody = $(".annotation-manager-table-body");
     filter = filter.toUpperCase();
+    $(tableBody).find("tr").hide()
 
+    let elements = undefined;
     if (filter) {
-      $(tableBody).find("tr").each((i, element) => {
+      elements = $(tableBody).find("tr").filter((i, element) => {
         let nameElement = $(element).find(".annotation-name");
-        let searchText = $(nameElement).text();
-        if (searchText.toUpperCase().indexOf(filter) > -1) {
-          $(element).show();
+        let commentElement = $(element).find(".annotation-comment");
+        let nameText = $(nameElement).text();
+        let commentText = $(commentElement).text();
+        if (nameText.toUpperCase().indexOf(filter) > -1 || commentText.toUpperCase().indexOf(filter) > -1) {
+          return true;
         } else {
-          $(element).hide();
+          return false;
         }
       });
     } else {
-      tableBody.find("tr").show();
+      elements = tableBody.find("tr");
     }
+
+    $(".annotation-manager-table-pagination").empty();
+    for (let i = 0; i < Math.ceil(elements.length / numElements); i++) {
+      $(".annotation-manager-table-pagination").append(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}" startIndex=${i * numElements}><span>${i + 1}</span></li>`)
+    }
+
+    $(".annotation-manager-table-pagination").find("li").off("click.annotationmanagerpage").on("click.annotationmanagerpage", (e) => {
+      that._filterAnnotationManagerTable(filter, $(e.currentTarget).attr("startIndex"), numElements);
+    });
+
+    elements.slice(startIndex, startIndex + numElements).show();
   },
 
   _nukeAnnotation2: function (annotation) {
     // deletes the annotation as well as the rendering.
     var that = this;
     var annotations = that.vars.chart.annotations.allItems;
-    console.log(annotations);
     annotations
       .slice()
       .reverse()
