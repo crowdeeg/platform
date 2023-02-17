@@ -1657,6 +1657,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _setup: function () {
     var that = this;
+
+    // Destroy existing dialogs to avoid duplicates.
+    $(".ui-dialog-content").dialog("destroy");
+
     //console.log("_setup.that:", that);
     that._adaptContent();
     that._updateAnnotationManagerSelect();
@@ -11426,11 +11430,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     $(".annotation-manager-table-pagination").empty();
     for (let i = 0; i < Math.ceil(elements.length / numElements); i++) {
-      $(".annotation-manager-table-pagination").append(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}" startIndex=${i * numElements}><span>${i + 1}</span></li>`)
+      $(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}"><span>${i + 1}</span></li>`)
+        .appendTo($(".annotation-manager-table-pagination")).prop("startIndex", i * numElements);
     }
 
     $(".annotation-manager-table-pagination").find("li").off("click.annotationmanagerpage").on("click.annotationmanagerpage", (e) => {
-      that._filterAnnotationManagerTable(filter, $(e.currentTarget).attr("startIndex"), numElements);
+      that._filterAnnotationManagerTable(filter, $(e.currentTarget).prop("startIndex"), numElements);
     });
 
     elements.slice(startIndex, startIndex + numElements).show();
