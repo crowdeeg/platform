@@ -669,11 +669,13 @@ Template.Data.events({
                   var dataFiles = assignments.map((assignment) =>
                     assignment.data._id
                   );
+                  // Given that only admins can access the Data tab we can just assign reviewer to the current admin user
                   console.log(dataFiles);
                   Assignments.insert({
                     users: [assigneeId],
                     task: task._id,
                     dataFiles: dataFiles,
+                    reviewer: Meteor.userId(),
                   });
                 });
 
@@ -777,10 +779,12 @@ Template.Data.events({
                   const assignments = assignmentsByAssignee[assigneeId];
                   assignments.forEach((assignment) => {
                     if (!assignment.doAssign) return;
+                    // Given that only admins can access the Data tab we can just assign reviewer to the current admin user
                     Assignments.insert({
                       users: [assigneeId],
                       task: task._id,
                       dataFiles: [assignment.data._id],
+                      reviewer: Meteor.userId(),
                     });
                   });
                 });
