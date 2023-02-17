@@ -1,4 +1,4 @@
-import { Data, Tasks, Assignments, Patients, getFileId} from '/collections';
+import { Data, Tasks, Assignments, Patients} from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
@@ -152,22 +152,20 @@ let assembleTaskObj = (signalNameSet, source, file) => {
 let deleteFile = (fileName) => {
   return new Promise((resolve, reject) => {
     let patient = Patients.findOne({id:"Unspecified Patient - "+ fileName });
-    let fileId = getFileId(fileName);
     if (patient) {
       let patient_id = patient["_id"];
-      console.log(patient_id);
-      console.log(fileName);
       Patients.remove({_id:patient_id});
     }
-    fileId = fileId.trim();
-    console.log(fileId);
 
-    Meteor.call('removeFile',fileId,function(err,res){
+    Meteor.call('removeFile',fileName,function(err,res){
       if (err){
         console.log(err);
         reject();
         return;
       }
+      let selectedData = selectedDataG.get();
+      delete selectedData[res];
+      selectedDataG.set(selectedData);
       resolve();
     });
   });
@@ -315,8 +313,12 @@ Template.Data.events({
     const files = document.getElementById("File");
     const folderFiles = document.getElementById("Folder");
 
-    const allFiles = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase() === "edf"));
-
+    let allFilesUnfiltered = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase() === "edf"));
+    const allFiles = allFilesUnfiltered.filter((file, i) => {
+      return allFilesUnfiltered.findIndex((e) => {
+        return e.name === file.name;
+      }) === i;
+    });
 
     console.log(allFiles);
 
@@ -344,10 +346,8 @@ Template.Data.events({
 
           // Since EDFFile is a promise, we need to handle it as such
           EDFFile.then(result => {
-            let fileId = getFileId(input.name);
-
             let checkIfFileExists = new Promise((resolve, reject) => {
-              Meteor.call("get.file.exists", fileId,
+              Meteor.call("get.file.exists", input.name,
                 (error, result) => {
                   if (error) {
                     throw new Error("Error checking file\n" + error);
@@ -406,8 +406,7 @@ Template.Data.events({
               var uploadInstance = result.insert({
                 file: input,
                 chunkSize: 'dynamic',
-                fileName: input.name,
-                fileId: fileId,
+                fileName: input.name
               }, false);
   
               uploadInstance.on('end', function (error, fileObj) {
@@ -1085,7 +1084,18 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
     name: "Data",
     collection: Data,
     columns: [
-      {data: "path", title: "Path"},
+      {data: "_id", title: "Path",
+        render:function(val) {
+          const data = Data.find({_id: val}).fetch();
+          let path = "";
+          let name = "";
+          data.forEach((d) => {
+            path = d.path;
+            name = d.name;
+          });
+          let pathEnd = path != null ? path.lastIndexOf("/") : -1;
+          return pathEnd === -1 ? name : path.substring(0, pathEnd + 1) + name;
+        }},
       {data: "metadata.wfdbdesc.Length", title: "Length",
         render:function(val){
           return val.split(" ")[0];
@@ -1146,13 +1156,15 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
 Template.selected.helpers({
   id(){
     return this._id;
+  },
+  isChecked() {
+    let selectedData = selectedDataG.get();
+    return selectedData[this._id] != null;
   }
-
 });
 
 Template.selected.events({
   'change .select-data': function (event, template) {
-    console.log("here")
     const target = $(event.target);
     const isSelected = target.is(':checked');
     //const dataId = target.data('id');
@@ -1243,17 +1255,16 @@ Template.deleteButton.events({
   
       const file_name = alldata["name"];
       deleteFile(file_name);
-      deleteAssignments(dataId);
       console.log(taskDictionary);
 
 
-      try{
+      /*try{
         Data.remove(dataId);
         console.log("Removed from data");
       } catch(error){
         console.log("Not removed from DATA");
         console.log("ERROR: " + error);
-      }
+      }*/
   
 
       // This is the old way of deleting before Dawson's fix
@@ -1285,7 +1296,7 @@ Template.deleteButton.events({
       file_id = file_id.trim();
       console.log(file_id)
     
-      Meteor.call('removeFile',file_id,function(err,res){
+      Meteor.call('removeFile',file_name,function(err,res){
         if (err){
           console.log(err);
         }

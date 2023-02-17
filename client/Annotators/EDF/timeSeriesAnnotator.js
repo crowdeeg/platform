@@ -3725,7 +3725,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _switchToWindow: function (allRecordings, start_time, window_length) {
-    console.log("Switching");
     // the main funciton called when navigating to another window
     var that = this;
     //console.log("_switchToWindow.that:", that);

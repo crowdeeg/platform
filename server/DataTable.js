@@ -8,7 +8,12 @@ TabularTables.Data = new Tabular.Table({
     name: "Data",
     collection: Data,
     columns: [
-        {data: "path", title: "Path"},
+        {data: "_id", title: "Path",
+        render:function(val) {
+          const data = Data.find({_id: val}).fetch();
+          let pathEnd = data.path.lastIndexOf("/");
+          return pathEnd === -1 ? data.name : data.path.substring(0, pathEnd + 1) + data.name;
+        }},
         {data: "metadata.wfdbdesc.Length", title: "Length",
           render:function(val){
             return val.split(" ")[0];
