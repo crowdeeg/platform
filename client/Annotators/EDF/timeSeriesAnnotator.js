@@ -5622,10 +5622,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           title: {
             text: null,
           },
-          scrollbar: {
-            enabled: true,
-            showFull: false,
-          },
+          // this scrollbar being enabled causes the scrollbar to appear when masking channels (dont think we want that)
+          //scrollbar: {
+            //enabled: true,
+            //showFull: false,
+          //},
         },
         scrollbar: {
           liveRedraw: false,
@@ -11491,6 +11492,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     if (refreshGraph) {
+      console.log("refresh graph")
       that._populateGraph();
     }
     //console.log(that.options.maskedChannels);
