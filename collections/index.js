@@ -417,11 +417,13 @@ Data.helpers({
     },
     pathAndLengthFormatted() {
         const lengthFormatted = this.lengthFormatted();
+        let pathEnd = this.path.lastIndexOf("/");
+        let pathFormatted = pathEnd === -1 ? this.name : this.path.substring(0, pathEnd + 1) + this.name;
         if (lengthFormatted == '') {
-            return this.path;
+            return pathFormatted;
         }
-        console.log(this.path + ' (' + lengthFormatted + ')');
-        return this.path + ' (' + lengthFormatted + ')';
+        console.log(pathFormatted + ' (' + lengthFormatted + ')');
+        return pathFormatted + ' (' + lengthFormatted + ')';
     },
     pathLengthAndPatientInfoFormatted() {
         let patientInfo = '';
@@ -2541,15 +2543,7 @@ exports.EDFFile = env_p.then(result =>{
         return EDFFile;
         
     })
-    .catch(error => console.log(error))
-
-exports.getFileId = (fileName) => {
-
-    /* helpers.sanitize is how ids are sanitized in the ostrio:files import, in server.js of their github repository.
-       This is done since we construct file ids based on their name, so to replicate we need to sanitize the same way.
-       (Note the split and replace is our own sanitization). */
-    return helpers.sanitize(fileName.split('.')[0].replace(/\W/g, ''), 20, 'a');
-};
+    .catch(error => console.log(error));
 
 
 Meteor.startup(() => {

@@ -195,10 +195,47 @@ dialog .input-field input {
   text-align: center;
 }
 
-/* Here */
 .y-axis-options-container{
   display:flex;
   width:100%;
+}
+
+#annotation-manager-dialog {
+  padding: 10px 45px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.annotation-manager-table-header {
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.sort-arrow {
+  margin-left: 5px;
+}
+
+.annotation-manager-table-row .annotation-name {
+  cursor: pointer;
+}
+
+.annotation-manager-table-row .annotation-name:hover {
+  background-color: #999999;
+}
+
+.annotation-manager-table-pagination {
+  cursor: default;
+}
+
+.annotation-manager-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .annotation_manager_big_div{
@@ -214,7 +251,6 @@ dialog .input-field input {
   flex:1;
 }
 
-/* Here */
 .y-axis-options-container div {
   padding-left:10px;
   padding-right:10px;
