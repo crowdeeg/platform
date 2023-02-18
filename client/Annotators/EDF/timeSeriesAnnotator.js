@@ -1,11 +1,158 @@
 import { ReactiveVar } from "meteor/reactive-var";
 import { Annotations, Preferences, Assignments, Data, EDFFile } from "/collections";
 import swal from "sweetalert2";
+import { data } from "jquery";
 
 var Highcharts = require("highcharts/highstock");
 require("highcharts-annotations")(Highcharts);
 require("highcharts-boost")(Highcharts);
 
+// function that connects to the backend to update an assignment
+let _updateReviewAssignment = (data, update) => {
+  return new Promise((resolve, reject) => {
+    Meteor.call('updateReviewAssignment', data, update, function(err, res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      resolve();
+    })
+  });
+}
+
+// function that connects to the backend to find an assignment id
+let _findAssignmentId = (data) => {
+  return new Promise((resolve, reject) => {
+    Meteor.call('findAssignment', data, (error, res)=> {
+      if(error){
+        console.log(error.error);
+        alert(error.error);
+        reject();
+        return;
+      }
+      resolve(res._id);
+    })
+  })
+}
+
+// function that connects to backend to insert a review assignment (just an assignment for the reviewer to have on their side)
+let _insertReviewAssignment = (data) => {
+  return new Promise((resolve, reject) => {
+    Meteor.call('insertAssignmentForReview', data, function(err, res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      resolve(res);
+    })
+  });
+}
+
+// function that connects to the backend to insert all the annotations for this reading to the reviewer or annotator
+let _insertReviewAnnotations = (data) => {
+  return new Promise((resolve, reject) => {
+    Meteor.call('insertAnnotationsForReview', data, function(err, res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      console.log(data);
+      resolve();
+    })
+  });
+}
+
+// function that conencts to the backend to delete all annotations with the corresponding id
+let _deleteReviewAnnotations = (assignmentId) => {
+  return new Promise((resolve, reject) => {
+    Meteor.call('deleteAnnotationsForReview', assignmentId, function(err, res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      resolve();
+    })
+  });
+}
+
+// async function that waits for backend processes to complete
+// in this case we need to insert an assignment for the reviewer, and upload all annotations to that assignment
+let waitForInsertingAnnotationsPromise = async function(data){
+  return new Promise(async (resolve, reject) => {
+    var id = await _insertReviewAssignment(data);
+    await _deleteReviewAnnotations(id);
+    console.log(id);
+    var docs = [];
+    let annotations = Annotations.find(
+      {
+        assignment: that.options.context.assignment._id,
+        dataFiles: that.options.context.dataset.map((data) => data._id),
+        user: Meteor.userId(),
+        type: "SIGNAL_ANNOTATION",
+      },
+    ).fetch();
+    annotations.forEach(doc => {
+      var newDoc = {...doc};
+      newDoc["assignment"] = id;
+      newDoc["user"] = that.options.context.assignment.reviewer;
+      delete newDoc.updatedAt;
+      delete newDoc._id;
+      console.log(newDoc);
+      docs.push(newDoc);
+      //resolve();
+    });
+    await _insertReviewAnnotations(docs);
+    //console.log("resolving")
+    resolve();
+  })
+}
+
+// Async funciton that wait for us to insert all the info for the reviewer before switching pages
+let doneSwitchPages = async function(data){
+  await waitForInsertingAnnotationsPromise(data);
+  window.location.href='/';
+}
+
+//Async funtion that waits for us to delete the annotations and assignments on the reviewer's side to save storage space
+let rejectSwitchPages = async function(assignmentId){
+  await _deleteReviewAnnotations(assignmentId);
+  Assignments.remove(assignmentId);
+  window.location.href='/';
+}
+
+// async function that uploads the changes made to the annotations by the reviewer
+let sendChanges = async function(data){
+  console.log(data);
+  const assignmentId = await _findAssignmentId(data);
+  console.log(assignmentId);
+  await _deleteReviewAnnotations(assignmentId);
+  let annotations = Annotations.find(
+    {
+      assignment: that.options.context.assignment._id,
+      dataFiles: that.options.context.dataset.map((data) => data._id),
+      user: Meteor.userId(),
+      type: "SIGNAL_ANNOTATION",
+    },
+  ).fetch();
+  console.log("num annotations", annotations);
+  var docs = [];
+  annotations.forEach(doc => {
+    var newDoc = {...doc};
+    newDoc["assignment"] = assignmentId;
+    newDoc["user"] = that.options.context.assignment.reviewing;
+    delete newDoc.updatedAt;
+    delete newDoc._id;
+    //console.log(newDoc);
+    docs.push(newDoc);
+    //resolve();
+  });
+  await _insertReviewAnnotations(docs);
+  window.alert("Changes have been sent to the annotator's assignment");
+}
 
 $.widget("crowdeeg.TimeSeriesAnnotator", {
   // initial options when the widget is created
@@ -461,6 +608,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           "recordingNameFromGetParameter:",
           recordingNameFromGetParameter
         );
+      }
+      if(that.options.context.preferences == undefined){
+        console.log("heer");
+        that.options.context.preferences = {};
       }
       that._setup();
     }
@@ -973,9 +1124,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       </div> \
                   </div> \
               </div> \
-              <div style="display: flex; justify-content: center; margin-bottom: 20px" class="done_button_container">\
+              <div style="display: flex; justify-content: center; margin-bottom: 20px" class="btn-toolbar">\
                 <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
                 Done\
+                </button> \
+                <button type="button" class="btn btn-default reject" id="reject_button" aria-label="Reject"> \
+                Reject\
+                </button> \
+                <button type="button" class="btn btn-default sendChanges" id="sendChanges_button" aria-label="Send Changes"> \
+                Send Changes\
+                </button> \
+                <button type="button" class="btn btn-default feedback" id="feedback_button" aria-label="Feedback"> \
+                Feedback\
                 </button> \
               </div>\
           </div> \
@@ -1657,6 +1817,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _setup: function () {
     var that = this;
+    console.log(window);
+    console.log(this)
     //console.log("_setup.that:", that);
     that._adaptContent();
     that._updateAnnotationManagerSelect();
@@ -1669,6 +1831,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTimeSyncPanel();
     that._setupIOPanel();
     that._setupDoneButton();
+    that._setupRejectButton();
+    that._setupSendChangesButton();
+    that._setupFeedbackButton();
     that._setupPreferencesPanel();
     that._setupTrainingPhase();
     that._setupArbitration();
@@ -2881,14 +3046,130 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       });
   },
+  _setupFeedbackButton: function(){
+    var that = this;
+    var element = $(that.element);
+    // if the user is the admin (or the feedback is undefined), then hide the button
+    if(that.options.context.assignment.reviewing != undefined || that.options.context.assignment.feedback === undefined || that.options.context.assignment.reviewer === Meteor.userId()){
+      $('#feedback_button').hide();
+    } else {
+      // otherwise, if the user clicks the button, then create a simple alert with the feedback
+      element.find('#feedback_button').click(function (){
+        window.alert(that.options.context.assignment.feedback);
+      });
+    }
+  },
+
+  _setupSendChangesButton: function(){
+    var that = this;
+    var element = $(that.element);
+    // if the user is the annotator, then hide the send changes button
+    if(that.options.context.assignment.reviewing === undefined){
+      $('#sendChanges_button').hide();
+    } else {
+      // otherwise show the button and call the async sendChanges function
+      element.find('#sendChanges_button').click(function (){
+        users = [];
+        users.push(that.options.context.assignment.reviewing);
+        const data = {
+          "task": that.options.context.assignment.task,
+          "dataFiles": that.options.context.assignment.dataFiles,
+          "users": users,
+          "arbitration": that.options.context.assignment.arbitration,
+          "reviewer": Meteor.userId(),
+        };
+        sendChanges(data);
+      });
+    }
+  },
+
+  _setupRejectButton: function(){
+    var that = this;
+    var element = $(that.element);
+    // if the user is not the reviewer then hide the reject button
+    if(that.options.context.assignment.reviewing === undefined){
+      $('#reject_button').hide();
+    } else {
+      // otherwise ask the user for feedback and reject the assignment
+      element.find("#reject_button").click(function (){
+        users = [];
+        users.push(that.options.context.assignment.reviewing);
+        const data = {
+          "task": that.options.context.assignment.task,
+          "dataFiles": that.options.context.assignment.dataFiles,
+          "users": users,
+          "arbitration": that.options.context.assignment.arbitration,
+          "reviewer": Meteor.userId(),
+        };
+        // prompt the user for feedback and save it
+        let feedback = prompt("Feedback:", "No feedback")
+        if(feedback==null){
+          // This is for when the user clicks cancel, just stop the process (dont do anything cuz they cancelled)
+          //feedback = "No feedback";
+          
+        } else {
+          _updateReviewAssignment(data, { $set: { feedback: feedback, status: 'In Progress'}});
+          rejectSwitchPages(that.options.context.assignment._id);
+        }
+      })
+    }
+
+  },
 
   _setupDoneButton: function (){
     var that = this;
     var element = $(that.element);
-    console.log(that);
+    console.log(that.options.context);
     element.find("#done_button").click(function (){
-      Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Completed"}});
-      window.location.href='/';
+      user = Meteor.users.findOne(Meteor.userId());
+      // if the user has a role, then they are either an admin or test user
+      if(user.roles){
+        console.log("check1");
+        // if we are reviewing someones work, and think it is complete, then update the persons assignment to complete and go home
+        if(that.options.context.assignment.reviewing != undefined){
+          console.log("check2");
+          users = [];
+          users.push(that.options.context.assignment.reviewing);
+          const data = {
+            task: that.options.context.assignment.task,
+            dataFiles: that.options.context.assignment.dataFiles,
+            status: "Review",
+            users: users,
+            arbitration: that.options.context.assignment.arbitration,
+            reviewer: Meteor.userId(),
+          };
+          _updateReviewAssignment(data, { $set: {status: "Completed", canBeReopenedAfterCompleting: false}});
+        }
+        console.log("check3");
+        console.log(that.options.context.assignment._id);
+        Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Completed"}});
+        window.location.href='/';
+      } else {
+        // otherwise, if there exists a reviewer, mark it as under review, else mark it as done
+        if(that.options.context.assignment.reviewer){
+          console.log("check4");
+          Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Review"}});
+          users = [];
+          users.push(that.options.context.assignment.reviewer);
+          const data = {
+            task: that.options.context.assignment.task,
+            dataFiles: that.options.context.assignment.dataFiles,
+            users: users,
+            status: "Review",
+            arbitration: that.options.context.assignment.arbitration,
+            reviewing: Meteor.userId(),
+          };
+          doneSwitchPages(data);
+          console.log("here")
+        } else {
+          console.log("test user here");
+          Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Completed"}});
+          window.location.href='/';
+        }
+       
+       //window.location.href='/';
+      }
+
     });
   },
 
@@ -3819,7 +4100,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log("4-1");
       that._saveUserEventWindowBegin();
     }
-
+    console.log(that.options.context.preferences);
     that._savePreferences({ startTime: start_time });
 
     var windowsToRequest = [
@@ -4313,7 +4594,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // console.log(scaleFactorAmplitude);
 
           valuesScaled = values.map((v) => v / scaleFactorAmplitude);
-          // //console.log(valuesScaled);
+          //console.log(valuesScaled);
         }
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
         var scaleFault = 0;
@@ -4773,6 +5054,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       //once we set up the original data, update some values based on our preferences for this file
       // add scaling factors (amplitude stuff)
+      console.log(that);
       if(that.options.context.preferences.annotatorConfig.scalingFactors != null){
         //console.log("LLLLLLLLLLLLLLLLLLLLLLLLLLLLl")
         console.log(that.options.context.preferences.annotatorConfig.scalingFactors);
@@ -5337,7 +5619,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     bookmarkData = [];
     const bookmarkedPages =
-      that.options.context.preferences.annotatorConfig.bookmarkedPages;
+      that.options.context.preferences ? that.options.context.preferences.annotatorConfig.bookmarkedPages : '';
     for (pageKey in bookmarkedPages) {
       if (bookmarkedPages[pageKey] === true) {
         bookmarkData.push(parseInt(pageKey));
@@ -9435,6 +9717,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const context = that.options.context;
     that._addArbitrationInformationToObject(modifier);
     modifier = { $set: modifier };
+    console.log(that.options.context.preferences);
     Preferences.update(
       that.options.context.preferences._id,
       modifier,
@@ -9471,6 +9754,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _loadChannelTimeshiftFromPreference: function () {
     console.log("getting preference");
     var that = this;
+    console.log(that);
     let timeshiftFromPreference =
       that.options.context.preferences.annotatorConfig.channelTimeshift;
     that.vars.channelTimeshift = timeshiftFromPreference

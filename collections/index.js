@@ -104,7 +104,7 @@ Security.defineMethod('ifNotTester', {
 Security.defineMethod('ifAssigned', {
     fetch: [],
     allow(type, field, userId, assignment) {
-        return assignment.users.indexOf(userId) > -1;
+        return assignment.users.indexOf(userId) > -1 || assingment.reviewer === userId;
     },
 });
 
@@ -113,7 +113,7 @@ Security.defineMethod('ifForOwnAssignment', {
     allow(type, field, userId, annotation) {
         const assignment = Assignments.findOne(annotation.assignment);
         if (!assignment) return false;
-        return assignment.users.indexOf(userId) > -1;
+        return assignment.users.indexOf(userId) > -1 || assignment.reviewer === userId;
     },
 });
 
@@ -737,6 +737,7 @@ Schemas.Assignments = new SimpleSchema({
         allowedValues: [
             'Pending',
             'In Progress',
+            'Review',
             'Completed',
         ],
         defaultValue: 'Pending',
@@ -792,6 +793,17 @@ Schemas.Assignments = new SimpleSchema({
     arbitration: SchemaHelpers.fromCollection(Arbitrations, {
         optional: true,
     }),
+    reviewer: SchemaHelpers.fromCollection(Meteor.users, {
+        optional: true,
+    }),
+    reviewing: SchemaHelpers.fromCollection(Meteor.users, {
+        optional: true,
+    }),
+    feedback: {
+        type: String,
+        optional: true,
+        defaultValue: "No Feedback"
+    },
     arbitrationRoundNumber: {
         type: SimpleSchema.Integer,
         label: 'Arbitration Round Number',
@@ -838,6 +850,12 @@ Assignments.helpers({
     let description = this.nameOrAnonymizedPatientDescription();
     if (this.arbitration) {
       description += ' [Adjudicate Disagreements]';
+    }
+    //console.log(this);
+    // here if we are reviewing someoes work, attach the annotators name to the file name
+    if(this.reviewing != undefined){
+        user = Meteor.users.findOne(this.reviewing);
+        description = user.username + " - " + description;
     }
     return description;
   },
@@ -1657,6 +1675,7 @@ Preferences.attachSchema(Schemas.Preferences);
 Preferences.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
 Preferences.permit(['insert', 'update']).ifForOwnAssignment().allowInClientCode();
 Preferences.permit(['update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
+Preferences.attachCollectionRevisions();
 exports.Preferences = Preferences;
 
 const arbitrationStatusValues = {

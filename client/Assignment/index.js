@@ -12,12 +12,39 @@ Template.AssignmentsPending.helpers({
     },
 });
 
+Template.AssignmentsInReview.helpers({
+    assignments(){
+        user = Meteor.users.findOne(Meteor.userId());
+        if(user){
+            // if admin, we want to make sure the Reviewing ones stay in Review until done
+            if(user.roles){
+                return Assignments.find({
+                    users: Meteor.userId(),
+                    status: { $in: ['Review', "In Progress"] },
+                    isHidden: { $ne: true },
+                    dataFiles: { $ne: undefined },
+                    reviewing: { $ne: undefined },
+                });
+            } else {
+                // if not admin then just find the ones under review
+                return Assignments.find({
+                    users: Meteor.userId(),
+                    status: { $eq: 'Review' },
+                    isHidden: { $ne: true },
+                });
+            }
+        }
+        
+    }
+})
+
 Template.AssignmentsInProgress.helpers({
     assignments() {
         return Assignments.find({
             users: Meteor.userId(),
             status: { $eq: 'In Progress' },
             isHidden: { $ne: true },
+            reviewing: { $eq: undefined },
         });
     },
 });
@@ -54,7 +81,32 @@ Template.Assignment.helpers({
 
 Template.Assignment.onRendered(function() {
     const data = this.data;
-    Session.set('numPendingItemsToSave', 0);    
+    console.log('data: ', data)
+    Session.set('numPendingItemsToSave', 0); 
+    // when we open a file that is in review:
+    if( data.assignment.reviewing === undefined){
+        users = [];
+        users.push(data.assignment.reviewer);
+        const info = {
+          task: data.assignment.task,
+          dataFiles: data.assignment.dataFiles,
+          users: users,
+          reviewing: Meteor.userId(),
+        };
+        Meteor.call("deleteAssignmentForReview", info);
+    // if the reviewer opens a completed file, then the mark it as under review, and the annotator should be able to open it again
+    } else if(data.assignment.status === "Completed") {
+        users = [];
+        console.log("HERE");
+        users.push(data.assignment.reviewing);
+        const info = {
+          task: data.assignment.task,
+          dataFiles: data.assignment.dataFiles,
+          users: users,
+          reviewer: Meteor.userId(),
+        };
+        Meteor.call('updateAssignmentWithDataQuery', info, { $set: { status: 'Review', canBeReopenedAfterCompleting: true} })
+    }
     Meteor.call('updateAssignmentWithoutHook', data.assignment._id, { $set: { status: 'In Progress' } });
     let messageToDisplayBeforeStart = data.assignment.messageToDisplayBeforeStart;
     let messageDisplayedBeforeStart;

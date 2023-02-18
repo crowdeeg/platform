@@ -1,5 +1,6 @@
 import isWebGLEnabled from 'detector-webgl';
 import moment from 'moment';
+import { Annotations, Preferences, Assignments, Data, EDFFile } from "/collections";
 
 Template.AnnotatorEDF.onCreated(function() {
     if (!browser.satisfies({
