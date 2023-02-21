@@ -70,5 +70,5 @@ TabularTables.Data = new Tabular.Table({
     processing: false,
     skipCount: true,
     pagingType: 'simple',
-    infoCallback: (settings, start, end) => `Showing ${start} to ${end}`,
+    infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
 });
