@@ -1817,15 +1817,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _setup: function () {
     var that = this;
-<<<<<<< HEAD
 
     // Destroy existing dialogs to avoid duplicates.
     $(".ui-dialog-content").dialog("destroy");
 
-=======
-    console.log(window);
-    console.log(this)
->>>>>>> master
     //console.log("_setup.that:", that);
     that._adaptContent();
     that._updateAnnotationManagerSelect();
