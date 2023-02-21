@@ -5,9 +5,10 @@
         </div>
     </div>
     <div class="row">
-        <div class="col s12 m4 text-center">{{> AssignmentsPending}}</div>
-        <div class="col s12 m4 text-center">{{> AssignmentsInProgress}}</div>
-        <div class="col s12 m4 text-center">{{> AssignmentsCompleted}}</div>
+        <div class="col s12 m3 text-center">{{> AssignmentsPending}}</div>
+        <div class="col s12 m3 text-center">{{> AssignmentsInProgress}}</div>
+        <div class="col s12 m3 text-center">{{> AssignmentsInReview}}</div>
+        <div class="col s12 m3 text-center">{{> AssignmentsCompleted}}</div>
     </div>
 </template>
 
@@ -41,6 +42,23 @@
         {{/with}}
     {{else}}
         <span class="flow-text">Start a reading task.</span>
+    {{/each}}
+    </div>
+</template>
+
+<template name="AssignmentsInReview">
+    <h4><i class="fa fa-star"></i> In Review</h4>
+    <div class="collection">
+    {{#each assignment in assignments}}
+        {{#with assignment}}
+        {{#if assignment.blockedForReason }}
+        <div class="collection-item grey lighten-3 grey-text"><i class="fa fa-ban left"></i> {{ assignment.nameOrAnonymizedPatientDescription }} <b>[{{ assignment.blockedForReason }}]</b></div>
+        {{else}}
+        <a href="{{pathFor route='assignment'}}" class="collection-item yellow lighten-4"><i class="fa fa-envelope-open left"></i> {{ assignment.nameOrAnonymizedPatientDescriptionWithAdjudicationInformation }}</a>
+        {{/if}}
+        {{/with}}
+    {{else}}
+        <span class="flow-text">Review a reading task.</span>
     {{/each}}
     </div>
 </template>

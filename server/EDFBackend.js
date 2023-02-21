@@ -1,6 +1,6 @@
 import { dsvFormat } from "d3-dsv";
 import { Mongo } from "meteor/mongo";
-import { Data, Assignments,EDFFile, sanitize} from "/collections";
+import { Data, Assignments,EDFFile, Annotations, sanitize} from "/collections";
 
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
@@ -710,6 +710,102 @@ Meteor.methods({
         if(err){
           reject(err);
         } else {
+          resolve();
+        }
+      });
+    });
+  },
+
+  // function that inserts a list of annotations
+  "insertAnnotationsForReview"(data){
+    return new Promise((resolve, reject) => {
+      try{
+        console.log(data);
+        for(i = 0; i < data.length; i++){
+          Annotations.insert(data[i]);
+        }
+        resolve();
+      } catch (err){
+        reject(err);
+        return;
+      }
+    });
+  },
+  // function that inserts an assignment
+  "insertAssignmentForReview"(data){
+    return new Promise((resolve, reject) => {
+      var assignment = Assignments.findOne(data);
+      console.log(data);
+      console.log(assignment);
+      if(assignment){
+        resolve(assignment._id);
+      } else {
+        Assignments.insert(data, (err, res)=> {
+          if(err){
+            console.info(err);
+            reject(err);
+          } else {
+            resolve(res);
+          }
+        });
+      }
+    });
+  },
+  // function that deletes all annotations with the given assignment id
+  "deleteAnnotationsForReview"(assignmentId){
+    return new Promise((resolve, reject) => {
+      Annotations.remove({assignment: assignmentId}, (err, res)=> {
+        if(err){
+          console.info(err);
+          reject(err);
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  },
+  // function that finds an assignment given a query
+  "findAssignment"(data){
+    return new Promise((resolve, reject) => {
+      console.log(data);
+      
+      try{
+        var assignment = Assignments.findOne(data);
+        if(assignment){
+          resolve(assignment);
+        }
+        reject();
+      } catch(err){
+        console.info(err);
+        reject(err);
+      }
+      
+    });
+  },
+  // function that updates a list of annotations
+  "updateAnnotationsForReview"(annotations, update){
+    return new Promise((resolve, reject)=> {
+      try{
+        for(i = 0; i < annotations.length; i++){
+          Annotations.update(annotations[i], update);
+        }
+        resolve();
+      } catch(err){
+        reject(err);
+      }
+    })
+  },
+  // function that updates an assignment
+  "updateReviewAssignment"(data, update){
+    return new Promise((resolve, reject) => {
+      Assignments.update(data, update,(err, res)=> {
+        console.log("data:", data);
+        console.log("update: ", update);
+        if(err){
+          console.info(err);
+          reject(err);
+        } else {
+          console.log("found");
           resolve();
         }
       });
