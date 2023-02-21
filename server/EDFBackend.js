@@ -245,8 +245,9 @@ let WFDB = {
       }
 
       const numSamples = rows.length;
-      const samplingRate = Math.round(numSamples / outputDurationInSeconds);
-      // console.log("237 samplingRate : " + samplingRate); console.log("237 numSamples : " + numSamples); console.log("237 outputDurationInSeconds : " + outputDurationInSeconds);
+      //const samplingRate = Math.round(numSamples / outputDurationInSeconds);
+      const samplingRate = numSamples/outputDurationInSeconds;
+      //console.log("237 samplingRate : " + samplingRate); console.log("237 numSamples : " + numSamples); console.log("237 outputDurationInSeconds : " + outputDurationInSeconds);
       const data = channelNames.map(() => {
         return new FloatArrayType(numSamples);
       });

@@ -3993,6 +3993,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (that._areTrainingWindowsSpecified()) {
         that.vars.currentTrainingWindowIndex += windows;
       }
+      // console.log("PPPPPPPPPPPPPPPPp")
+      // console.log(windows);
+      // console.log(that.vars.currentWindowStart);
+      // console.log(that.vars.xAxisScaleInSeconds);
       nextWindowStart = Math.max(
         0,
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds * windows
@@ -4013,9 +4017,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(!that._isCurrentWindowSpecifiedTrainingWindow());
 
     if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
-      //console.log("0");
+      console.log("0");
       if (that.options.visibleRegion.start !== undefined) {
-        //console.log("0-1");
+        console.log("0-1");
         start_time = Math.max(that.options.visibleRegion.start, start_time);
         start_time = window_length * Math.ceil(start_time / window_length);
 
@@ -4030,7 +4034,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
       // console.log(that.options.visibleRegion.end);
       if (that.options.visibleRegion.end !== undefined) {
-        //console.log("0-2");
+        console.log("0-2");
         start_time = Math.min(
           that.options.visibleRegion.end - window_length,
           start_time
@@ -4041,7 +4045,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.options.visibleRegion.end - window_length;
         that._setForwardEnabledStatus(forwardEnabled);
         if (!forwardEnabled) {
-          //console.log("0-2-1");
+          console.log("0-2-1");
           that._lastWindowReached();
         }
         var fastForwardEnabled = start_time +
@@ -4122,7 +4126,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         ++i
       ) {
         let window = start_time + i * that.options.windowJumpSizeFastForwardBackward * window_length;
-        if (!windowsToRequest.includes(window)) {
+        if (!windowsToRequest.includes(window) && window > 0) {
           windowsToRequest.push(window);
         }
       }
@@ -4132,7 +4136,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         ++i
       ) {
         let window = start_time - i * window_length;
-        if (!windowsToRequest.includes(window)) {
+        if (!windowsToRequest.includes(window) && window > 0) {
           windowsToRequest.push(window);
         }
       }
@@ -4142,12 +4146,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         ++i
       ) {
         let window = start_time - i * that.options.windowJumpSizeFastForwardBackward * window_length;
-        if (!windowsToRequest.includes(window)) {
+        if (!windowsToRequest.includes(window) && window > 0) {
           windowsToRequest.push(window);
         }
       }
     }
-
+    
     //console.log(that);
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
@@ -4181,6 +4185,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             let real = that._alignRealDataandData(realData,dataFiltered);
             that.vars.currentWindowData = dataFiltered;
             that.vars.real = real;
+            // console.log(real);
+            // console.log(dataFiltered);
+            
             //console.log(that);
             //that._populateGraph(that.vars.currentWindowData,real);
             that._populateGraph();
@@ -4192,6 +4199,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               let real = that._alignRealDataandData(realData,dataFiltered);
               that.vars.currentWindowData = dataFiltered;
               that.vars.real = real;
+              // console.log(real);
+              // console.log(dataFiltered);
               //console.log(that);
               //that._setupGraphFunctions(that.vars.currentWindowData,real);
               that._setupGraphFunctions();
@@ -4243,7 +4252,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
     if (that.vars.chart) {
-      if (that.vars.chart.annotaions) {
+      if (that.vars.chart.annotations) {
+        //console.log(that.vars.xAxisScaleInSeconds);
         that._flushAnnotations();
         that._getAnnotations(
           that.vars.currentWindowRecording,
@@ -4448,7 +4458,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       callback(that.vars.windowsCache[identifierKey].data);
       return;
     }
-    const numSecondsToPadBeforeAndAfter = 2;
+    const numSecondsToPadBeforeAndAfter = 0;
 
     const optionsPadded = JSON.parse(JSON.stringify(options));
 
@@ -4465,7 +4475,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       options.window_length +
       numSecondsPaddedBefore +
       numSecondsToPadBeforeAndAfter;
-
+    // console.log(optionsPadded.window_length);
+    // console.log(options.window_length);
     optionsPadded.low_resolution_data =
       that._isInNoTimelockMode() ||
       optionsPadded.window_length >
@@ -5228,7 +5239,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
-    //console.log(this.vars.chart.series);
+    console.log(this.vars.chart.series);
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
     for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
@@ -5326,7 +5337,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log(that);
     }
     that.vars.chart.redraw();
-    //console.log(that.vars.scalingFactors);
+    console.log(that.vars.scalingFactors);
     //console.log(this.vars.chart.series);
   },
 
