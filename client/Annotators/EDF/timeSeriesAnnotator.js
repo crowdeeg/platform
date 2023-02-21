@@ -260,6 +260,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     marginTop: null,
     marginBottom: null,
     windowSizeInSeconds: 30,
+    windowJumpSizeForwardBackward: 1 / 5,
     windowJumpSizeFastForwardBackward: 1,
     preloadEntireRecording: false,
     numberOfForwardWindowsToPrefetch: 3,
@@ -560,6 +561,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         sleep_stage_rem: "REM Sleep",
         sleep_stage_unknown: "Unknown",
       },
+      windowsCacheLength: 15,
       windowsCache: {},
       // windowCache is an object, keeping track of data that is loaded in the background:
       //
@@ -2589,14 +2591,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".forward")
         .click(function () {
-          that._shiftChart(1 / 5);
+          that._shiftChart(that.options.windowJumpSizeForwardBackward);
         });
     }
     if (that.options.showBackwardButton) {
       $(that.element)
         .find(".backward")
         .click(function () {
-          that._shiftChart(-1 / 5);
+          that._shiftChart(-that.options.windowJumpSizeForwardBackward);
         });
     }
     if (that.options.showFastForwardButton) {
@@ -3834,7 +3836,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     ) {
       //console.log("5");
       for (var i = 1; i <= that.options.numberOfForwardWindowsToPrefetch; ++i) {
-        windowsToRequest.push(start_time + i * window_length);
+        windowsToRequest.push(start_time + i * that.options.windowJumpSizeForwardBackward * window_length);
       }
       for (
         var i = 1;
@@ -3851,7 +3853,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         i <= that.options.numberOfBackwardWindowsToPrefetch;
         ++i
       ) {
-        let window = start_time - i * window_length;
+        let window = start_time - i * that.options.windowJumpSizeForwardBackward * window_length;
         if (!windowsToRequest.includes(window)) {
           windowsToRequest.push(window);
         }
@@ -3869,6 +3871,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     //console.log(that);
+    that.vars.reprint = 0;
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
       // gets the data for all the prefetched windows
@@ -3888,7 +3891,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       };
       //console.log(that);
       
-
       that._requestData(options, (data, errorData,realData) => {
         var windowAvailable = !errorData;
         // console.log(errorData);
@@ -4126,6 +4128,32 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
   },
 
+  _addToWindowsCache(identifierKey, data, realData, options) {
+    while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
+      let keyToDelete = undefined;
+      let farthestKeyDist = -1;
+      Object.keys(that.vars.windowsCache).forEach((key) => {
+        if (!that.vars.windowsCache[key] || !that.vars.windowsCache[key].data || !that.vars.windowsCache[key].startTime) {
+          keyToDelete = key;
+          farthestKeyDist = -2;
+        } else if (farthestKeyDist > -2) {
+          if (farthestKeyDist < 0 || Math.abs(options.start_time - that.vars.windowsCache[key].startTime) > farthestKeyDist) {
+            keyToDelete = key;
+            farthestKeyDist = Math.abs(options.start_time - that.vars.windowsCache[key].startTime);
+          }
+        }
+      });
+
+      delete that.vars.windowsCache[keyToDelete];
+    }
+
+    that.vars.windowsCache[identifierKey] = {};
+    // transform the data before storing or displaying them
+    that.vars.windowsCache[identifierKey].data = data;
+    that.vars.windowsCache[identifierKey].realData = realData;
+    that.vars.windowsCache[identifierKey].startTime = options.start_time;
+  },
+
   _requestData: function (options, callback) {
     var that = this;
     // console.log(that.vars.allRecordings);
@@ -4156,7 +4184,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     var reprint = that.vars.reprint;
-    //console.log("reprint", reprint);
     if (reprint === 1 || that._isInNoTimelockMode()) {
       that.vars.windowsCache = {};
     } else if (
@@ -4164,10 +4191,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.windowsCache[identifierKey].data &&
       callback
     ) {
-      console.log("hahahahah",that.vars.windowsCache[identifierKey].data);
-      callback(that.vars.windowsCache[identifierKey].data);
+      callback(that.vars.windowsCache[identifierKey].data, null, that.vars.windowsCache[identifierKey].realData);
       return;
     }
+
     const numSecondsToPadBeforeAndAfter = 2;
 
     const optionsPadded = JSON.parse(JSON.stringify(options));
@@ -4203,24 +4230,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           callback(null, noDataError);
         }
       } else {
-        that.vars.windowsCache[identifierKey] = {};
-        // transform the data before storing or displaying them
-        that.vars.windowsCache[identifierKey].data = that._transformData(
+        let transformedData = that._transformData(
           data,
           numSecondsPaddedBefore,
           options.window_length,
           numSecondsToPadBeforeAndAfter
         );
-        that.vars.reprint = 1;
+        that._addToWindowsCache(identifierKey, transformedData, data, options);
         if (callback) {
-          callback(that.vars.windowsCache[identifierKey].data, null, data);
+          callback(transformedData, null, data);
         }
       }
     });
-
-    that.vars.windowsCache[identifierKey] = {
-      request: "placeholder",
-    };
   },
 
   _transformData: function (
