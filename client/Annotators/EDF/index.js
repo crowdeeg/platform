@@ -1,5 +1,6 @@
 import isWebGLEnabled from 'detector-webgl';
 import moment from 'moment';
+import { Annotations, Preferences, Assignments, Data, EDFFile } from "/collections";
 
 Template.AnnotatorEDF.onCreated(function() {
     if (!browser.satisfies({
@@ -55,11 +56,11 @@ Template.AnnotatorEDF.onRendered(function() {
 	//console.log("here");
 	config = $.extend(config, {
 		recordingName: this.data.dataset.reduce((combined, data) => {
-			let dataPathSegments = data.path.split("/");
+			// let dataPathSegments = data.path.split("/");
 			if (!combined.length)
-				return dataPathSegments[dataPathSegments.length - 1];
+				return data.name // dataPathSegments[dataPathSegments.length - 1];
 			return (
-				combined + " + " + dataPathSegments[dataPathSegments.length - 1]
+				combined + " + " + data.name // dataPathSegments[dataPathSegments.length - 1]
 			);
 		}, ""),
 		allRecordings: this.data.dataset.map((data) => {

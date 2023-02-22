@@ -1,6 +1,6 @@
 import { dsvFormat } from "d3-dsv";
 import { Mongo } from "meteor/mongo";
-import { Data, Assignments,EDFFile, sanitize} from "/collections";
+import { Data, Assignments,EDFFile, Annotations, sanitize} from "/collections";
 
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
@@ -245,8 +245,9 @@ let WFDB = {
       }
 
       const numSamples = rows.length;
-      const samplingRate = Math.round(numSamples / outputDurationInSeconds);
-      // console.log("237 samplingRate : " + samplingRate); console.log("237 numSamples : " + numSamples); console.log("237 outputDurationInSeconds : " + outputDurationInSeconds);
+      //const samplingRate = Math.round(numSamples / outputDurationInSeconds);
+      const samplingRate = numSamples/outputDurationInSeconds;
+      //console.log("237 samplingRate : " + samplingRate); console.log("237 numSamples : " + numSamples); console.log("237 outputDurationInSeconds : " + outputDurationInSeconds);
       const data = channelNames.map(() => {
         return new FloatArrayType(numSamples);
       });
@@ -673,40 +674,36 @@ function indexOfChannel(channelArray, index, dataId) {
   return channelArray.findIndex(isChannel, { name: index, dataId: dataId });
 }
 
-const edfFileSync = Meteor.wrapAsync()
-
 Meteor.methods({
 
-  "removeFile"(id){
-    
-    EDFFile.then(result =>{
-      id = id.replace(/\s+/g, '');
-      id = id.replace(/\W/g, '');
-      console.log("ID: " + id);
-      return new Promise((resolve, reject) => {
-        const recordingPath = `/uploaded/${id}.edf`;
-        Data.remove({ path: recordingPath }, (err) => {
-          if (err) {
-            reject(err);
+  "removeFile"(fileName){
+    return new Promise((resolve, reject) => {
+      EDFFile.then(result =>{
+        let dataId = Data.findOne({ name: fileName, path: { $nin: ["/physionet/edfx/PSG.edf", "/physionet/edfx/ANNE.edf"]}})._id;
+        Assignments.remove({dataFiles: {$eq: dataId}}, (err)=> {
+          if(err){
+            reject();
           } else {
-            result.remove({_id:id},function(error){
-              if (error){
-                console.error("File wasn't removed, error: " + error.reason)
-                console.log("here1");
-                reject(error);
-              }
-              else{
-                console.info("File successfully removed");
-                console.log("here2");
-                resolve();
+            Data.remove({ _id: dataId}, (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                result.remove({name: fileName},function(error){
+                  if (error){
+                    console.error("File wasn't removed, error: " + error.reason)
+                    reject(error);
+                  }
+                  else{
+                    console.info("File successfully removed");
+                    resolve(dataId);
+                  }
+                });
               }
             });
           }
         });
       });
-    })
-
-    
+    });
   },
   "deleteFromAssignments"(dataId){
     return new Promise((resolve, reject) => {
@@ -719,10 +716,106 @@ Meteor.methods({
       });
     });
   },
-  "get.file.exists"(fileId){
+
+  // function that inserts a list of annotations
+  "insertAnnotationsForReview"(data){
+    return new Promise((resolve, reject) => {
+      try{
+        console.log(data);
+        for(i = 0; i < data.length; i++){
+          Annotations.insert(data[i]);
+        }
+        resolve();
+      } catch (err){
+        reject(err);
+        return;
+      }
+    });
+  },
+  // function that inserts an assignment
+  "insertAssignmentForReview"(data){
+    return new Promise((resolve, reject) => {
+      var assignment = Assignments.findOne(data);
+      console.log(data);
+      console.log(assignment);
+      if(assignment){
+        resolve(assignment._id);
+      } else {
+        Assignments.insert(data, (err, res)=> {
+          if(err){
+            console.info(err);
+            reject(err);
+          } else {
+            resolve(res);
+          }
+        });
+      }
+    });
+  },
+  // function that deletes all annotations with the given assignment id
+  "deleteAnnotationsForReview"(assignmentId){
+    return new Promise((resolve, reject) => {
+      Annotations.remove({assignment: assignmentId}, (err, res)=> {
+        if(err){
+          console.info(err);
+          reject(err);
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  },
+  // function that finds an assignment given a query
+  "findAssignment"(data){
+    return new Promise((resolve, reject) => {
+      console.log(data);
+      
+      try{
+        var assignment = Assignments.findOne(data);
+        if(assignment){
+          resolve(assignment);
+        }
+        reject();
+      } catch(err){
+        console.info(err);
+        reject(err);
+      }
+      
+    });
+  },
+  // function that updates a list of annotations
+  "updateAnnotationsForReview"(annotations, update){
+    return new Promise((resolve, reject)=> {
+      try{
+        for(i = 0; i < annotations.length; i++){
+          Annotations.update(annotations[i], update);
+        }
+        resolve();
+      } catch(err){
+        reject(err);
+      }
+    })
+  },
+  // function that updates an assignment
+  "updateReviewAssignment"(data, update){
+    return new Promise((resolve, reject) => {
+      Assignments.update(data, update,(err, res)=> {
+        console.log("data:", data);
+        console.log("update: ", update);
+        if(err){
+          console.info(err);
+          reject(err);
+        } else {
+          console.log("found");
+          resolve();
+        }
+      });
+    });
+  },
+  "get.file.exists"(fileName){
     return new Promise((resolve, reject) => {
       EDFFile.then(result =>{
-        let file = result.findOne({ _id: fileId });
+        let file = result.findOne({ name: fileName });
         if (file) {
           resolve(true);
         } else {
