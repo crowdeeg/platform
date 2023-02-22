@@ -4420,7 +4420,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
   },
 
-  _addToWindowsCache(identifierKey, data, realData, options) {
+  _addToWindowsCache: function (identifierKey, data, realData, options) {
+    var that = this;
     while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
       let keyToDelete = undefined;
       let farthestKeyDist = -1;
