@@ -728,6 +728,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //         data: dataObject
       //     },
       // }
+      annotationsCacheLength: 15,
       annotationsCache: {},
       // annotationsCache is an object, keeping track of annotations loaded from the server:
       //
@@ -2296,7 +2297,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $(".annotation-display-option").off("click.annotationoption").on("click.annotationoption", (e) => {
       that.options.features.showAllBoxAnnotations = e.target.attributes.option.value;
       that.vars.annotationsLoaded = false;
-      that.vars.annotationsCache = [];
+      that.vars.annotationsCache = {};
 
       that._removeAnnotationBox();
 
@@ -3962,7 +3963,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       windows <= -that.options.windowJumpSizeFastForwardBackward
     )
       return;
-    that._flushAnnotations();
     var nextRecordings = that.options.allRecordings;
     var nextWindowSizeInSeconds = that.vars.xAxisScaleInSeconds;
     var nextWindowStart = that.options.currentWindowStart;
@@ -4255,17 +4255,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       });
     });
-    if (that.vars.chart) {
-      if (that.vars.chart.annotations) {
-        //console.log(that.vars.xAxisScaleInSeconds);
-        that._flushAnnotations();
-        that._getAnnotations(
-          that.vars.currentWindowRecording,
-          that.vars.currentWindowStart,
-          that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-        );
-      }
-    }
   },
 
   jumpToEpochWithStartTime: function (epochStartTimeInSeconds) {
@@ -8670,6 +8659,31 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return annotations;
   },
 
+  _addToAnnotationsCache: function (cacheKey, annotations, startTime) {
+    var that = this;
+
+    while (Object.keys(that.vars.annotationsCache).length >= that.vars.annotationsCacheLength) {
+      let keyToDelete = undefined;
+      let farthestKeyDist = -1;
+      Object.keys(that.vars.annotationsCache).forEach((key) => {
+        if (!that.vars.annotationsCache[key] || !that.vars.annotationsCache[key].startTime || !that.vars.annotationsCache[key].annotations) {
+          keyToDelete = key;
+          farthestKeyDist = -2;
+        } else if (farthestKeyDist > -2) {
+          if (farthestKeyDist < 0 || Math.abs(startTime - that.vars.annotationsCache[key].startTime) > farthestKeyDist) {
+            keyToDelete = key;
+            farthestKeyDist = Math.abs(startTime - that.vars.annotationsCache[key].startTime);
+          }
+        }
+      });
+
+      delete that.vars.annotationsCache[keyToDelete];
+    }
+
+    that.vars.annotationsCache[cacheKey] = {};
+    that.vars.annotationsCache[cacheKey].annotations = annotations;
+    that.vars.annotationsCache[cacheKey].startTime = startTime;
+  },
 
   _saveFullWindowLabel: function (annotationCategory, label, rationale) {
     var that = this;
@@ -8686,7 +8700,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       false,
       annotationCategory
     );
-    var annotation = that.vars.annotationsCache[cacheKey] || {};
+    var annotation = that.vars.annotationsCache[cacheKey] ? that.vars.annotationsCache[cacheKey].annotations : {};
 
     ////console.log(time_start);
     that._saveAnnotation(
@@ -8709,7 +8723,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             savedAnnotation.arbitrationRoundNumber;
           annotationFormatted.rationale = savedAnnotation.rationale;
           that.vars.currentAnnotationTime = null;
-          that.vars.annotationsCache[cacheKey] = savedAnnotation;
+          that._addToAnnotationsCache(cacheKey, savedAnnotation, time_start);
         }
         that._refreshAnnotations();
       }
@@ -9751,7 +9765,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const context = that.options.context;
     that._addArbitrationInformationToObject(modifier);
     modifier = { $set: modifier };
-    console.log(that.options.context.preferences);
     Preferences.update(
       that.options.context.preferences._id,
       modifier,
@@ -9893,129 +9906,100 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       correctAnswers
     );
 
-    if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
-      var data = that.vars.annotationsCache[cacheKey] || {
-        annotations: [],
-      };
-      if (!correctAnswers) {
-        that._incrementNumberOfAnnotationsInCurrentWindow(
-          that._getVisibleAnnotations(data.annotations).length
-        );
-      }
-      that._displayArtifactsSelection(data.annotations);
-      that._displaySleepStageSelection(
-        data.annotations,
-        window_start,
-        window_end
-      );
-      return;
-    }
-
     var annotations;
 
-    if (Roles.userIsInRole(Meteor.userId(), "admin")) {
-      // Devil's bargin quick fix: assume the user only wants his own annotations
-
-      // if (that.options.features.showAllBoxAnnotations == "all") {
-      //   //     //console.log("inside annotate");
-      //   //grab annotations from all users
-      //   ////console.log(that.options.context.data._id);
-      //   // //console.log(that.options.context.assignment._id);
-      //   annotations = Annotations.find(
-      //     {
-      //         assignment: that.options.context.assignment._id,
-      //       dataFiles: that.options.context.dataset.map((data) => data._id),
-      //       type: "SIGNAL_ANNOTATION",
-      //     },
-      //     {
-      //       sort: { updatedAt: -1 },
-      //     }
-      //   ).fetch();
-      // } else if (that.options.features.showAllBoxAnnotations == "my") {
-      //grab annotations from this current admin user
-      annotations = Annotations.find(
-        {
-          assignment: that.options.context.assignment._id,
-          dataFiles: that.options.context.dataset.map((data) => data._id),
-          user: Meteor.userId(),
-          type: "SIGNAL_ANNOTATION",
-        },
-        {
-          sort: { updatedAt: -1 },
-        }
-      ).fetch();
-      // } 
-      // else if (that.options.features.showAllBoxAnnotations != "") {
-      //   //grab annotations from the selected user
-      //   annotations = Annotations.find(
-      //     {
-      //       assignment: that.options.context.assignment._id,
-      //       dataFiles: that.options.context.dataset.map((data) => data._id),
-      //       user: that.options.features.showAllBoxAnnotations,
-      //       type: "SIGNAL_ANNOTATION",
-      //     },
-      //     {
-      //       sort: { updatedAt: -1 },
-      //     }
-      //   ).fetch();
-      //   console.log(8189);
-      //   console.log(annotations);
-
-      // }
+    if (that.vars.annotationsLoaded && that.vars.annotationsCache[cacheKey]) {
+      annotations = that.vars.annotationsCache[cacheKey].annotations || [];
+      if (!correctAnswers) {
+        that._incrementNumberOfAnnotationsInCurrentWindow(
+          that._getVisibleAnnotations(annotations).length
+        );
+      }
     } else {
-      //grab annotations from this current non-admin user
-      annotations = Annotations.find(
-        {
-          assignment: that.options.context.assignment._id,
-          dataFiles: that.options.context.dataset.map((data) => data._id),
-          user: Meteor.userId(),
-          type: "SIGNAL_ANNOTATION",
-        },
-        {
-          sort: { updatedAt: -1 },
-        }
-      ).fetch();
+      if (Roles.userIsInRole(Meteor.userId(), "admin")) {
+        // Devil's bargin quick fix: assume the user only wants his own annotations
+  
+        // if (that.options.features.showAllBoxAnnotations == "all") {
+        //   //     //console.log("inside annotate");
+        //   //grab annotations from all users
+        //   ////console.log(that.options.context.data._id);
+        //   // //console.log(that.options.context.assignment._id);
+        //   annotations = Annotations.find(
+        //     {
+        //         assignment: that.options.context.assignment._id,
+        //       dataFiles: that.options.context.dataset.map((data) => data._id),
+        //       type: "SIGNAL_ANNOTATION",
+        //     },
+        //     {
+        //       sort: { updatedAt: -1 },
+        //     }
+        //   ).fetch();
+        // } else if (that.options.features.showAllBoxAnnotations == "my") {
+        //grab annotations from this current admin user
+        annotations = Annotations.find(
+          {
+            assignment: that.options.context.assignment._id,
+            dataFiles: that.options.context.dataset.map((data) => data._id),
+            user: Meteor.userId(),
+            type: "SIGNAL_ANNOTATION",
+          },
+          {
+            sort: { updatedAt: -1 },
+          }
+        ).fetch();
+        // } 
+        // else if (that.options.features.showAllBoxAnnotations != "") {
+        //   //grab annotations from the selected user
+        //   annotations = Annotations.find(
+        //     {
+        //       assignment: that.options.context.assignment._id,
+        //       dataFiles: that.options.context.dataset.map((data) => data._id),
+        //       user: that.options.features.showAllBoxAnnotations,
+        //       type: "SIGNAL_ANNOTATION",
+        //     },
+        //     {
+        //       sort: { updatedAt: -1 },
+        //     }
+        //   ).fetch();
+        //   console.log(8189);
+        //   console.log(annotations);
+  
+        // }
+      } else {
+        //grab annotations from this current non-admin user
+        annotations = Annotations.find(
+          {
+            assignment: that.options.context.assignment._id,
+            dataFiles: that.options.context.dataset.map((data) => data._id),
+            user: Meteor.userId(),
+            type: "SIGNAL_ANNOTATION",
+          },
+          {
+            sort: { updatedAt: -1 },
+          }
+        ).fetch();
+      }
+  
+      that.vars.annotationsLoaded = true;
+  
+      annotations = annotations.map(function (annotation) {
+        var annotationFormatted = annotation.value;
+        annotationFormatted.id = annotation._id;
+        annotationFormatted.user = annotation.user;
+        annotationFormatted.arbitration = annotation.arbitration;
+        annotationFormatted.arbitrationRoundNumber =
+          annotation.arbitrationRoundNumber;
+        annotationFormatted.rationale = annotation.rationale;
+        return annotationFormatted;
+      });
+  
+      that._addToAnnotationsCache(cacheKey, annotations, window_start);
     }
 
-    that.vars.annotationsLoaded = true;
-
-    annotations = annotations.map(function (annotation) {
-      var annotationFormatted = annotation.value;
-      annotationFormatted.id = annotation._id;
-      annotationFormatted.user = annotation.user;
-      annotationFormatted.arbitration = annotation.arbitration;
-      annotationFormatted.arbitrationRoundNumber =
-        annotation.arbitrationRoundNumber;
-      annotationFormatted.rationale = annotation.rationale;
-      return annotationFormatted;
-    });
-    annotations.forEach(function (annotation) {
-      var annotationWindowStart =
-        Math.floor(annotation.position.start / that.vars.xAxisScaleInSeconds) *
-        that.vars.xAxisScaleInSeconds;
-      var annotationWindowEnd =
-        annotationWindowStart + that.vars.xAxisScaleInSeconds;
-      var annotationCacheKey = that._getAnnotationsCacheKey(
-        recording_name,
-        annotationWindowStart,
-        annotationWindowEnd,
-        correctAnswers
-      );
-      if (!that.vars.annotationsCache[annotationCacheKey]) {
-        that.vars.annotationsCache[annotationCacheKey] = {
-          annotations: [],
-        };
-      }
-      that.vars.annotationsCache[annotationCacheKey].annotations.push(
-        annotation
-      );
-    });
-    var data = that.vars.annotationsCache[cacheKey] || {
-      annotations: [],
-    };
-    that._displayArtifactsSelection(data.annotations);
+    
+    that._displayArtifactsSelection(annotations);
     that._displaySleepStageSelection(
-      data.annotations,
+      annotations,
       window_start,
       window_end
     );
@@ -10119,7 +10103,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           false,
           "ARTIFACT"
         );
-        that.vars.annotationsCache[cacheKey] = annotation;
+        that._addToAnnotationsCache(cacheKey, annotation, annotation.position.start);
         $(that.element)
           .find(
             '.artifact_panel button.artifact[data-annotation-type="' +
@@ -10197,7 +10181,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             false,
             "SLEEP_STAGE"
           );
-          that.vars.annotationsCache[cacheKey] = annotation;
+          that._addToAnnotationsCache(cacheKey, annotation, annotation.position.start);
           if (arbitrationDoc && !!arbitrationRoundNumber) {
             annotationArbitrationRoundNumber =
               !!annotation.arbitrationRoundNumber
@@ -10479,7 +10463,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       annotations[0].destroy();
       that.vars.chart.selectedAnnotation = null;
     }
-    that.vars.annotationsCache = {};
   },
 
   _saveAnnotation: function (
@@ -10622,24 +10605,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     function updateCache(annotation) {
-      var key = that._getAnnotationsCacheKey(
-        recording_name,
-        annotation.value.position.start,
-        annotation.value.position.end,
-        false
-      );
-      var cacheEntry = that.vars.annotationsCache[key];
-      if (!cacheEntry) {
-        cacheEntry = {
-          annotations: [],
-        };
-      }
-
-      // console.log(cacheEntry);
-      if (cacheEntry.annotations) {
-        cacheEntry.annotations.unshift(annotation.value);
-      }
-      that.vars.annotationsCache[key] = cacheEntry;
+      that.vars.annotationsCache = {};
       callback && callback(annotation, null);
     }
   },
@@ -11200,9 +11166,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _saveAnnotations: function (annotaions) {
+  _saveAnnotations: function (annotations) {
     var that = this;
-    let newAnnotations = annotaions.map((annotation) => {
+    let newAnnotations = annotations.map((annotation) => {
       var annotationId = annotation.metadata.id;
       var type = annotation.metadata.featureType;
       var start = that._getAnnotationXMinFixed(annotation);
@@ -11284,42 +11250,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._updateMarkAssignmentAsCompletedButtonState();
 
     for (let i = 0; i < newAnnotations.length; i++) {
-      updateCache(annotaions[i], newAnnotations[i])
+      annotations[i].metadata.id = newAnnotations[i].id;
       if (i === newAnnotations.length - 1) {
-        window.alert(`uploaded ${annotaions.length} annotations`);
+        window.alert(`uploaded ${annotations.length} annotations`);
       }
     }
+
+    updateCache();
 
     if ($("#annotation-manager-dialog").dialog("isOpen")) {
       that._populateAnnotationManagerTable(that._getAnnotationsOnly());
     }
 
-    function updateCache(annotation, savedAnnotation) {
-      var key = that._getAnnotationsCacheKey(
-        that.vars.currentWindowRecording,
-        savedAnnotation.value.position.start,
-        savedAnnotation.value.position.end,
-        false
-      );
-      var cacheEntry = that.vars.annotationsCache[key];
-      if (!cacheEntry) {
-        cacheEntry = {
-          annotations: [],
-        };
-      }
-
-      // console.log(cacheEntry);
-      if (cacheEntry.annotations) {
-        cacheEntry.annotations.unshift(annotation.value);
-      }
-      that.vars.annotationsCache[key] = cacheEntry;
-      annotation.metadata.id = savedAnnotation.id;
-      annotationFormatted = savedAnnotation.value;
-      annotationFormatted.id = savedAnnotation.id;
-      annotationFormatted.arbitration = savedAnnotation.arbitration;
-      annotationFormatted.arbitrationRoundNumber =
-        savedAnnotation.arbitrationRoundNumber;
-      annotationFormatted.rationale = savedAnnotation.rationale;
+    function updateCache() {
+      that.vars.annotationsCache = {};
     }
 
   },
