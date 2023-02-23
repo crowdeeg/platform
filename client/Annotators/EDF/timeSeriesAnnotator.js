@@ -10631,6 +10631,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         return;
       }
     });
+    that.vars.annotationsCache = {};
     that._updateAnnotationManagerSelect();
   },
 
