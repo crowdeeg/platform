@@ -826,13 +826,27 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //TODO: lines 645 to end of comment is hwere the N1 things are located
       ' \
             <div class="graph_container"> \
-              <div class="container">\
+              <div class="container-fluid">\
                 <div class="row">\
-                  <div class="graph-menus col s12">\
+                  <div class="graph-menus col s7">\
                     <a class="dropdown-button btn" data-activates="channel-dropdown">Channel</a>\
                     <a class="dropdown-button btn" data-activates="annotation-dropdown">Annotation</a>\
                     <a class="dropdown-button btn" data-activates="display-dropdown">Display</a>\
                     <a class="dropdown-button btn" data-activates="metadata-dropdown">Metadata</a>\
+                  </div> \
+                  <div class="btn-toolbar col s5"> \
+                    <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
+                    Done\
+                    </button> \
+                    <button type="button" class="btn btn-default reject" id="reject_button" aria-label="Reject"> \
+                    Reject\
+                    </button> \
+                    <button type="button" class="btn btn-default sendChanges" id="sendChanges_button" aria-label="Send Changes"> \
+                    Send Changes\
+                    </button> \
+                    <button type="button" class="btn btn-default feedback" id="feedback_button" aria-label="Feedback"> \
+                    Feedback\
+                    </button> \
                   </div>\
                 </div>\
                 <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
@@ -1127,20 +1141,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       </div> \
                   </div> \
               </div> \
-              <div style="display: flex; justify-content: center; margin-bottom: 20px" class="btn-toolbar">\
-                <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
-                Done\
-                </button> \
-                <button type="button" class="btn btn-default reject" id="reject_button" aria-label="Reject"> \
-                Reject\
-                </button> \
-                <button type="button" class="btn btn-default sendChanges" id="sendChanges_button" aria-label="Send Changes"> \
-                Send Changes\
-                </button> \
-                <button type="button" class="btn btn-default feedback" id="feedback_button" aria-label="Feedback"> \
-                Feedback\
-                </button> \
-              </div>\
           </div> \
         ';
     $(that.element).html(content);
