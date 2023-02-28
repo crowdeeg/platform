@@ -1,6 +1,6 @@
 import { dsvFormat } from "d3-dsv";
 import { Mongo } from "meteor/mongo";
-import { Data, Assignments,EDFFile, Annotations, sanitize} from "/collections";
+import { Data, Assignments,EDFFile, Annotations, Preferences, sanitize} from "/collections";
 
 String.prototype.toPascalCase = function () {
 	return this.replace(/\s(.)/g, function ($1) {
@@ -730,6 +730,26 @@ Meteor.methods({
         reject(err);
         return;
       }
+    });
+  },
+  //function to insert preferences for the reviewer/reviewee
+  "insertPreferencesForReview"(data){
+    return new Promise((resolve, reject)=> {
+      var check = {...data};
+      delete check.annotatorConfig;
+      console.log("CHECK", check);
+      var preference = Preferences.findOne(check);
+      console.log("preference", preference);
+      if(preference){
+        Preferences.remove(preference._id);
+      }
+      Preferences.insert(data, (err)=>{
+        if(err){
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
     });
   },
   // function that inserts an assignment

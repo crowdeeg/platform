@@ -86,6 +86,16 @@ let waitForInsertingAnnotationsPromise = async function(data){
     var id = await _insertReviewAssignment(data);
     await _deleteReviewAnnotations(id);
     console.log(id);
+    var newPreferences = {...that.options.context.preferences};
+    newPreferences["assignment"] = id;
+    newPreferences["user"] = that.options.context.assignment.reviewer;
+    delete newPreferences.updatedAt;
+    delete newPreferences._id;
+    delete newPreferences.createdAt;
+    delete newPreferences.revisions;
+    delete newPreferences.lastModified;
+    await createPreferences(newPreferences);
+
     var docs = [];
     let annotations = Annotations.find(
       {
@@ -111,6 +121,21 @@ let waitForInsertingAnnotationsPromise = async function(data){
   })
 }
 
+let createPreferences = async function(newPreferences){
+
+  return new Promise((resolve, reject) => {
+    Meteor.call('insertPreferencesForReview', newPreferences, function(err, res){
+      if (err){
+        console.log(err);
+        reject();
+        return;
+      }
+      console.log(data);
+      resolve();
+    })
+  });
+}
+
 // Async funciton that wait for us to insert all the info for the reviewer before switching pages
 let doneSwitchPages = async function(data){
   await waitForInsertingAnnotationsPromise(data);
@@ -129,6 +154,18 @@ let sendChanges = async function(data){
   console.log(data);
   const assignmentId = await _findAssignmentId(data);
   console.log(assignmentId);
+
+  var newPreferences = {...that.options.context.preferences};
+  newPreferences["assignment"] = assignmentId;
+  newPreferences["user"] = that.options.context.assignment.reviewing;
+  delete newPreferences.updatedAt;
+  delete newPreferences._id;
+  delete newPreferences.createdAt;
+  delete newPreferences.revisions;
+  delete newPreferences.lastModified;
+  console.log(newPreferences);
+  await createPreferences(newPreferences);
+
   await _deleteReviewAnnotations(assignmentId);
   let annotations = Annotations.find(
     {
@@ -3144,6 +3181,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             reviewer: Meteor.userId(),
           };
           _updateReviewAssignment(data, { $set: {status: "Completed", canBeReopenedAfterCompleting: false}});
+        } else if(that.options.context.assignment.reviewer != Meteor.userId()){
+          console.log("check4");
+          Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Review"}});
+          users = [];
+          users.push(that.options.context.assignment.reviewer);
+          const data = {
+            task: that.options.context.assignment.task,
+            dataFiles: that.options.context.assignment.dataFiles,
+            users: users,
+            status: "Review",
+            arbitration: that.options.context.assignment.arbitration,
+            reviewing: Meteor.userId(),
+          };
+          doneSwitchPages(data);
+          console.log("here")
         }
         console.log("check3");
         console.log(that.options.context.assignment._id);
