@@ -969,7 +969,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       <input type="text" id="annotation-manager-table-search" class="col s12">\
                       <label for="annotation-manager-table-search">Search:</label>\
                     </div>\
-                    <button id="annotation-manager-table-delete" class="btn red col s4">Delete</button>\
+                  </div>\
+                  <div class="annotation-manager-row row">\
+                    <button id="annotation-manager-table-select-all" class="row-btn btn col s4">Select All</button>\
+                    <button id="annotation-manager-table-deselect-all" class="row-btn btn col s5">Deselect All</button>\
+                    <button id="annotation-manager-table-delete" class="row-btn btn red col s4">Delete</button>\
                   </div>\
                 </div>\
                 <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
@@ -11590,10 +11594,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
-  _getAnnotationManagerSortFunc() {
-
-  },
-
   _populateAnnotationManagerTable: function(annotations, sortFunc) {
     var that = this;
     let tableBody = $(".annotation-manager-table-body");
@@ -11616,7 +11616,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
           <td class="annotation-comment">${annotation.metadata.comment != undefined ? annotation.metadata.comment : ""}</td>
-          <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" /><label for="annotation-manager-select-${i}"></label></p></td>
+          <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" class="annotation-manager-select" /><label for="annotation-manager-select-${i}"></label></p></td>
         </tr>`);
       }
     });
@@ -11642,6 +11642,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
 
+    $("#annotation-manager-table-select-all").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      $(that._getFilteredAnnotations($("#annotation-manager-table-search").val())).find(".annotation-manager-select").prop("checked", true).trigger("change");
+    });
+
+    $("#annotation-manager-table-deselect-all").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      $(that._getFilteredAnnotations($("#annotation-manager-table-search").val())).find(".annotation-manager-select").prop("checked", false).trigger("change");
+    });
+
     $("#annotation-manager-table-delete").off("click.annotationmanager").on("click.annotationmanager", (e) => {
       let annotations = that._getAnnotationsOnly();
       let ids = $(".annotation-manager-table-row .annotation-select input:checked").closest(".annotation-manager-table-row").map((i, element) => {
@@ -11654,6 +11662,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       let newAnnotations = that._getAnnotations();
       that._populateAnnotationManagerTable(newAnnotations, sortFunc);
+    });
+  },
+
+  _getFilteredAnnotations(filter) {
+    let tableBody = $(".annotation-manager-table-body");
+    filter = filter.toUpperCase();
+    return $(tableBody).find("tr").filter((i, element) => {
+      let nameElement = $(element).find(".annotation-name");
+      let commentElement = $(element).find(".annotation-comment");
+      let nameText = $(nameElement).text();
+      let commentText = $(commentElement).text();
+      if (nameText.toUpperCase().indexOf(filter) > -1 || commentText.toUpperCase().indexOf(filter) > -1) {
+        return true;
+      } else {
+        return false;
+      }
     });
   },
 
@@ -11672,17 +11696,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     let elements = undefined;
     if (filter) {
-      elements = $(tableBody).find("tr").filter((i, element) => {
-        let nameElement = $(element).find(".annotation-name");
-        let commentElement = $(element).find(".annotation-comment");
-        let nameText = $(nameElement).text();
-        let commentText = $(commentElement).text();
-        if (nameText.toUpperCase().indexOf(filter) > -1 || commentText.toUpperCase().indexOf(filter) > -1) {
-          return true;
-        } else {
-          return false;
-        }
-      });
+      elements = $(that._getFilteredAnnotations(filter));
     } else {
       elements = tableBody.find("tr");
     }
