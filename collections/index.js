@@ -831,11 +831,21 @@ Assignments.helpers({
   },
   dataDocs() {
     let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    // console.log(queryArray);
+    // console.log((Data.find({ $or: queryArray }) || false).fetch());
+    var data = (Data.find({ $or: queryArray }) || false).fetch();
+    if(data[0]){
+        var firstDoc = data[0]._id;
+        if(firstDoc != queryArray[0]){
+            return (Data.find({ $or: queryArray }, {sort: { "_id": -1}}) || false);
+        }
+    }
     return Data.find({ $or: queryArray }) || false;
   },
   patientDoc() {
     // only return the patient of the first data in dataFiles
     const data = this.dataDocs().fetch();
+    //console.log(data);
     if (!data.length) return false;
     return data.map(data => data.patientDoc());
   },
