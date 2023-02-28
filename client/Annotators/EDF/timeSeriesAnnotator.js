@@ -199,6 +199,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_axis_limited: [],
     y_limit_lower: [],
     y_limit_upper: [],
+    showTitle: true,
     y_axis_limited_values: [],
     projectUUID: undefined,
     requireConsent: false,
@@ -871,7 +872,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     <a class="dropdown-button btn" data-activates="display-dropdown">Display</a>\
                     <a class="dropdown-button btn" data-activates="metadata-dropdown">Metadata</a>\
                   </div> \
-                  <div class="btn-toolbar col s5"> \
+                  <div class="btn-toolbar col s4"> \
                     <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
                     Done\
                     </button> \
@@ -883,6 +884,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </button> \
                     <button type="button" class="btn btn-default feedback" id="feedback_button" aria-label="Feedback"> \
                     Feedback\
+                    </button> \
+                  </div>\
+                  <div class="btn-toolbar col s1">\
+                  <button type="button" class="btn btn-default toggleTitle" id="title_button" aria-label="TItle"> \
+                    Title\
                     </button> \
                   </div>\
                 </div>\
@@ -1877,6 +1883,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTimeSyncPanel();
     that._setupIOPanel();
     that._setupDoneButton();
+    that._setupTitleButton();
     that._setupRejectButton();
     that._setupSendChangesButton();
     that._setupFeedbackButton();
@@ -3160,6 +3167,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
     }
 
+  },
+
+  _setupTitleButton: function(){
+    var that = this;
+    var element = $(that.element);
+    element.find("#title_button").click(function(){
+      // console.log("toggle title");
+      // console.log(that.vars.chart.title.textStr);
+      // console.log(that.vars.chart);
+
+      if(that.options.showTitle == true){
+        that.options.showTitle = false;
+        that.vars.chart.setTitle({text: null});
+        $("#prevPageLatestLabel").hide();
+        $("#prevPageLatestBox").hide();
+      } else {
+        that.options.showTitle = true;
+        that.vars.chart.setTitle({text: that.options.recordingName});
+        $("#prevPageLatestLabel").show();
+        $("#prevPageLatestBox").show();
+      }
+    });
   },
 
   _setupDoneButton: function (){
@@ -5763,6 +5792,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         credits: {
           enabled: false,
         },
+        //TITLE HERE!!!!!!!!!!!!!!!
         title: {
           text: that.options.recordingName,
         },
