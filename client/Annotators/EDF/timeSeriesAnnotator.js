@@ -200,6 +200,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_limit_lower: [],
     y_limit_upper: [],
     showTitle: true,
+    latestClick: null,
     y_axis_limited_values: [],
     projectUUID: undefined,
     requireConsent: false,
@@ -1883,6 +1884,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTimeSyncPanel();
     that._setupIOPanel();
     that._setupDoneButton();
+    that._setupLatestClick();
     that._setupTitleButton();
     that._setupRejectButton();
     that._setupSendChangesButton();
@@ -2458,7 +2460,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
 
+
     $(".display-timescale-option").off("click.timescaleoption").on("click.timescaleoption", (e) => {
+      var currentXAxisScaleInSeconds = that.vars.xAxisScaleInSeconds;
       let timescaleIndex = e.target.attributes.timescaleIndex.value;
       let settingIndex = e.target.attributes.settingIndex.value;
       let timescaleSetting = that.options.xAxisTimescales[timescaleIndex];
@@ -2470,7 +2474,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         timescaleSetting: timescaleSetting.options[settingIndex],
       });
       timescaleSetting.options[settingIndex].default = true;
+      if(currentXAxisScaleInSeconds > e.target.attributes.option.value){
+        that.vars.currentWindowStart = that.options.latestClick - Number(e.target.attributes.option.value)/2;
+      }
       that.vars.xAxisScaleInSeconds = +e.target.attributes.option.value;
+      if(that.vars.currentWindowStart < 0){
+        that.vars.currentWindowStart = 0;
+      }
+      console.log(that.vars.currentWindowStart);
       that._reloadCurrentWindow();
     });
   },
@@ -3188,6 +3199,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         $("#prevPageLatestLabel").show();
         $("#prevPageLatestBox").show();
       }
+    });
+  },
+
+  _setupLatestClick: function(){
+    var that = this;
+    var element = $(that.element);
+    console.log(element);
+    element.find(".graph").click(function(event){
+      // console.log("here");
+      // console.log(event);
+      //that.options.latestClick = event.originalEvent.point.x ? event.originalEvent.point.x : event.originalEvent.xAxis[0].value;
+      if(event.originalEvent.point != undefined){
+        that.options.latestClick = event.originalEvent.point.x;
+      } else {
+        that.options.latestClick = event.originalEvent.xAxis[0].value;
+      }
+      console.log(that.options.latestClick);
     });
   },
 
