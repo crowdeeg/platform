@@ -4431,6 +4431,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _reloadCurrentWindow: function () {
     //console.log("_reloadCurrentWindow");
     var that = this;
+    that.vars.annotationsCache = {};
+    that.vars.windowsCache = {};
     // reloads the current window by "switching" to it using the current window start time, the current x axis scale and the current recordings
     that._switchToWindow(
       that.options.allRecordings,
