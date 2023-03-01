@@ -301,6 +301,11 @@ dialog .input-field input {
   margin: 0;
 }
 
+.crosshair-time-input-container {
+  float: left;
+  width: 20%;
+}
+
 .timesync_panel button {
   margin: 0 0 0 20px !important;
 }
