@@ -867,13 +867,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             <div class="graph_container"> \
               <div class="container-fluid">\
                 <div class="row">\
-                  <div class="graph-menus col s7">\
+                  <div class="graph-menus col s6">\
                     <a class="dropdown-button btn" data-activates="channel-dropdown">Channel</a>\
                     <a class="dropdown-button btn" data-activates="annotation-dropdown">Annotation</a>\
                     <a class="dropdown-button btn" data-activates="display-dropdown">Display</a>\
                     <a class="dropdown-button btn" data-activates="metadata-dropdown">Metadata</a>\
                   </div> \
-                  <div class="btn-toolbar col s4"> \
+                  <div class="btn-toolbar col s5"> \
                     <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
                     Done\
                     </button> \
