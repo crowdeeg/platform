@@ -996,7 +996,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                         <tr>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-label">Label</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
-                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-comment">Comment</th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-duration">Duration</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-select">Select</th>\
                         </tr>\
                       </thead>\
@@ -2050,11 +2050,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
 
-    $(".annotation-manager-table-header-comment").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+    $(".annotation-manager-table-header-duration").off("click.annotationmanager").on("click.annotationmanager", (e) => {
       if ($(e.currentTarget).prop("sortDirection") === "up") {
-        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (b.metadata.comment == null ? "" : "" + b.metadata.comment).localeCompare(a.metadata.comment == null ? "" : "" + a.metadata.comment));
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (b.position.end - b.position.start) - (a.position.end - a.position.start)});
       } else {
-        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (a.metadata.comment == null ? "" : "" + a.metadata.comment).localeCompare(b.metadata.comment == null ? "" : "" + b.metadata.comment));
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (a.position.end - a.position.start) - (b.position.end - b.position.start)});
       }
     });
   },
@@ -11722,12 +11722,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.annotationManagerSortFunc = sortFunc;
 
     annotations.sort(sortFunc).forEach((annotation,i)=>{
-      if(annotation.metadata.annotationLabel != null){
-        
+      if(annotation.metadata.annotationLabel != null) {
         tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id}>
           <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
-          <td class="annotation-comment">${annotation.metadata.comment != undefined ? annotation.metadata.comment : ""}</td>
+          <td class="annotation-duration">${that._getDisplayTime(annotation.position.end - annotation.position.start)}</td>
           <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" class="annotation-manager-select" /><label for="annotation-manager-select-${i}"></label></p></td>
         </tr>`);
       }
@@ -11782,10 +11781,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     filter = filter.toUpperCase();
     return $(tableBody).find("tr").filter((i, element) => {
       let nameElement = $(element).find(".annotation-name");
-      let commentElement = $(element).find(".annotation-comment");
       let nameText = $(nameElement).text();
-      let commentText = $(commentElement).text();
-      if (nameText.toUpperCase().indexOf(filter) > -1 || commentText.toUpperCase().indexOf(filter) > -1) {
+      if (nameText.toUpperCase().indexOf(filter) > -1) {
         return true;
       } else {
         return false;
