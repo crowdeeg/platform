@@ -199,6 +199,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_axis_limited: [],
     y_limit_lower: [],
     y_limit_upper: [],
+    showTitle: true,
+    latestClick: null,
     y_axis_limited_values: [],
     projectUUID: undefined,
     requireConsent: false,
@@ -865,7 +867,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             <div class="graph_container"> \
               <div class="container-fluid">\
                 <div class="row">\
-                  <div class="graph-menus col s7">\
+                  <div class="graph-menus col s6">\
                     <a class="dropdown-button btn" data-activates="channel-dropdown">Channel</a>\
                     <a class="dropdown-button btn" data-activates="annotation-dropdown">Annotation</a>\
                     <a class="dropdown-button btn" data-activates="display-dropdown">Display</a>\
@@ -883,6 +885,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </button> \
                     <button type="button" class="btn btn-default feedback" id="feedback_button" aria-label="Feedback"> \
                     Feedback\
+                    </button> \
+                  </div>\
+                  <div class="btn-toolbar col s1">\
+                  <button type="button" class="btn btn-default toggleTitle" id="title_button" aria-label="TItle"> \
+                    Title\
                     </button> \
                   </div>\
                 </div>\
@@ -989,7 +996,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                         <tr>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-label">Label</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
-                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-comment">Comment</th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-duration">Duration</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-select">Select</th>\
                         </tr>\
                       </thead>\
@@ -1877,6 +1884,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTimeSyncPanel();
     that._setupIOPanel();
     that._setupDoneButton();
+    that._setupLatestClick();
+    that._setupTitleButton();
     that._setupRejectButton();
     that._setupSendChangesButton();
     that._setupFeedbackButton();
@@ -2041,11 +2050,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
 
-    $(".annotation-manager-table-header-comment").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+    $(".annotation-manager-table-header-duration").off("click.annotationmanager").on("click.annotationmanager", (e) => {
       if ($(e.currentTarget).prop("sortDirection") === "up") {
-        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (b.metadata.comment == null ? "" : "" + b.metadata.comment).localeCompare(a.metadata.comment == null ? "" : "" + a.metadata.comment));
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (b.position.end - b.position.start) - (a.position.end - a.position.start)});
       } else {
-        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (a.metadata.comment == null ? "" : "" + a.metadata.comment).localeCompare(b.metadata.comment == null ? "" : "" + b.metadata.comment));
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (a.position.end - a.position.start) - (b.position.end - b.position.start)});
       }
     });
   },
@@ -2451,7 +2460,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
 
+
     $(".display-timescale-option").off("click.timescaleoption").on("click.timescaleoption", (e) => {
+      var currentXAxisScaleInSeconds = that.vars.xAxisScaleInSeconds;
       let timescaleIndex = e.target.attributes.timescaleIndex.value;
       let settingIndex = e.target.attributes.settingIndex.value;
       let timescaleSetting = that.options.xAxisTimescales[timescaleIndex];
@@ -2463,7 +2474,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         timescaleSetting: timescaleSetting.options[settingIndex],
       });
       timescaleSetting.options[settingIndex].default = true;
+      if(currentXAxisScaleInSeconds > e.target.attributes.option.value){
+        that.vars.currentWindowStart = that.options.latestClick - Number(e.target.attributes.option.value)/2;
+      }
       that.vars.xAxisScaleInSeconds = +e.target.attributes.option.value;
+      if(that.vars.currentWindowStart < 0){
+        that.vars.currentWindowStart = 0;
+      }
+      console.log(that.vars.currentWindowStart);
       that._reloadCurrentWindow();
     });
   },
@@ -3188,6 +3206,45 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       })
     }
 
+  },
+
+  _setupTitleButton: function(){
+    var that = this;
+    var element = $(that.element);
+    element.find("#title_button").click(function(){
+      // console.log("toggle title");
+      // console.log(that.vars.chart.title.textStr);
+      // console.log(that.vars.chart);
+
+      if(that.options.showTitle == true){
+        that.options.showTitle = false;
+        that.vars.chart.setTitle({text: null});
+        $("#prevPageLatestLabel").hide();
+        $("#prevPageLatestBox").hide();
+      } else {
+        that.options.showTitle = true;
+        that.vars.chart.setTitle({text: that.options.recordingName});
+        $("#prevPageLatestLabel").show();
+        $("#prevPageLatestBox").show();
+      }
+    });
+  },
+
+  _setupLatestClick: function(){
+    var that = this;
+    var element = $(that.element);
+    console.log(element);
+    element.find(".graph").click(function(event){
+      // console.log("here");
+      // console.log(event);
+      //that.options.latestClick = event.originalEvent.point.x ? event.originalEvent.point.x : event.originalEvent.xAxis[0].value;
+      if(event.originalEvent.point != undefined){
+        that.options.latestClick = event.originalEvent.point.x;
+      } else {
+        that.options.latestClick = event.originalEvent.xAxis[0].value;
+      }
+      console.log(that.options.latestClick);
+    });
   },
 
   _setupDoneButton: function (){
@@ -4440,8 +4497,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _reloadCurrentWindow: function () {
     //console.log("_reloadCurrentWindow");
     var that = this;
-    that.vars.windowsCache = {};
     that.vars.annotationsCache = {};
+    that.vars.windowsCache = {};
     // reloads the current window by "switching" to it using the current window start time, the current x axis scale and the current recordings
     that._switchToWindow(
       that.options.allRecordings,
@@ -5803,6 +5860,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         credits: {
           enabled: false,
         },
+        //TITLE HERE!!!!!!!!!!!!!!!
         title: {
           text: that.options.recordingName,
         },
@@ -10869,11 +10927,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let fileName = "";
 
     var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
-      let extBegin = record.Record.lastIndexOf(".");
+      let recordName = that.options.allRecordings.filter((rec) => {
+        return rec._id === key;
+      })[0].name;
+      let extBegin = recordName.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recordName.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recordName + "_";
       }
       return (JSON.stringify({
         'filename': record.Record,
@@ -10908,16 +10969,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     // console.log(annotations);
     var obj = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
-    Object.values(that.vars.recordingMetadata).forEach((record) => {
-      let extBegin = record.Record.lastIndexOf(".");
+    Object.values(that.options.allRecordings).forEach((recording) => {
+      let extBegin = recording.name.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recording.name.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recording.name + "_";
       }
     });
     fileName = fileName + "alignment.json";
@@ -10945,12 +11007,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
-    Object.values(that.vars.recordingMetadata).forEach((record) => {
-      let extBegin = record.Record.lastIndexOf(".");
+    Object.values(that.options.allRecordings).forEach((recording) => {
+      let extBegin = recording.name.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recording.name.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recording.name + "_";
       }
     });
     fileName = fileName + "preferences.json";
@@ -11702,12 +11764,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.annotationManagerSortFunc = sortFunc;
 
     annotations.sort(sortFunc).forEach((annotation,i)=>{
-      if(annotation.metadata.annotationLabel != null){
-        
+      if(annotation.metadata.annotationLabel != null) {
         tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id}>
           <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
-          <td class="annotation-comment">${annotation.metadata.comment != undefined ? annotation.metadata.comment : ""}</td>
+          <td class="annotation-duration">${that._getDisplayTime(annotation.position.end - annotation.position.start)}</td>
           <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" class="annotation-manager-select" /><label for="annotation-manager-select-${i}"></label></p></td>
         </tr>`);
       }
@@ -11762,10 +11823,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     filter = filter.toUpperCase();
     return $(tableBody).find("tr").filter((i, element) => {
       let nameElement = $(element).find(".annotation-name");
-      let commentElement = $(element).find(".annotation-comment");
       let nameText = $(nameElement).text();
-      let commentText = $(commentElement).text();
-      if (nameText.toUpperCase().indexOf(filter) > -1 || commentText.toUpperCase().indexOf(filter) > -1) {
+      if (nameText.toUpperCase().indexOf(filter) > -1) {
         return true;
       } else {
         return false;
