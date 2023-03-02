@@ -201,6 +201,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_limit_upper: [],
     showTitle: true,
     latestClick: null,
+    loading: false,
     y_axis_limited_values: [],
     projectUUID: undefined,
     requireConsent: false,
@@ -888,9 +889,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </button> \
                   </div>\
                   <div class="btn-toolbar col s1">\
-                  <button type="button" class="btn btn-default toggleTitle" id="title_button" aria-label="TItle"> \
-                    Title\
-                    </button> \
+                  <div class="loader" id="loader" style="border: 16px solid #f3f3f3; border-top: 16px solid #1b948e; border-radius: 50%; width: 35px; height: 35px; animation: spin 2s linear infinite; margin: auto"></div>\
                   </div>\
                 </div>\
                 <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
@@ -1024,6 +1023,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="display-notch" class="dropdown-button dropdown-submenu" data-activates="display-notch-submenu">Filter</a></li>\
                   <li><a id="display-timescale" class="dropdown-button dropdown-submenu" data-activates="display-timescale-submenu">Timescale</a></li>\
                   <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
+                  <li><a id="toggle_title" class="toggle-title">Toggle Title</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
@@ -1868,7 +1868,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _setup: function () {
     var that = this;
-
     // Destroy existing dialogs to avoid duplicates.
     $(".ui-dialog-content").dialog("destroy");
 
@@ -1907,7 +1906,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       })
       .catch((error) => console.error(error));
-
+    //that._hideLoading();
   },
 
   _setupGraphMenus: function () {
@@ -3099,6 +3098,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $(that.element)
       .find(".timesync")
       .click(function () {
+        that._showLoading();
+        console.log("YAAAA");
         if (that._isInCrosshairSyncMode()) {
           that._performCrosshairSync();
         } else if (that._isInOffsetSyncMode()) {
@@ -3108,6 +3109,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // besides free scrolling by mouse wheel,
           // adding [+/-] hh:mm:ss option and [shift left/right] buttons
         }
+        console.log("here");
+        //that._hideLoading();
       });
   },
   _setupFeedbackButton: function(){
@@ -3156,6 +3159,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     } else {
       // otherwise ask the user for feedback and reject the assignment
       element.find("#reject_button").click(function (){
+        that._showLoading();
         users = [];
         users.push(that.options.context.assignment.reviewing);
         const data = {
@@ -3183,7 +3187,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _setupTitleButton: function(){
     var that = this;
     var element = $(that.element);
-    element.find("#title_button").click(function(){
+    element.find("#toggle_title").click(function(){
       // console.log("toggle title");
       // console.log(that.vars.chart.title.textStr);
       // console.log(that.vars.chart);
@@ -3218,12 +3222,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(that.options.latestClick);
     });
   },
+  _hideLoading: function (){
+    var that = this;
+    var element = $(that.element);
+    $("#loader").hide();
+  },
+
+  _showLoading: function (){
+    var that = this;
+    $("#loader").show();
+  },
 
   _setupDoneButton: function (){
     var that = this;
     var element = $(that.element);
     console.log(that.options.context);
     element.find("#done_button").click(function (){
+      that._showLoading();
       user = Meteor.users.findOne(Meteor.userId());
       // if the user has a role, then they are either an admin or test user
       if(user.roles){
@@ -5360,6 +5375,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
+    that._showLoading();
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
 
@@ -5465,6 +5481,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     that.vars.chart.redraw();
     console.log(that.vars.scalingFactors);
+    that._hideLoading();
     //console.log(this.vars.chart.series);
   },
 
@@ -11116,8 +11133,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             console.log(text);
             const data = JSON.parse(text);
             diff = data[Object.keys(data)[0]];
+            that._showLoading();
             that._performOffsetSync();
             that._performCrosshairSync(diff);
+            that._hideLoading();
             alignmentLoaded = true;
           }
           // else {
