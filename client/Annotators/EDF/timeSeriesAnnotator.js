@@ -3016,6 +3016,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
       that.vars.reprint = 1;
       that.vars.crosshairPosition = [];
+      $(".crosshair-time-input").val("");
       $(this.element)
         .find(".timesync_panel select")
         .val("undefined")
@@ -3052,19 +3053,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     that.options.allRecordings.forEach((recording) => {
       that.element.find(".timesync_panel").prepend(`<div class="crosshair-time-input-container input-field col s12" hidden>
-          <input type="number" id="crosshair-time-input-${recording._id}" class="crosshair-time-input"></input>
-          <label for="crosshair-time-input-${recording._id}" class="active">${recording.name}:</label>
+          <input type="number" id="crosshair-time-input-${recording._id}" class="crosshair-time-input" step="any"></input>
+          <label for="crosshair-time-input-${recording._id}" class="active">${recording.name} Timestamp:</label>
         </div>`);
       $(`#crosshair-time-input-${recording._id}`).prop("recordingId", recording._id);
     });
 
-    $(".crosshair-time-input").on("change", (e) => {
+    $(".crosshair-time-input").off("change.timesync").on("change.timesync", (e) => {
       let element = $(e.currentTarget);
       that._setCrosshair({
         dataId: element.prop("recordingId"),
         timeInSeconds: element.val(),
         plotX: that.vars.chart.xAxis[0].toPixels(element.val(), true)
       });
+    });
+
+    $(".crosshair-time-input-container").off("mouseup.timesync").on("mouseup.timesync", (e) => {
+      e.stopPropagation();
     });
 
     timeSyncOptions.forEach((timeSyncOption) => {
@@ -3390,16 +3395,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // draw the crosshair using svgPath and add it as a highchart SVGElement
       let svgPath = [
         "M",
-        left + crosshair.plotX,
+        left + chart.xAxis[0].toPixels(crosshair.timeInSeconds, true),
         top + crosshairTop,
         "L",
-        left + crosshair.plotX,
+        left + chart.xAxis[0].toPixels(crosshair.timeInSeconds, true),
         top + crosshairBottom,
       ];
       chart.renderer
         .path(svgPath)
         .attr({
-          "stroke-width": 1,
+          "stroke-width": 2,
           stroke: "blue",
         })
         .add(that.vars.crosshair).toFront();
@@ -3708,7 +3713,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let crosshairPosition = that.vars.crosshairPosition;
     let sameRecording = false;
     let index = undefined;
-    $("#crosshair-time-input-" + pointInfo.dataId).val(pointInfo.timeInSeconds);
+    $("#crosshair-time-input-" + pointInfo.dataId).val(Math.round(pointInfo.timeInSeconds * 1000) / 1000);
     crosshairPosition.forEach((crosshair, i) => {
       if (crosshair.dataId === pointInfo.dataId) {
         sameRecording = true;
@@ -4284,6 +4289,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             //console.log(that);
             //that._populateGraph(that.vars.currentWindowData,real);
             that._populateGraph();
+            that._displayCrosshair(that.vars.crosshairPosition);
           });
         } else if (windowAvailable &&
           windowStartTime == that.vars.currentWindowStart && !that.options.graphPopulated){
@@ -4300,7 +4306,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             });
           }
 
-        that._displayCrosshair(that.vars.crosshairPosition);
         if (!that.options.experiment.running) {
           if (that._isInNoTimelockMode()) {
             that._setForwardEnabledStatus(false);
