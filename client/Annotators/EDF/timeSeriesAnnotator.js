@@ -10889,11 +10889,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let fileName = "";
 
     var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
-      let extBegin = record.Record.lastIndexOf(".");
+      let recordName = that.options.allRecordings.filter((rec) => {
+        return rec._id === key;
+      })[0].name;
+      let extBegin = recordName.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recordName.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recordName + "_";
       }
       return (JSON.stringify({
         'filename': record.Record,
@@ -10928,16 +10931,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     // console.log(annotations);
     var obj = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
-    Object.values(that.vars.recordingMetadata).forEach((record) => {
-      let extBegin = record.Record.lastIndexOf(".");
+    Object.values(that.options.allRecordings).forEach((recording) => {
+      let extBegin = recording.name.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recording.name.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recording.name + "_";
       }
     });
     fileName = fileName + "alignment.json";
@@ -10965,12 +10969,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
-    Object.values(that.vars.recordingMetadata).forEach((record) => {
-      let extBegin = record.Record.lastIndexOf(".");
+    Object.values(that.options.allRecordings).forEach((recording) => {
+      let extBegin = recording.name.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recording.name.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recording.name + "_";
       }
     });
     fileName = fileName + "preferences.json";
