@@ -201,6 +201,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_limit_upper: [],
     showTitle: true,
     y_axis_limited_values: [],
+    alignmentFromCSV: [],
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -10860,18 +10861,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     let fileName = "";
 
-    var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
+    var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record], index) => {
       let extBegin = record.Record.lastIndexOf(".");
+      console.log(index);
       if (extBegin > 0) {
         fileName = fileName + record.Record.substring(0, extBegin) + "_";
       } else {
         fileName = fileName + record.Record + "_";
       }
+      var alignmentKey = Object.keys(that.options.context.preferences.annotatorConfig.channelTimeshift);
+      var alignmentValue = Object.values(that.options.context.preferences.annotatorConfig.channelTimeshift);
+      console.log([key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]])
       return (JSON.stringify({
         'filename': record.Record,
         'fileId': key,
         'startTime': record.StartingTime,
-        'channels': channels[key].join('//')
+        'channels': channels[key].join('//'),
+        'alignment' : [key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]],
       }))
     })).join(',')
 
@@ -11082,12 +11088,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             const text = e.target.result;
             console.log(text);
             const data = that._CSVToArray(text);
+            diff = that.options.alignmentFromCSV ? that.options.alignmentFromCSV[1] : null;
+            if(diff != null){
+              that._performOffsetSync();
+              that._performCrosshairSync(diff);
+            }
             that._redrawAnnotationsFromObjects(data);
           } else if (input.type === "application/json" && !alignmentLoaded) {
             const text = e.target.result;
             console.log(text);
             const data = JSON.parse(text);
             diff = data[Object.keys(data)[0]];
+            console.log(diff);
             that._performOffsetSync();
             that._performCrosshairSync(diff);
             alignmentLoaded = true;
@@ -11161,20 +11173,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var data = JSON.parse(str)
         result.push(data)
       } catch (err) {
-
+        console.log(err);
       }
       return result
     }, [])
-
+    console.log(headerData);
     var discrepancies = headerData.length < 1 || headerData.length > 2 ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
+    console.log(process);
     if (process) {
       const remainStr = str.slice(str.indexOf("Index,Time"));
+      const alignmentArr = headerData.reduce(el => {
+        if(el.alignment[1] != null){
+          return el.alignment;
+        }
+      });
+      that.options.alignmentFromCSV = alignmentArr;
+      console.log(alignmentArr);
       const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
+      console.log(headers);
       // slice from \n index + 1 to the end of the text
       // use split to create an array of each csv value row
       const rows = remainStr.slice(remainStr.indexOf("\n") + 1).trim().split("\n");
-
+      console.log(rows);
       // Map the rows
       // split values from each row into an array
       // use headers.reduce to create an object
