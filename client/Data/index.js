@@ -19,6 +19,7 @@ let cond = {}
 var selectedDataG = new ReactiveVar({});
 var selectedAssigneesG = new ReactiveVar({});
 var selectedTaskG = new ReactiveVar(false);
+var loading = new ReactiveVar(false);
 
 let renderDate = (dateValue) => {
   if (dateValue instanceof Date) {
@@ -199,6 +200,7 @@ Template.Data.events({
     let filesSuccessfullyUploaded = 0;
     let filesUploadFailed = "";
     let uploadsEnded = 0;
+    loading.set(true);
 
     for (let i = 0; i < allFiles.length; i++) {
       const input = allFiles[i].name;
@@ -299,6 +301,7 @@ Template.Data.events({
         uploadsEnded++;
 
         if (uploadsEnded === allFiles.length) {
+          loading.set(false);
           window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n$`);
         }
 
@@ -307,7 +310,9 @@ Template.Data.events({
 
   },
   'click .btn.download': function () {
-    $(Template.instance().find('table.reactive-table')).table2csv();
+    loading.set(true);
+    $(Template.instance().find('table')).table2csv();
+    loading.set(false);
   },
   'click .btn.upload': function () {
     const files = document.getElementById("File");
@@ -330,6 +335,8 @@ Template.Data.events({
     let filesSuccessfullyUploadedString = "";
     let overwritePromise = false;
     let overwriteDuplicates = false;
+
+    loading.set(true);
 
     for (let i = 0; i < allFiles.length; i++) {
 
@@ -411,11 +418,12 @@ Template.Data.events({
   
               uploadInstance.on('end', function (error, fileObj) {
                 if (error) {
-  
+                  loading.set(false);
                   window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
                   filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
                   uploadsEnded++;
                   if (uploadsEnded === allFiles.length) {
+                    loading.set(false);
                     window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
                   }
                 } else {
@@ -524,6 +532,7 @@ Template.Data.events({
                     uploadsEnded++;
   
                     if (uploadsEnded === allFiles.length) {
+                      loading.set(false);
                       window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
                     }
   
@@ -541,10 +550,12 @@ Template.Data.events({
               filesUploadFailed += input.name + ": " + err + "\n";
   
               if (uploadsEnded === allFiles.length) {
+                loading.set(false);
                 window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
               }
             });
           }).catch(error => {
+            loading.set(false);
             console.log("Upload Process Failed: ", error);
           });
 
@@ -968,6 +979,10 @@ Template.Data.helpers({
   data() {
     return Object.values(Template.instance().selectedData.get());
   },
+  loading(){
+    //console.log(Template.instance());
+    return Template.instance().loading.get();
+  },
   taskAutocompleteSettings() {
     return {
       limit: Number.MAX_SAFE_INTEGER,
@@ -1321,11 +1336,12 @@ Template.Data.onCreated(function () {
   this.selectedAssignees = selectedAssigneesG;
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
-
+  this.loading = loading;
   //console.log(this);
 });
 
 Template.selected.onCreated(function(){
   this.change = new ReactiveVar(true);
   this.align = new ReactiveVar(true);
+  this.loading = loading;
 });
