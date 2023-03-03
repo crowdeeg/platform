@@ -10861,17 +10861,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     let fileName = "";
 
-    var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record], index) => {
+    var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
       let extBegin = record.Record.lastIndexOf(".");
-      console.log(index);
       if (extBegin > 0) {
         fileName = fileName + record.Record.substring(0, extBegin) + "_";
       } else {
         fileName = fileName + record.Record + "_";
       }
-      var alignmentKey = Object.keys(that.options.context.preferences.annotatorConfig.channelTimeshift);
-      var alignmentValue = Object.values(that.options.context.preferences.annotatorConfig.channelTimeshift);
-      console.log([key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]])
+      //console.log([key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]])
       return (JSON.stringify({
         'filename': record.Record,
         'fileId': key,
