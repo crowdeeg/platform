@@ -203,6 +203,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     latestClick: null,
     loading: false,
     y_axis_limited_values: [],
+    alignmentFromCSV: [],
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -10953,11 +10954,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else {
         fileName = fileName + recordName + "_";
       }
+      //console.log([key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]])
       return (JSON.stringify({
         'filename': record.Record,
         'fileId': key,
         'startTime': record.StartingTime,
-        'channels': channels[key].join('//')
+        'channels': channels[key].join('//'),
+        'alignment' : [key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]],
       }))
     })).join(',')
 
@@ -11169,6 +11172,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             const text = e.target.result;
             console.log(text);
             const data = that._CSVToArray(text);
+            diff = that.options.alignmentFromCSV ? that.options.alignmentFromCSV[1] : null;
+            if(diff != null){
+              that._performOffsetSync();
+              that._performCrosshairSync(diff);
+            }
             that._redrawAnnotationsFromObjects(data);
           } else if (input.type === "application/json" && !alignmentLoaded) {
             const text = e.target.result;
@@ -11250,20 +11258,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var data = JSON.parse(str)
         result.push(data)
       } catch (err) {
-
+        console.log(err);
       }
       return result
     }, [])
-
+    console.log(headerData);
     var discrepancies = headerData.length < 1 || headerData.length > 2 ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
+    console.log(process);
     if (process) {
       const remainStr = str.slice(str.indexOf("Index,Time"));
+      const alignmentArr = headerData.reduce(el => {
+        if(el.alignment[1] != null){
+          return el.alignment;
+        }
+      });
+      that.options.alignmentFromCSV = alignmentArr;
+      console.log(alignmentArr);
       const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
+      console.log(headers);
       // slice from \n index + 1 to the end of the text
       // use split to create an array of each csv value row
       const rows = remainStr.slice(remainStr.indexOf("\n") + 1).trim().split("\n");
-
+      console.log(rows);
       // Map the rows
       // split values from each row into an array
       // use headers.reduce to create an object
