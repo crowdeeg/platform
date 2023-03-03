@@ -297,8 +297,21 @@ dialog .input-field input {
 }
 
 .timesync_panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   float: left;
   margin: 0;
+}
+
+.crosshair-time-input-container {
+  float: left;
+  width: 20%;
+  margin: 0px 0px 0px 20px;
+}
+
+.crosshair-time-input-container .crosshair-time-input:not(.browser-default) {
+  margin: 0px;
 }
 
 .timesync_panel button {

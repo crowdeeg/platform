@@ -60,6 +60,9 @@
                 <input type="file" accept=".edf" multiple id="File" >
                 <b>Folders:</b>
                 <input type="file" multiple id="Folder" webkitdirectory="true">
+                {{#if loading}}
+                <div class="loader"></div>
+                {{/if}}
             </center>
             <br>
             <button class="btn download">Download Visible Rows To CSV</button>

@@ -200,6 +200,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     y_limit_lower: [],
     y_limit_upper: [],
     showTitle: true,
+    latestClick: null,
+    loading: false,
     y_axis_limited_values: [],
     alignmentFromCSV: [],
     projectUUID: undefined,
@@ -867,13 +869,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             <div class="graph_container"> \
               <div class="container-fluid">\
                 <div class="row">\
-                  <div class="graph-menus col s7">\
+                  <div class="graph-menus col s6">\
                     <a class="dropdown-button btn" data-activates="channel-dropdown">Channel</a>\
                     <a class="dropdown-button btn" data-activates="annotation-dropdown">Annotation</a>\
                     <a class="dropdown-button btn" data-activates="display-dropdown">Display</a>\
                     <a class="dropdown-button btn" data-activates="metadata-dropdown">Metadata</a>\
                   </div> \
-                  <div class="btn-toolbar col s4"> \
+                  <div class="btn-toolbar col s5"> \
                     <button type="button" class="btn btn-default done" id="done_button" aria-label="Done"> \
                     Done\
                     </button> \
@@ -888,9 +890,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     </button> \
                   </div>\
                   <div class="btn-toolbar col s1">\
-                  <button type="button" class="btn btn-default toggleTitle" id="title_button" aria-label="TItle"> \
-                    Title\
-                    </button> \
+                  <div class="loader" id="loader" style="border: 16px solid #f3f3f3; border-top: 16px solid #1b948e; border-radius: 50%; width: 35px; height: 35px; animation: spin 2s linear infinite; margin: auto"></div>\
                   </div>\
                 </div>\
                 <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
@@ -996,7 +996,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                         <tr>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-label">Label</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
-                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-comment">Comment</th>\
+                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-duration">Duration</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-select">Select</th>\
                         </tr>\
                       </thead>\
@@ -1024,6 +1024,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="display-notch" class="dropdown-button dropdown-submenu" data-activates="display-notch-submenu">Filter</a></li>\
                   <li><a id="display-timescale" class="dropdown-button dropdown-submenu" data-activates="display-timescale-submenu">Timescale</a></li>\
                   <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
+                  <li><a id="toggle_title" class="toggle-title">Toggle Title</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
@@ -1868,7 +1869,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _setup: function () {
     var that = this;
-
     // Destroy existing dialogs to avoid duplicates.
     $(".ui-dialog-content").dialog("destroy");
 
@@ -1884,6 +1884,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTimeSyncPanel();
     that._setupIOPanel();
     that._setupDoneButton();
+    that._setupLatestClick();
     that._setupTitleButton();
     that._setupRejectButton();
     that._setupSendChangesButton();
@@ -1906,7 +1907,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
       })
       .catch((error) => console.error(error));
-
+    //that._hideLoading();
   },
 
   _setupGraphMenus: function () {
@@ -2049,11 +2050,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
 
-    $(".annotation-manager-table-header-comment").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+    $(".annotation-manager-table-header-duration").off("click.annotationmanager").on("click.annotationmanager", (e) => {
       if ($(e.currentTarget).prop("sortDirection") === "up") {
-        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (b.metadata.comment == null ? "" : "" + b.metadata.comment).localeCompare(a.metadata.comment == null ? "" : "" + a.metadata.comment));
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (b.position.end - b.position.start) - (a.position.end - a.position.start)});
       } else {
-        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => (a.metadata.comment == null ? "" : "" + a.metadata.comment).localeCompare(b.metadata.comment == null ? "" : "" + b.metadata.comment));
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (a.position.end - a.position.start) - (b.position.end - b.position.start)});
       }
     });
   },
@@ -2459,7 +2460,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
     });
 
+
     $(".display-timescale-option").off("click.timescaleoption").on("click.timescaleoption", (e) => {
+      var currentXAxisScaleInSeconds = that.vars.xAxisScaleInSeconds;
       let timescaleIndex = e.target.attributes.timescaleIndex.value;
       let settingIndex = e.target.attributes.settingIndex.value;
       let timescaleSetting = that.options.xAxisTimescales[timescaleIndex];
@@ -2471,7 +2474,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         timescaleSetting: timescaleSetting.options[settingIndex],
       });
       timescaleSetting.options[settingIndex].default = true;
+      if(currentXAxisScaleInSeconds > e.target.attributes.option.value){
+        that.vars.currentWindowStart = that.options.latestClick - Number(e.target.attributes.option.value)/2;
+      }
       that.vars.xAxisScaleInSeconds = +e.target.attributes.option.value;
+      if(that.vars.currentWindowStart < 0){
+        that.vars.currentWindowStart = 0;
+      }
+      console.log(that.vars.currentWindowStart);
       that._reloadCurrentWindow();
     });
   },
@@ -2934,10 +2944,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       case "crosshair":
         $(".timesync").prop("disabled", false);
         that._toggleNoTimelockScroll(false);
+        $(".crosshair-time-input-container").show();
         that._displayCrosshair(that.vars.crosshairPosition);
         break;
       case "notimelock":
         $(".timesync").prop("disabled", true);
+        $(".crosshair-time-input-container").hide();
         that._destroyCrosshair();
         that._toggleNoTimelockScroll(true);
         $(".time_sync").text("");
@@ -2946,12 +2958,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       case "offset":
         // $(".time_sync").text("");
         $(".timesync").prop("disabled", false);
+        $(".crosshair-time-input-container").hide();
         that._toggleNoTimelockScroll(false);
         that._destroyCrosshair();
         break;
       case "undefined":
       default:
         $(".timesync").prop("disabled", true);
+        $(".crosshair-time-input-container").hide();
         that._toggleNoTimelockScroll(false);
         that._destroyCrosshair();
         break;
@@ -3020,6 +3034,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
       that.vars.reprint = 1;
       that.vars.crosshairPosition = [];
+      $(".crosshair-time-input").val("");
       $(this.element)
         .find(".timesync_panel select")
         .val("undefined")
@@ -3053,10 +3068,32 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _setupTimeSyncPanel: function () {
     var that = this;
     let timeSyncOptions = that.options.timeSyncOptions || [];
+
+    that.options.allRecordings.forEach((recording) => {
+      that.element.find(".timesync_panel").prepend(`<div class="crosshair-time-input-container input-field col s12" hidden>
+          <input type="number" id="crosshair-time-input-${recording._id}" class="crosshair-time-input" step="any"></input>
+          <label for="crosshair-time-input-${recording._id}" class="active">${recording.name} Timestamp:</label>
+        </div>`);
+      $(`#crosshair-time-input-${recording._id}`).prop("recordingId", recording._id);
+    });
+
+    $(".crosshair-time-input").off("change.timesync").on("change.timesync", (e) => {
+      let element = $(e.currentTarget);
+      that._setCrosshair({
+        dataId: element.prop("recordingId"),
+        timeInSeconds: element.val(),
+        plotX: that.vars.chart.xAxis[0].toPixels(element.val(), true)
+      });
+    });
+
+    $(".crosshair-time-input-container").off("mouseup.timesync").on("mouseup.timesync", (e) => {
+      e.stopPropagation();
+    });
+
     timeSyncOptions.forEach((timeSyncOption) => {
       let selectContainer = $(
         '<div class="select_panel"><select></select></div>'
-      ).appendTo(that.element.find(".timesync_panel"));
+      ).prependTo(that.element.find(".timesync_panel"));
       let select = selectContainer.find("select");
       let defaultOptionIndex = null;
       timeSyncOption.options.forEach((option, i) => {
@@ -3086,9 +3123,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._renderAlignmentAlert();
       });
     });
+
     $(that.element)
       .find(".timesync")
       .click(function () {
+        that._showLoading();
+        console.log("YAAAA");
         if (that._isInCrosshairSyncMode()) {
           that._performCrosshairSync();
         } else if (that._isInOffsetSyncMode()) {
@@ -3098,6 +3138,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           // besides free scrolling by mouse wheel,
           // adding [+/-] hh:mm:ss option and [shift left/right] buttons
         }
+        console.log("here");
+        //that._hideLoading();
       });
   },
   _setupFeedbackButton: function(){
@@ -3146,6 +3188,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     } else {
       // otherwise ask the user for feedback and reject the assignment
       element.find("#reject_button").click(function (){
+        that._showLoading();
         users = [];
         users.push(that.options.context.assignment.reviewing);
         const data = {
@@ -3173,7 +3216,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _setupTitleButton: function(){
     var that = this;
     var element = $(that.element);
-    element.find("#title_button").click(function(){
+    element.find("#toggle_title").click(function(){
       // console.log("toggle title");
       // console.log(that.vars.chart.title.textStr);
       // console.log(that.vars.chart);
@@ -3192,11 +3235,39 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
   },
 
+  _setupLatestClick: function(){
+    var that = this;
+    var element = $(that.element);
+    console.log(element);
+    element.find(".graph").click(function(event){
+      // console.log("here");
+      // console.log(event);
+      //that.options.latestClick = event.originalEvent.point.x ? event.originalEvent.point.x : event.originalEvent.xAxis[0].value;
+      if(event.originalEvent.point != undefined){
+        that.options.latestClick = event.originalEvent.point.x;
+      } else {
+        that.options.latestClick = event.originalEvent.xAxis[0].value;
+      }
+      console.log(that.options.latestClick);
+    });
+  },
+  _hideLoading: function (){
+    var that = this;
+    var element = $(that.element);
+    $("#loader").hide();
+  },
+
+  _showLoading: function (){
+    var that = this;
+    $("#loader").show();
+  },
+
   _setupDoneButton: function (){
     var that = this;
     var element = $(that.element);
     console.log(that.options.context);
     element.find("#done_button").click(function (){
+      that._showLoading();
       user = Meteor.users.findOne(Meteor.userId());
       // if the user has a role, then they are either an admin or test user
       if(user.roles){
@@ -3397,19 +3468,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // draw the crosshair using svgPath and add it as a highchart SVGElement
       let svgPath = [
         "M",
-        left + crosshair.plotX,
+        left + chart.xAxis[0].toPixels(crosshair.timeInSeconds, true),
         top + crosshairTop,
         "L",
-        left + crosshair.plotX,
+        left + chart.xAxis[0].toPixels(crosshair.timeInSeconds, true),
         top + crosshairBottom,
       ];
       chart.renderer
         .path(svgPath)
         .attr({
-          "stroke-width": 1,
+          "stroke-width": 2,
           stroke: "blue",
         })
-        .add(that.vars.crosshair);
+        .add(that.vars.crosshair).toFront();
     });
   },
 
@@ -3688,7 +3759,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return that._isFromSource(dataId, "PSG");
   },
 
-  _setCrosshair: function (point) {
+  // pointInfo must contain dataId, plotX, and timeInSeconds.
+  _setCrosshair: function (pointInfo) {
     var that = this;
 
     // console.log("======getTopDataId()======");
@@ -3714,17 +3786,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let crosshairPosition = that.vars.crosshairPosition;
     let sameRecording = false;
     let index = undefined;
+    $("#crosshair-time-input-" + pointInfo.dataId).val(Math.round(pointInfo.timeInSeconds * 1000) / 1000);
     crosshairPosition.forEach((crosshair, i) => {
-      if (crosshair.dataId === point.dataId) {
+      if (crosshair.dataId === pointInfo.dataId) {
         sameRecording = true;
         index = i;
       }
     });
     if (sameRecording) {
-      crosshairPosition[index] = point;
+      crosshairPosition[index] = {
+        dataId: pointInfo.dataId,
+        timeInSeconds: pointInfo.timeInSeconds,
+        plotX: pointInfo.plotX
+      };
     } else {
       if (crosshairPosition.length < 2) {
-        crosshairPosition.push(point);
+        crosshairPosition.push({
+          dataId: pointInfo.dataId,
+          timeInSeconds: pointInfo.timeInSeconds,
+          plotX: pointInfo.plotX
+        });
       }
       // if (crosshairPosition.length > 2) {
       //   crosshairPosition.shift();
@@ -4281,6 +4362,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             //console.log(that);
             //that._populateGraph(that.vars.currentWindowData,real);
             that._populateGraph();
+            that._displayCrosshair(that.vars.crosshairPosition);
           });
         } else if (windowAvailable &&
           windowStartTime == that.vars.currentWindowStart && !that.options.graphPopulated){
@@ -4297,7 +4379,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             });
           }
 
-        that._displayCrosshair(that.vars.crosshairPosition);
         if (!that.options.experiment.running) {
           if (that._isInNoTimelockMode()) {
             that._setForwardEnabledStatus(false);
@@ -5333,6 +5414,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
+    that._showLoading();
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
 
@@ -5438,6 +5520,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     that.vars.chart.redraw();
     console.log(that.vars.scalingFactors);
+    that._hideLoading();
     //console.log(this.vars.chart.series);
   },
 
@@ -10862,11 +10945,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let fileName = "";
 
     var fileInfo = (Object.entries(that.vars.recordingMetadata).map(([key, record]) => {
-      let extBegin = record.Record.lastIndexOf(".");
+      let recordName = that.options.allRecordings.filter((rec) => {
+        return rec._id === key;
+      })[0].name;
+      let extBegin = recordName.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recordName.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recordName + "_";
       }
       //console.log([key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]])
       return (JSON.stringify({
@@ -10903,16 +10989,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     // console.log(annotations);
     var obj = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
-    Object.values(that.vars.recordingMetadata).forEach((record) => {
-      let extBegin = record.Record.lastIndexOf(".");
+    Object.values(that.options.allRecordings).forEach((recording) => {
+      let extBegin = recording.name.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recording.name.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recording.name + "_";
       }
     });
     fileName = fileName + "alignment.json";
@@ -10940,12 +11027,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
-    Object.values(that.vars.recordingMetadata).forEach((record) => {
-      let extBegin = record.Record.lastIndexOf(".");
+    Object.values(that.options.allRecordings).forEach((recording) => {
+      let extBegin = recording.name.lastIndexOf(".");
       if (extBegin > 0) {
-        fileName = fileName + record.Record.substring(0, extBegin) + "_";
+        fileName = fileName + recording.name.substring(0, extBegin) + "_";
       } else {
-        fileName = fileName + record.Record + "_";
+        fileName = fileName + recording.name + "_";
       }
     });
     fileName = fileName + "preferences.json";
@@ -11096,9 +11183,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             console.log(text);
             const data = JSON.parse(text);
             diff = data[Object.keys(data)[0]];
-            console.log(diff);
+            that._showLoading();
             that._performOffsetSync();
             that._performCrosshairSync(diff);
+            that._hideLoading();
             alignmentLoaded = true;
           }
           // else {
@@ -11712,12 +11800,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.annotationManagerSortFunc = sortFunc;
 
     annotations.sort(sortFunc).forEach((annotation,i)=>{
-      if(annotation.metadata.annotationLabel != null){
-        
+      if(annotation.metadata.annotationLabel != null) {
         tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id}>
           <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
-          <td class="annotation-comment">${annotation.metadata.comment != undefined ? annotation.metadata.comment : ""}</td>
+          <td class="annotation-duration">${that._getDisplayTime(annotation.position.end - annotation.position.start)}</td>
           <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" class="annotation-manager-select" /><label for="annotation-manager-select-${i}"></label></p></td>
         </tr>`);
       }
@@ -11772,10 +11859,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     filter = filter.toUpperCase();
     return $(tableBody).find("tr").filter((i, element) => {
       let nameElement = $(element).find(".annotation-name");
-      let commentElement = $(element).find(".annotation-comment");
       let nameText = $(nameElement).text();
-      let commentText = $(commentElement).text();
-      if (nameText.toUpperCase().indexOf(filter) > -1 || commentText.toUpperCase().indexOf(filter) > -1) {
+      if (nameText.toUpperCase().indexOf(filter) > -1) {
         return true;
       } else {
         return false;
