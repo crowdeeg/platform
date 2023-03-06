@@ -8087,7 +8087,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
       that._nukeAnnotation(annotation);
 
-      that._getNonTrivialUniversalAnnotations();
       if (nextAnnotation !== undefined) {
         that._updateChangePointLabelLeft(nextAnnotation);
         that._updateChangePointLabelRight(nextAnnotation);
@@ -8137,7 +8136,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _addChangePointLabelFixed: function () {
     var that = this;
     let chart = that.vars.chart;
-    var annotations = that._getNonTrivialUniversalAnnotations();
+    var annotations = that.vars.universalChangePointAnnotationsCache;
     // grab the previous annotation in sorted order
     var index = that._getUniversalAnnotationIndexByXVal(that.vars.currentWindowStart);
     var annotation = annotations[index];
@@ -8218,7 +8217,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation));
     // var annotations = that.vars.universalChangePointAnnotationsCache;
-    var annotations = that._getNonTrivialUniversalAnnotations();
+    var annotations = that.vars.universalChangePointAnnotationsCache;
 
     if (annotations.length != 0 && index >= 0) {
       textarea1.val(annotations[index].metadata.annotationLabel);
@@ -8454,7 +8453,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     let chart = that.vars.chart;
 
-    var annotations = that._getNonTrivialUniversalAnnotations();
+    var annotations = that.vars.universalChangePointAnnotationsCache;
     // grab the previous annotation in sorted order
     var index = that._getUniversalAnnotationIndexByXVal(that.vars.currentWindowStart);
     var annotation = annotations[index];
@@ -8482,10 +8481,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _updateChangePointLabelLeft: function (annotation) {
     var that = this;
     // var annotations = that.vars.universalChangePointAnnotationsCache;
-    var annotations = that._getNonTrivialUniversalAnnotations();
+    var annotations = that.vars.universalChangePointAnnotationsCache;
     // grab the previous annotation in sorted order
-    var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) - 1;
-
+    var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation));
+    // If the annotation is non trivial, it is included in the indexing, so move to the previous one.
+    if (that._isNonTrivialUniversalAnnotation(annotation)) {
+      index = index - 1;
+    }
 
     var element = $(`#${annotation.metadata.id}Left`);
 
@@ -8624,9 +8626,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._updateChangePointLabelLeft(annotation);
 
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
-      var annotations = that._getNonTrivialUniversalAnnotations();
+      var annotations = that.vars.universalChangePointAnnotationsCache;
       if (annotations[index] != undefined) {
-        that._updateChangePointLabelLeft(annotations[index]);
+        let nextVisibleChangePoint = that.vars.chart.annotations.allItems.filter((a) => a.metadata.id === annotations[index].id)[0];
+        if (nextVisibleChangePoint) {
+          that._updateChangePointLabelLeft(nextVisibleChangePoint);
+        }
       }
     }
 
@@ -8801,7 +8806,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     var XValue = parseFloat(XVal).toFixed(2);
     var annotations = that.vars.universalChangePointAnnotationsCache;
-    var XValues = annotations.map(a => parseFloat(that._getAnnotationXMinFixed(a)).toFixed(2));
+    var XValues = annotations.map(a => parseFloat(a.position.start).toFixed(2));
 
     var index;
 
@@ -8815,19 +8820,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return index;
   },
 
-  _getNonTrivialUniversalAnnotations: function () {
+  _isNonTrivialUniversalAnnotation(annotation) {
+    return annotation.metadata.annotationLabel !== undefined &&
+      annotation.metadata.annotationLabel != "undefined" &&
+      annotation.metadata.annotationLabel != "(data missing)";
+  },
+
+  _getNonTrivialUniversalAnnotations: function (annotationsToFilter) {
     var that = this;
     // non trivial means that an annotation has an actual sleep stage value saved in it.
-    that.vars.chart.annotations.allItems.sort((a, b) => {
-      return that._getAnnotationXMinFixed(a) - that._getAnnotationXMaxFixed(b);
+    var annotations = annotationsToFilter.filter(a => (parseFloat(a.position.start) === parseFloat(a.position.end)) && that._isNonTrivialUniversalAnnotation(a));
+    
+    annotations.sort((a, b) => {
+      return parseFloat(a.position.start) - parseFloat(b.position.start);
     });
 
-    var annotations = that.vars.chart.annotations.allItems.filter(a => a.metadata.displayType == 'ChangePointAll' &&
-      a.metadata.annotationLabel !== undefined &&
-      a.metadata.annotationLabel != "undefined" &&
-      a.metadata.annotationLabel != "(data missing)");
-
-    that.vars.universalChangePointAnnotationsCache = annotations;
     return annotations;
   },
 
@@ -10056,6 +10063,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       return annotationFormatted;
     });
 
+    that.vars.universalChangePointAnnotationsCache = that._getNonTrivialUniversalAnnotations(annotations);
 
     return annotations;
 
@@ -10168,7 +10176,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._addToAnnotationsCache(cacheKey, annotations, window_start);
     }
 
-    
+    that.vars.universalChangePointAnnotationsCache = that._getNonTrivialUniversalAnnotations(annotations);
     that._displayArtifactsSelection(annotations);
     that._displaySleepStageSelection(
       annotations,
@@ -10473,7 +10481,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     while (oldAnnotations && oldAnnotations.length > 0) {
       oldAnnotations[0].destroy();
     }
-    that.vars.universalChangePointAnnotationsCache = [];
 
     annotations
       .sort((a, b) => {
