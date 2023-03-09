@@ -1,5 +1,5 @@
 import { ReactiveVar } from "meteor/reactive-var";
-import { Annotations, Preferences, Assignments, Data, EDFFile } from "/collections";
+import { Annotations, Preferences, Assignments, Data, EDFFile, PreferencesFiles} from "/collections";
 import swal from "sweetalert2";
 import { data } from "jquery";
 
@@ -1045,7 +1045,32 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="preferences-save">Save</a></li>\
                   <li><a id="preferences-download">Download</a></li>\
                   <li><a class="preferences-upload-dialog-open">Upload</a></li>\
+                  <li><a class="preferences-manager-dialog-open">View Preferences Directory</a></li>\
                 </ul>\
+                <div id="preferences-manager-dialog">\
+                  <div class="preferences-manager-row row">\
+                    <table class="preferences-manager-table highlight">\
+                      <thead>\
+                        <tr>\
+                          <th class="preferences-manager-table-header preferences-manager-table-header-sort preferences-manager-table-header-label">Name</th>\
+                          <th class="preferences-manager-table-header preferences-manager-table-header-sort preferences-manager-table-header-duration">Channels Required</th>\
+                        </tr>\
+                      </thead>\
+                      <tbody class="preferences-manager-table-body">\
+                      </tbody>\
+                    </table>\
+                  </div>\
+                  <div class="preferences-manager-row row">\
+                    <ul class="preferences-manager-table-pagination pagination">\
+                    </ul>\
+                  </div>\
+                  <div class="preferences-manager-row row">\
+                    <div class="input-field col s8" id="preferences-search-bar">\
+                      <input type="text" id="preferences-manager-table-search" class="col s12">\
+                      <label for="preferences-manager-table-search">Search:</label>\
+                    </div>\
+                  </div>\
+                </div>\
                 <div id="annotation-upload-dialog">\
                   <div class="row">\
                     <form action="#" class="col s12">\
@@ -2002,6 +2027,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "auto"
     });
 
+    $("#preferences-manager-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Close",
+        click: () => {
+          $("#preferences-manager-dialog").dialog("close");
+        }
+      }],
+      title: "Preferences Directory",
+      width: "auto"
+    });
+
+    $(".preferences-manager-dialog-open").off("click.preferencesmanager").on("click.preferencesmanager", () => {
+      that._populatePreferencesManagerTable();
+
+      $("#preferences-manager-table-delete").removeClass("disabled").addClass("disabled");
+
+      $("#preferences-manager-dialog").dialog("open");
+    });
+
     $(".annotation-manager-table-header-sort").off("click.sortheader").on("click.sortheader", (e) => {
       $(e.currentTarget).closest("thead").find(".sort-arrow").remove();
       $(e.currentTarget).closest("thead").find(".annotation-manager-table-header").not($(e.currentTarget)).removeProp("sortDirection");
@@ -2462,6 +2507,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
 
     $(".display-timescale-option").off("click.timescaleoption").on("click.timescaleoption", (e) => {
+      that._showLoading();
       var currentXAxisScaleInSeconds = that.vars.xAxisScaleInSeconds;
       let timescaleIndex = e.target.attributes.timescaleIndex.value;
       let settingIndex = e.target.attributes.settingIndex.value;
@@ -11782,6 +11828,95 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return;
 
 
+  },
+
+  _populatePreferencesManagerTable: function(sortFunc) {
+    var that = this;
+    let tableBody = $(".preferences-manager-table-body");
+    tableBody.empty();
+
+    var pFiles = PreferencesFiles.find({}).collection._docs._map;
+
+    console.log("pfiles: ", pFiles);
+    Object.values(pFiles).forEach((file, i)=>{
+      tableBody.append(`<tr class="preferences-manager-table-row" annotationId=${file._id}>
+          <td class="preferences-name" fileID=${file._id}>${file.name}</td>
+          <td class="preferences-channels-required" style="text-align:right">${Object.keys(file.annotatorConfig.scalingFactors).length}</td>
+          </tr>`);
+    })
+
+    $(".preferences-manager-table-row .preferences-name").off("click.preferencesmanager").on("click.preferencesmanager", (e) => {
+      let fileID = $(e.currentTarget).attr("fileID");
+      var pref = PreferencesFiles.findOne({_id: fileID});
+      let annotatorConfig = pref.annotatorConfig;
+      console.log(annotatorConfig);
+      if(Object.keys(annotatorConfig.scalingFactors).length != Object.keys(that.vars.originalScalingFactors).length){
+        window.alert("The preferences file you wish to upload is not compatible with the chart (number of channels do not match). Please choose another file.");
+      } else {
+        that._savePreferences(annotatorConfig);
+        location.reload();
+      }
+      
+    });
+
+    that._filterPreferencesManagerTable($("#preferences-manager-table-search").val(), 0, 8);
+
+    $("#preferences-search-bar").ready(function(){
+      $("#preferences-manager-table-search").on("keyup", function(){
+        that._filterPreferencesManagerTable($("#preferences-manager-table-search").val(), 0, 8);
+      })
+    });
+
+
+    
+  },
+
+  _getFilteredFiles(filter) {
+    filter = filter.toUpperCase();
+    return $(".preferences-manager-table-body tr").filter((i, element) => {
+      let nameElement = $(element).find(".preferences-name");
+      let channelElement = $(element).find(".preferences-channels-required");
+      let nameText = $(nameElement).text();
+      let channelText = $(channelElement).text()
+      if (nameText.toUpperCase().indexOf(filter) > -1 || channelText.toUpperCase().indexOf(filter)>-1) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+  },
+
+  _filterPreferencesManagerTable: function(filter, startIndex, numElements) {
+    var that = this;
+    if (startIndex == null) {
+      startIndex = 0;
+    }
+    if (!numElements) {
+      numElements = 8;
+    }
+
+    let tableBody = $(".preferences-manager-table-body");
+    filter = filter.toUpperCase();
+    $(tableBody).find("tr").hide()
+
+    let elements = undefined;
+    if (filter) {
+      elements = $(that._getFilteredFiles(filter));
+    } else {
+      elements = tableBody.find("tr");
+    }
+
+    $(".preferences-manager-table-pagination").empty();
+    for (let i = 0; i < Math.ceil(elements.length / numElements); i++) {
+      $(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}"><span>${i + 1}</span></li>`)
+        .appendTo($(".preferences-manager-table-pagination")).prop("startIndex", i * numElements);
+    }
+
+    $(".preferences-manager-table-pagination").find("li").off("click.preferencesmanagerpage").on("click.preferencesmanagerpage", (e) => {
+      that._filterPreferencesManagerTable(filter, $(e.currentTarget).prop("startIndex"), numElements);
+    });
+
+    elements.slice(startIndex, startIndex + numElements).show();
   },
 
   _populateAnnotationManagerTable: function(annotations, sortFunc) {

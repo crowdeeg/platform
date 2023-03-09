@@ -1,5 +1,5 @@
 import { Tabular } from "meteor/aldeed:tabular";
-import { Data, Tasks, Assignments, Patients} from '/collections';
+import { Data, Tasks, Assignments, Patients, PreferencesFiles} from '/collections';
 
 TabularTables = {};
 Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
@@ -74,6 +74,30 @@ TabularTables.Data = new Tabular.Table({
       ],
     initComplete: function() {
         $('.dataTables_empty').html('processing');
+    },
+    processing: false,
+    skipCount: true,
+    pagingType: 'simple',
+    infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
+});
+
+
+TabularTables.PreferencesFiles = new Tabular.Table({
+    name: "PreferencesFiles",
+    collection: PreferencesFiles,
+    columns: [
+      {data: "name", title: "Name"},
+      {data: "annotatorConfig", title: "Channels Required", 
+      render:function(val){
+        return Object.keys(val.scalingFactors).length;
+      }},
+      {title: "Delete",
+        tmpl: Meteor.isClient && Template.deleteButtonPreferences},
+      {title: "Selected", 
+        tmpl: Meteor.isClient && Template.selectedPreferences}
+      ],
+    initComplete: function() {
+      $('.dataTables_empty').html('processing');
     },
     processing: false,
     skipCount: true,
