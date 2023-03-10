@@ -204,6 +204,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     loading: false,
     y_axis_limited_values: [],
     alignmentFromCSV: [],
+    previousAnnotationType: "none",
     projectUUID: undefined,
     requireConsent: false,
     trainingVideo: {
@@ -2458,7 +2459,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       select.material_select();
       // $(document).ready(function() {
       select.change(function () {
+        that.options.previousAnnotationType = select.val();
         that.options.features.annotationType = select.val();
+        //console.log($(that.element).find('.annotation_type_select_panel .select_panel').find('select').find('option[value="none"]'));
         that._setupAnnotationInteraction();
       });
       // });
@@ -2892,10 +2895,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       $(that.element)
         .find(".ruler")
         .click(function () {
+          //$(that.element).find('.annotation_type_select_panel .select_panel').find('select').find('option[value="none"]').attr("selected", "selected");
+          //that._setupAnnotationInteraction();
+          console.log(that.options.features.annotationType);
           if (that.vars.rulerMode) {
+            that.options.features.annotationType = that.options.previousAnnotationType;
+            that._setupAnnotationInteraction();
             that._destroyRuler();
             that._setRulerMode(0);
           } else {
+            that.options.previousAnnotationType = that.options.features.annotationType;
+            that.options.features.annotationType = "none";
+            that._setupAnnotationInteraction();
             that._setRulerMode(1);
           }
         });
@@ -2988,6 +2999,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     switch (mode) {
       case "crosshair":
+        console.log("HERE");
+        console.log(that.options.features.annotationType)
+        that.options.previousAnnotationType = that.options.features.annotationType;
+        that.options.features.annotationType = "none";
+        that._setupAnnotationInteraction();
         $(".timesync").prop("disabled", false);
         that._toggleNoTimelockScroll(false);
         $(".crosshair-time-input-container").show();
@@ -3010,6 +3026,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         break;
       case "undefined":
       default:
+        console.log(that.options.previousAnnotationType);
+        that.options.features.annotationType = that.options.previousAnnotationType;
+        that._setupAnnotationInteraction();
         $(".timesync").prop("disabled", true);
         $(".crosshair-time-input-container").hide();
         that._toggleNoTimelockScroll(false);
@@ -5993,7 +6012,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     channelIndex: e.point.series.index,
                     dataId: e.point.series.options.custom.dataId,
                   };
-
                   that.vars.annotationCrosshairCurrPosition = ({ ...crosshairPosition });
                   that._setCrosshair(crosshairPosition);
 
@@ -6209,6 +6227,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (that.vars.rulerMode) {
         if (e.key === "Escape") {
           if (that.vars.rulerMode === 1 && !that.vars.rulerPoints.length) {
+            that.options.features.annotationType = that.options.previousAnnotationType;
+            that._setupAnnotationInteraction();
             that._setRulerMode(0);
           } else {
             that._setRulerMode(1);
