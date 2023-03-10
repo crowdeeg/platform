@@ -1172,6 +1172,101 @@ Meteor.methods({
       });
     });
   },
+  "get.shared.annotation.data"(assignmentId) {
+    return new Promise((resolve, reject) => {
+      let userId = Meteor.userId();
+      let matchedAssignment = Assignments.findOne({ _id: assignmentId, users: userId });
+      if (!matchedAssignment) {
+        return reject("Assignment not found.");
+      }
+
+      let assignments = undefined;
+      if (!Roles.userIsInRole(userId, "admin")) {
+        assignments = Assignments.find({ _id: { $ne: assignmentId }, task: matchedAssignment.task }, { fields: { _id: 1, dataFiles: 1, users: 1, lastModified: 1 } }).fetch();
+        assignments = assignments.filter((assignment) => {
+          if (matchedAssignment.dataFiles.length !== assignment.dataFiles.length) {
+            return false;
+          }
+
+          for (let i = 0; i < matchedAssignment.dataFiles.length; i++) {
+            if (!assignment.dataFiles.includes(matchedAssignment.dataFiles[i])) {
+              return false;
+            }
+          }
+
+          return true;
+        });
+      } else {
+        assignments = Assignments.find({ _id: { $ne: assignmentId }, dataFiles: { $all: matchedAssignment.dataFiles } }, { fields: { _id: 1, dataFiles: 1, users: 1, lastModified: 1 } }).fetch();
+        assignments = assignments.filter((assignment) => {
+          return matchedAssignment.dataFiles.length === assignment.dataFiles.length
+        });
+      }
+
+      let userIds = assignments.reduce((acc, assignment) => {
+        return acc.concat(assignment.users);
+      }, []);
+      let users = Meteor.users.find({ _id: { $in: userIds } }, { fields: { _id: 1, username: 1} }).fetch();
+      assignments = assignments.map((assignment) => {
+        let numAnnotations = Annotations.find({ assignment: assignment._id }).count();
+        return {
+          ...assignment,
+          numAnnotations: numAnnotations,
+          users: assignment.users.map((userId) => {
+            return users.find((user) => user._id === userId).username;
+          }),
+          lastModified: Date.parse(assignment.lastModified)
+        }
+      });
+      return resolve(assignments);
+    });
+  },
+  "import.assignment.annotations"(sourceAssignmentId, destAssignmentId) {
+    return new Promise((resolve, reject) => {
+      let userId = Meteor.userId();
+      let sourceAssignment = Assignments.findOne({ _id: sourceAssignmentId });
+      let destAssignment = Assignments.findOne({ _id: destAssignmentId, users: userId });
+
+      if (!sourceAssignment || !destAssignment) {
+        return reject("Assignment not found");
+      }
+
+      if (!Roles.userIsInRole(userId, "admin")) {
+        if (sourceAssignment.task !== destAssignment.task) {
+          return reject("Cannot import between those assignments.");
+        }
+      }
+
+      if (sourceAssignment.dataFiles.length !== destAssignment.dataFiles.length) {
+        return reject("Data files for these assignments do not match.");
+      }
+
+      for (let i = 0; i < sourceAssignment.dataFiles.length; i++) {
+        if (!destAssignment.dataFiles.includes(sourceAssignment.dataFiles[i])) {
+          return reject("Data files for these assignments do not match.");
+        }
+      }
+
+      let sourceAnnotations = Annotations.find({ assignment: sourceAssignment._id }).fetch();
+      let newAnnotations = sourceAnnotations.map((annotation) => {
+        let newAnnotation = {
+          ...annotation,
+          _id: undefined,
+          assignment: destAssignment._id,
+          user: userId,
+          updatedAt: undefined
+        }
+
+        return newAnnotation;
+      });
+
+      newAnnotations.forEach((annotation) => {
+        Annotations.insert(annotation);
+      });
+
+      return resolve();
+    });
+  }
 
 });
 
