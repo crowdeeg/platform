@@ -83,6 +83,15 @@
             </div>
             {{/if}}
             <div class="input-group">
+                <span class="input-group-addon"><span>Add Preferences</span></span>
+                {{> inputAutocomplete settings=preferencesAutoCompleteSettings class="preferences form-control autoclear"}}
+            </div>
+            {{#if preferences}}
+            <div class="collection card">
+                <div class="collection-item"><i class="fa fa-check"></i> {{preferences.name}}</div>
+            </div>
+            {{/if}}
+            <div class="input-group">
                 <span class="input-group-addon"><span>Add reader</span></span>
                 {{> inputAutocomplete settings=singleUserAutocompleteSettings class="assignee form-control autoclear"}}
             </div>

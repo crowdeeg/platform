@@ -89,6 +89,7 @@ let Assignments;
 let Annotations;
 let Preferences;
 let Arbitrations;
+let PreferencesFiles;
 
 if (Meteor.isClient) {
     Meteor.subscribe('all');
@@ -1656,6 +1657,19 @@ Annotations.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInCli
 Annotations.permit(['insert', 'update', 'remove']).ifForOwnAssignment().allowInClientCode();
 Annotations.attachCollectionRevisions(CollectionRevisions.Annotations);
 exports.Annotations = Annotations;
+
+PreferencesFiles = new Meteor.Collection('preferencesFiles');
+Schemas.PreferencesFiles = new SimpleSchema({
+    name: {
+    type: String,
+    label: 'Name',
+    },
+    annotatorConfig: SchemaHelpers.annotatorConfig,
+});
+PreferencesFiles.attachSchema(Schemas.PreferencesFiles);
+PreferencesFiles.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
+PreferencesFiles.attachCollectionRevisions();
+exports.PreferencesFiles = PreferencesFiles;
 
 Preferences = new Meteor.Collection('preferences');
 Schemas.Preferences = new SimpleSchema({
