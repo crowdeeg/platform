@@ -972,6 +972,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="annotation-filter" class="dropdown-button dropdown-submenu" data-activates="annotation-filter-submenu">Filter</a></li>\
                   <li><a id="annotation-display" class="dropdown-button dropdown-submenu" data-activates="annotation-display-submenu">User</a></li>\
                   <li><a class="annotation-manager-dialog-open">Annotation Manager</a></li>\
+                  <li class="divider"></li>\
+                  <li><a class="annotation-import-dialog-open">Import Annotations</a></li>\
                 </ul>\
                 <ul id="annotation-filter-submenu" class="dropdown-content dropdown-select">\
                   <li><a class="annotation-filter-option dropdown-select-option" option="all">All<span class="dropdown-select-check"><i class="fa fa-check"></i></span></a></li>\
@@ -990,13 +992,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="annotation-display-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <div id="annotation-manager-dialog">\
-                  <div class="annotation-manager-row row">\
+                  <div class="dialog-row row">\
                     <table class="annotation-manager-table highlight">\
                       <thead>\
                         <tr>\
-                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-label">Label</th>\
-                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
-                          <th class="annotation-manager-table-header annotation-manager-table-header-sort annotation-manager-table-header-duration">Duration</th>\
+                          <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-label">Label</th>\
+                          <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
+                          <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-duration">Duration</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-select">Select</th>\
                         </tr>\
                       </thead>\
@@ -1004,20 +1006,54 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       </tbody>\
                     </table>\
                   </div>\
-                  <div class="annotation-manager-row row">\
-                    <ul class="annotation-manager-table-pagination pagination">\
-                    </ul>\
+                  <div class="dialog-row row">\
+                      <ul class="annotation-manager-table-pagination pagination">\
+                      </ul>\
                   </div>\
-                  <div class="annotation-manager-row row">\
+                  <div class="dialog-row row">\
                     <div class="input-field col s8">\
                       <input type="text" id="annotation-manager-table-search" class="col s12">\
                       <label for="annotation-manager-table-search">Search:</label>\
                     </div>\
                   </div>\
-                  <div class="annotation-manager-row row">\
+                  <div class="dialog-row row">\
                     <button id="annotation-manager-table-select-all" class="row-btn btn col s4">Select All</button>\
                     <button id="annotation-manager-table-deselect-all" class="row-btn btn col s5">Deselect All</button>\
                     <button id="annotation-manager-table-delete" class="row-btn btn red col s4">Delete</button>\
+                  </div>\
+                </div>\
+                <div id="annotation-import-dialog">\
+                  <div class="dialog-row row">\
+                    <div class="annotation-import-table col">\
+                      <div class="row">\
+                        <table class="highlight">\
+                          <thead>\
+                            <tr>\
+                              <th class="annotation-import-table-header table-header-sort annotation-import-table-header-users">Annotators</th>\
+                              <th class="annotation-import-table-header table-header-sort annotation-import-table-header-modified">Last Modified<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
+                              <th class="annotation-import-table-header table-header-sort annotation-import-table-header-count">Annotations</th>\
+                              <th class="annotation-import-table-header annotation-import-table-header-select">Select</th>\
+                            </tr>\
+                          </thead>\
+                          <tbody class="annotation-import-table-body">\
+                          </tbody>\
+                        </table>\
+                      </div>\
+                      <div class="row">\
+                        <ul class="annotation-import-table-pagination pagination">\
+                        </ul>\
+                      </div>\
+                    </div>\
+                  </div>\
+                  <div class="dialog-row row">\
+                    <div class="input-field col s8">\
+                      <input type="text" id="annotation-import-table-search" class="col s12">\
+                      <label for="annotation-import-table-search">Search:</label>\
+                    </div>\
+                  </div>\
+                  <div class="dialog-row row">\
+                    <button id="annotation-import-table-deselect-all" class="row-btn btn col s5">Deselect All</button>\
+                    <button id="annotation-import-table-import" class="row-btn btn col s4">Import</button>\
                   </div>\
                 </div>\
                 <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
@@ -2002,7 +2038,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "auto"
     });
 
-    $(".annotation-manager-table-header-sort").off("click.sortheader").on("click.sortheader", (e) => {
+    $(".table-header-sort").off("click.sortheader").on("click.sortheader", (e) => {
       $(e.currentTarget).closest("thead").find(".sort-arrow").remove();
       $(e.currentTarget).closest("thead").find(".annotation-manager-table-header").not($(e.currentTarget)).removeProp("sortDirection");
 
@@ -2056,6 +2092,97 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else {
         that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (a.position.end - a.position.start) - (b.position.end - b.position.start)});
       }
+    });
+
+    $("#annotation-import-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Close",
+        click: () => {
+          $("#annotation-import-dialog").dialog("close");
+        }
+      }],
+      title: "Import Annotations",
+      width: "auto"
+    });
+
+    $(".annotation-import-dialog-open").off("click.annotationimport").on("click.annotationimport", () => {
+      that._populateAnnotationImportTable();
+
+      $("#annotation-import-table-import").removeClass("disabled").addClass("disabled");
+
+      $("#annotation-import-dialog").dialog("open");
+    });
+
+    $("#annotation-import-table-search").off("input.annotationimport").on("input.annotationimport", (e) => {
+      that._sortAndFilterTable($(".annotation-import-table"),
+        null,
+        (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+        $(e.currentTarget).val(),
+        0,
+        8);
+    });
+
+    $(".annotation-import-table-header-modified").prop("sortDirection", "down");
+    $(".annotation-import-table-header-modified").off("click.annotationimport").on("click.annotationimport", (e) => {
+      let tableBody = $(".annotation-import-table-body");
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._sortAndFilterTable($(".annotation-import-table"),
+          (a, b) => {return parseInt($(b).find(".annotation-import-modified").attr("lastModified")) - parseInt($(a).find(".annotation-import-modified").attr("lastModified"))},
+          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          $("#annotation-import-table-search").val(),
+          null,
+          8);
+      } else {
+        that._sortAndFilterTable($(".annotation-import-table"),
+          (a, b) => {return parseInt($(a).find(".annotation-import-modified").attr("lastModified")) - parseInt($(b).find(".annotation-import-modified").attr("lastModified"))},
+          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          $("#annotation-import-table-search").val(),
+          null,
+          8);
+      }
+    });
+
+    $(".annotation-import-table-header-users").off("click.annotationimport").on("click.annotationimport", (e) => {
+      let tableBody = $(".annotation-import-table-body");
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._sortAndFilterTable($(".annotation-import-table"),
+          (a, b) => {return ("" + $(b).find(".annotation-import-user").text()).localeCompare($(a).find(".annotation-import-user").text())},
+          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          $("#annotation-import-table-search").val(),
+          null,
+          8);
+      } else {
+        that._sortAndFilterTable($(".annotation-import-table"),
+          (a, b) => {return ("" + $(a).find(".annotation-import-user").text()).localeCompare($(b).find(".annotation-import-user").text())},
+          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          $("#annotation-import-table-search").val(),
+          null,
+          8);
+      }
+    });
+
+    $(".annotation-import-table-header-count").off("click.annotationimport").on("click.annotationimport", (e) => {
+      let tableBody = $(".annotation-import-table-body");
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._sortAndFilterTable($(".annotation-import-table"),
+          (a, b) => {return parseInt($(b).find(".annotation-import-count").attr("numAnnotations")) - parseInt($(a).find(".annotation-import-count").attr("numAnnotations"))},
+          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          $("#annotation-import-table-search").val(),
+          null,
+          8);
+      } else {
+        that._sortAndFilterTable($(".annotation-import-table"),
+          (a, b) => {return parseInt($(a).find(".annotation-import-count").attr("numAnnotations")) - parseInt($(b).find(".annotation-import-count").attr("numAnnotations"))},
+          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          $("#annotation-import-table-search").val(),
+          null,
+          8);
+      }
+    });
+
+    $("#annotation-import-table-deselect-all").off("click.annotationimport").on("click.annotationimport", (e) => {
+      $(that._getFilteredAnnotationImports($(".annotation-import-table-body"), $("#annotation-import-table-search").val())).find(".annotation-import-select-input").prop("checked", false).trigger("change");
     });
   },
 
@@ -10159,6 +10286,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         ).fetch();
       }
+
+      console.log("Annotations:", Annotations.find({}).fetch());
   
       that.vars.annotationsLoaded = true;
   
@@ -11656,6 +11785,129 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     return false;
+  },
+
+  _sortAndFilterTable(table, sortFunc, filterFunc, filter, startIndex, numElements) {
+    var that = this;
+    let pagination = $(table).find(".pagination");
+
+    if (!filter) {
+      filter = "";
+    }
+
+    if (startIndex == null) {
+      startIndex = pagination.find(".active").prop("startIndex") || 0;
+    }
+
+    if (!numElements) {
+      numElements = 8;
+    }
+
+    let tableBody = $(table).find("tbody");
+
+    let tableRows = $(tableBody).find("tr");
+    tableRows.hide();
+
+    if (sortFunc) {
+      tableRows = tableRows.detach().sort(sortFunc);
+      $(tableBody).append(tableRows);
+    }
+
+    if (filterFunc) {
+      tableRows = filterFunc(tableBody, filter);
+    } else {
+      tableRows = $(tableBody).find("tr");
+    }
+
+    pagination.empty();
+    for (let i = 0; i < Math.ceil(tableRows.length / numElements); i++) {
+      $(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}"><span>${i + 1}</span></li>`)
+        .appendTo(pagination).prop("startIndex", i * numElements);
+    }
+
+    pagination.find("li").off("click.tablepage").on("click.tablepage", (e) => {
+      that._sortAndFilterTable(table, sortFunc, filterFunc, filter, $(e.currentTarget).prop("startIndex"), numElements);
+    });
+
+    tableRows.slice(startIndex, startIndex + numElements).show();
+  },
+
+  _populateAnnotationImportTable: function(sortFunc) {
+    var that = this;
+    let tableBody = $(".annotation-import-table-body");
+    tableBody.empty();
+
+    if (!sortFunc) {
+      sortFunc = (a,b) => {return parseInt($(a).find(".annotation-import-modified").attr("lastModified")) - parseInt($(b).find(".annotation-import-modified").attr("lastModified"))};
+    }
+    Meteor.call("get.shared.annotation.data", that.options.context.assignment._id, (err, assignmentData) => {
+      if (assignmentData) {
+        assignmentData.forEach((data,i)=>{
+          tableBody.append(`<tr class="annotation-import-table-row" assignmentId=${data._id}>
+            <td class="annotation-import-user">${data.users.join(', ')}</td>
+            <td class="annotation-import-modified" lastModified="${data.lastModified}">${new Date(data.lastModified).toLocaleString()}</td>
+            <td class="annotation-import-count" numAnnotations="${data.numAnnotations}">${data.numAnnotations}</td>
+            <td class="annotation-import-select"><p><input type="checkbox" id="annotation-import-select-${i}" class="annotation-import-select-input" /><label for="annotation-import-select-${i}"></label></p></td>
+          </tr>`);
+        });
+      }
+
+      $(".annotation-import-table").find("thead .sort-arrow").remove();
+      $(".annotation-import-table-header-modified").append(`<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span>`);
+      $(".annotation-import-table-header-modified").prop("sortDirection", "down");
+
+      that._sortAndFilterTable($(".annotation-import-table"),
+        sortFunc,
+        (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+        $("#annotation-import-table-search").val(),
+        0,
+        8);
+
+      $("#annotation-import-table-import").off("click.annotationimport").on("click.annotationimport", (e) => {
+        let ids = $(".annotation-import-table-row .annotation-import-select input:checked").closest(".annotation-import-table-row").map((i, element) => {
+          return $(element).attr("assignmentId");
+        }).get();
+
+        $("#annotation-import-dialog").dialog("close");
+  
+        Promise.all(ids.map((id) => {
+          return new Promise((resolve, reject) => {
+            Meteor.call("import.assignment.annotations", id, that.options.context.assignment._id, () => {
+              resolve();
+            });
+          });
+        })).then(() => {
+          that.vars.annotationsCache = {};
+          that._refreshAnnotations();
+        });
+      });
+      
+      $(".annotation-import-table-row .annotation-import-select input").off("change.annotationimport").on("change.annotationimport", (e) => {
+        console.log("change");
+        if ($(".annotation-import-table-row .annotation-import-select input:checked").length === 0) {
+          $("#annotation-import-table-import").removeClass("disabled").addClass("disabled");
+        } else {
+          $("#annotation-import-table-import").removeClass("disabled");
+        }
+      });
+    });
+  },
+
+  _getFilteredAnnotationImports: function(tableBody, filter) {
+    if (!filter) {
+      filter = "";
+    }
+
+    filter = filter.toUpperCase();
+    return $(tableBody).find("tr").filter((i, element) => {
+      let userElement = $(element).find(".annotation-import-user");
+      let userText = $(userElement).text();
+      if (userText.toUpperCase().indexOf(filter) > -1) {
+        return true;
+      } else {
+        return false;
+      }
+    });
   },
 
   _startAnnotationManagerEvents: function(){
