@@ -19,6 +19,7 @@ let cond = {}
 var selectedDataG = new ReactiveVar({});
 var selectedAssigneesG = new ReactiveVar({});
 var selectedTaskG = new ReactiveVar(false);
+var selectedPreferencesG = new ReactiveVar({});
 console.log(PreferencesFiles.find())
 console.log(Data.find());
 
@@ -105,6 +106,28 @@ Template.Preferences.events({
             // need this or the onload wont work
             reader.readAsText(file);
         }
+        selectedPreferencesG.set({});
+    },
+    'click .btn.download': function(){
+      console.log("hellp");
+      var allPreferences = selectedPreferencesG.get();
+      if(Object.keys(allPreferences).length < 1){
+        window.alert("No Preferences Selected To Download");
+      } else {
+        Object.values(allPreferences).forEach((item)=>{
+          var annotatorConfigObj = item.annotatorConfig;
+          console.log(item);
+          var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotatorConfigObj));
+          var downloadAnchorNode = document.createElement('a');
+          downloadAnchorNode.setAttribute("href", dataStr);
+          let fileName = item.name;
+          downloadAnchorNode.setAttribute("download", fileName);
+          document.body.appendChild(downloadAnchorNode); // required for firefox
+          downloadAnchorNode.click();
+          downloadAnchorNode.remove();
+        });
+
+      }
     }
 });
 
@@ -120,8 +143,8 @@ TabularTables.PreferencesFiles = new Tabular.Table({
       }},
       {title: "Delete",
         tmpl: Meteor.isClient && Template.deleteButtonPreferences},
-    //   {title: "Selected", 
-    //     tmpl: Meteor.isClient && Template.selectedPreferences}
+      {title: "Selected", 
+        tmpl: Meteor.isClient && Template.selectedPreferences}
       ],
     initComplete: function() {
       $('.dataTables_empty').html('processing');
@@ -147,39 +170,25 @@ Template.selectedPreferences.helpers({
     'change .select-prefereneces': function (event, template) {
       const target = $(event.target);
       const isSelected = target.is(':checked');
-      const dataId = this._id;
+      const id = this._id;
       console.log(this);
-      let selectedData = selectedDataG.get();
-      console.log(Template.Data);
+      let selectedPreferences = selectedPreferencesG.get();
+      //console.log(Template.Data);
       if (isSelected) {
-        const data = Data.findOne(dataId);
-        console.log(data);
-        selectedData[dataId] = data;
-        let taskId = data.defaultTask;
-        if (taskId) {
-          const task = Tasks.findOne(taskId);
-          selectedTaskG.set(task);
-        } else if ((Tasks.findOne({name: "edf annotation from template: " + data.name}))){
-          const task = Tasks.findOne({name: "edf annotation from template: " + data.name});
-          data.defaultTask = task;
-          selectedTaskG.set(task);
-          console.log(data);
-        }
+        const preferenece = PreferencesFiles.findOne(id);
+        console.log(preferenece);
+        selectedPreferences[id] = preferenece;
   
         let user = Meteor.user();
   
         console.log(user);
-
-        let selectedAssignees = selectedAssigneesG.get();
-        selectedAssignees[user._id] = user;
-        selectedAssigneesG.set(selectedAssignees);
-        console.log(selectedAssigneesG.get());
   
       }
       else {
-        delete selectedData[dataId];
+        delete selectedPreferences[id];
       }
-      selectedDataG.set(selectedData);
+      selectedPreferencesG.set(selectedPreferences);
+      console.log(selectedPreferencesG.get());
     }
   });
   
@@ -204,6 +213,7 @@ Template.selectedPreferences.helpers({
   
   // Tabular does not do well with parent-child relationships with the ReactiveVars so global variable had to be made
   Template.Preferences.onCreated(function () {
+    this.selectedPreferences = selectedPreferencesG;
   });
   
   Template.selectedPreferences.onCreated(function(){
