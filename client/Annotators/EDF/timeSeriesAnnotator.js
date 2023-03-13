@@ -8276,7 +8276,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (that.options.isReadOnly) return;
 
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
-      var nextAnnotation = that.vars.universalChangePointAnnotationsCache[index];
+      var nextAnnotation = that.vars.chart.annotations.allItems.find((a) => a.metadata.id === that.vars.universalChangePointAnnotationsCache[index].id);
 
       that._nukeAnnotation(annotation);
 
