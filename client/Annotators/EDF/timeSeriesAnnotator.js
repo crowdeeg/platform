@@ -933,6 +933,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a class="y-unmask-btn">Restore Masked Channels</a></li>\
                   <li><a class="limit-y-dialog-open">Limit Y-Axis</a></li>\
                   <li><a class="restore-btn">Restore Y-Axis Limits</a></li>\
+                  <li><a class="show-max-min">Show Max/Min</a></la>\
+                  <li><a class="hide-max-min">Hide Max/Min</a></la>\
                   <li class="divider"></li>\
                   <li><a id="alignment-select" class="dropdown-button dropdown-submenu" data-activates="alignment-submenu">Align</a></li>\
                   <li class="divider"></li>\
@@ -5672,12 +5674,95 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         
       }
     });
+
+    $(".show-max-min").click(function(){
+      console.log("show max min");
+      if(that._isChannelSelected()){
+        that._showLoading();
+        let i = that.vars.selectedChannelIndex;
+        let max = that._getMaxChannelData(i);
+        let min = that._getMinChannelData(i);
+        let realMax = that._getMaxRealYData(i);
+        let realMin = that._getMinRealYData(i);
+        // console.log(max);
+        // console.log(min);
+        // console.log(that.vars.chart.series);
+        // console.log(that.vars.chart.yAxis);
+        flipFactor = that._getFlipFactorForChannel(that.vars.currentWindowData.channels[i]);
+        var maxId = "channel" + i + "max";
+        var minId = "channel" + i + "max";
+        that.vars.chart.yAxis[0].removePlotLine(maxId);
+        that.vars.chart.yAxis[0].removePlotLine(minId);
+        var maxOptions = {
+          id: maxId,
+          color: "#26a69a",
+          value: max,
+          width: 1,
+          label: {
+            text: flipFactor == 1 ? realMax : realMin,
+            x: -30,
+            y: 2
+          }
+        };
+        var minOptions = {
+          id: minId,
+          color: "#26a69a",
+          value: min,
+          width: 1,
+          label: {
+            text: flipFactor == 1 ? realMin : realMax,
+            x: -30,
+            y: 2
+          }
+        };
+        that.vars.chart.yAxis[0].addPlotLine(maxOptions);
+        that.vars.chart.yAxis[0].addPlotLine(minOptions);
+        that._hideLoading();
+      }
+    });
+    $(".hide-max-min").click(function(){
+      console.log("hide max min");
+      if(that._isChannelSelected()){
+        that._showLoading();
+        let i = that.vars.selectedChannelIndex;
+        var maxId = "channel" + i + "max";
+        var minId = "channel" + i + "max";
+        that.vars.chart.yAxis[0].removePlotLine(maxId);
+        that.vars.chart.yAxis[0].removePlotLine(minId);
+        that._hideLoading();
+      }
+    });
     // need to call this to get the scaling factors right. Putting the code starting at the "extremes"
     // currently causes the channels to blow up, but calling the function is ok
     // Note doesnt really slow anything down since there are no more jQuery in _populateGraph
     that._populateGraph();
 
     
+  },
+
+  _getMaxRealYData: function(index){
+    //gets the largest data point in the channel
+    var that = this;
+    let max = that.vars.chart.series[index].realyData[1];
+    for (let i = 2;i<that.vars.chart.series[index].realyData.length;i++){
+      if(that.vars.chart.series[index].realyData[i] > max){
+        max = that.vars.chart.series[index].realyData[i];
+
+      }
+    }
+    return max;
+  },
+
+  _getMinRealYData: function(index){
+    var that = this;
+    let min = that.vars.chart.series[index].realyData[1];
+    for (let i = 2;i<that.vars.chart.series[index].realyData.length;i++){
+      if(that.vars.chart.series[index].realyData[i] < min){
+        min = that.vars.chart.series[index].realyData[i];
+
+      }
+    }
+    return min;
   },
   
 
