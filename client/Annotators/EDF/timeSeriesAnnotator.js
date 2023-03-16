@@ -419,6 +419,40 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         options: [],
       },
     ],
+    xAxisLabelFrequency: [
+      {
+        name: '3 per page',
+        value: 2,
+      },
+      {
+        name: '4 per page',
+        value: 3,
+      },
+      {
+        name: '5 per page',
+        value: 4,
+      },
+      {
+        name: '6 per page',
+        value: 5,
+      },
+      {
+        name: '7 per page (default)',
+        value: 6,
+      },
+      {
+        name: '11 per page',
+        value: 10,
+      },
+      {
+        name: '13 per page',
+        value: 12,
+      },
+      {
+        name: '16 per page',
+        value: 15,
+      },
+    ],
     keyboardInputEnabled: true,
     isReadOnly: false,
     startTime: 0,
@@ -1062,12 +1096,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="display-timescale" class="dropdown-button dropdown-submenu" data-activates="display-timescale-submenu">Timescale</a></li>\
                   <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
                   <li><a id="toggle_title" class="toggle-title">Toggle Title</a></li>\
+                  <li><a id="display-xAxis-units" class="dropdown-button dropdown-submenu" data-activates="display-xAxis-submenu">Label Frequency</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="display-timescale-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="display-montage-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="display-xAxis-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="metadata-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a class="dropdown-button dropdown-submenu" data-activates="metadata-annotations-alignment-submenu">Annotations/Alignment</a></li>\
@@ -2597,6 +2634,47 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
+  _setupXAxisLabelFrequency: function(){
+    let that = this;
+    let xAxisLabelFrequency = that.options.xAxisLabelFrequency || [];
+    console.log(xAxisLabelFrequency);
+    let defaultOptionIndex = null;
+    let dropdown = $("#display-xAxis-submenu");
+    let frequencyDefault = 6;
+    if (that.options.context.preferences.annotatorConfig.xAxisLabelFreq != null) {
+      frequencyDefault = that.options.context.preferences.annotatorConfig.xAxisLabelFreq;
+      // console.log(frequencyDefault);
+    }
+    console.log(xAxisLabelFrequency);
+    //let selectedString = "";
+    xAxisLabelFrequency.forEach((frequency, index)=> {
+      // console.log(frequency.value);
+      let selectedString = "";
+      if (frequency.value == frequencyDefault) {
+        console.log("here");
+        selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
+        defaultOptionIndex = index;
+        frequency.default = true;
+        //that.vars.xAxisScaleInSeconds = +timescale.value;
+      }
+      dropdown.append(
+        `<li><a class="display-xAxis-option dropdown-select-option" option=${frequency.value}>${frequency.name}${selectedString}</a></li>`
+      );
+    });
+
+    $(".display-xAxis-option").off("click.frequencyOption").on("click.frequencyOption", (e) => {
+      that._showLoading();
+      that.vars.chart.xAxis[0].options.labels.step = (that.vars.xAxisScaleInSeconds / e.target.attributes.option.value);
+      that._savePreferences({
+        xAxisLabelFreq: e.target.attributes.option.value,
+      });
+      that._reloadCurrentWindow();
+      
+    });
+
+
+  },
+
   _setupXAxisScaleSelector: function () {
     // all options except full recording
     // at the end use the addFullRecording to the end so that their isnt any duplication
@@ -2836,6 +2914,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("Finish _setupFrequencyFilterSelector");
     that._addFullRecordingToXAxisScaleOptions();
     that._setupXAxisScaleSelector();
+    that._setupXAxisLabelFrequency();
     //console.log("Finish _setupXAxisScaleSelector");
     that._setupAnnotationChoice();
     //console.log("Finish _setupAnnotationChoice");
@@ -6205,13 +6284,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             style: {
               textOverflow: "none",
             },
-            step: that.vars.xAxisScaleInSeconds / 6,
+            step: that.options.context.preferences.annotatorConfig.xAxisLabelFreq ? that.vars.xAxisScaleInSeconds / that.options.context.preferences.annotatorConfig.xAxisLabelFreq : that.vars.xAxisScaleInSeconds / 6,
             formatter: that._formatXAxisLabel,
           },
           tickInterval: that.vars.xAxisScaleInSeconds < 3600 ? 1 : that.vars.xAxisScaleInSeconds,
           minorTickInterval: 0.5,
           min: that.vars.currentWindowStart,
           max: that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
+          // THEY KILLED KENNY THOSE BASTARDS
           unit: [["second", 1]],
           events: {
             setExtremes: function (e) {
