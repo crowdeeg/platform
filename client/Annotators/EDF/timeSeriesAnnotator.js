@@ -755,7 +755,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       windowsToRequest: [],
       windowsCacheLength: 15,
       windowsCache: {},
-      windowsCacheWorker: null,
       // windowCache is an object, keeping track of data that is loaded in the background:
       //
       // {
@@ -1955,7 +1954,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTrainingPhase();
     that._setupArbitration();
     that._setupAmplitudeAdjustmentMenu();
-    //that._setupCacheWorker();
     that
       ._getRecordingMetadata()
       .then(that._setupDownsampledRecording) // downsample the recording if loading for the first time
@@ -1972,17 +1970,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .catch((error) => console.error(error));
     //that._hideLoading();
   },
-
-  /*_setupCacheWorker: function () {
-    if (window.Worker) {
-      that.vars.windowsCacheWorker = new Worker(Meteor.absoluteUrl("processDataWorker.js"));
-      that.vars.windowsCacheWorker.postMessage({
-        staticFrequencyFiltersByDataModality: that.options.staticFrequencyFiltersByDataModality
-      });
-    } else {
-      throw new Error("Web workers not supported");
-    }
-  },*/
 
   _setupGraphMenus: function () {
     $(".graph-menus .dropdown-button").dropdown({
@@ -4393,10 +4380,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("_switchToWindow.that:", that);
     // can be ignored for now, something to do with the machine learning component of the app
     // console.log(!that._isCurrentWindowSpecifiedTrainingWindow());
-    console.time("switch");
-
     if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
-      console.log("0");
       if (that.options.visibleRegion.start !== undefined) {
         console.log("0-1");
         start_time = Math.max(that.options.visibleRegion.start, start_time);
@@ -4444,6 +4428,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log("1");
       that._setNumberOfAnnotationsInCurrentWindow(0); // reset the number of annotations in the current window
     }
+
+    that._showLoading();
 
     that.vars.currentWindowStart = start_time; // update the current window start
     that.vars.currentWindowRecording = that.options.recordingName; // update the current window recording
@@ -4560,7 +4546,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.windowsToRequest.splice(requestedIndex, 1);
         }
         if (windowStartTime === that.vars.currentWindowStart) {
-          console.log("populating", that.vars.currentWindowStart);
           that.vars.currentWindowData = data;
           that.vars.real = realData;
 
@@ -4840,23 +4825,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         if (!that._isDataValid(realData)) {
           return reject(noDataError);
         } else {
-          /*const listener = (e) => {
-            if (e.data.key === identifierKey) {
-              that.vars.windowsCacheWorker.removeEventListener("message", listener);
-              if (e.error) {
-                return reject(error);
-              }
-              return resolve([e.data.data, e.data.realData]);
-            }
-          };
-          that.vars.windowsCacheWorker.addEventListener("message", listener);
-          that.vars.windowsCacheWorker.postMessage({
-            key: identifierKey,
-            window_length: options.window_length,
-            audioContextSampleRate: that.vars.audioContextSampleRate,
-            frequencyFilters: that.vars.frequencyFilters,
-            realData: realData
-          });*/
           let transformedData = that._transformData(
             realData,
             0,
@@ -5301,10 +5269,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // if the chart object does not yet exist, because the user is loading the page for the first time
       // or refreshing the page, then it's necessary to initialize the plot area
       // if this is the first pageload, then we'll need to load the entire
-      console.time("_initGraph");
       that._initGraph(that.vars.currentWindowData);
-      //console.log("[[time end]]");
-      console.timeEnd("_initGraph");
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
       that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
@@ -5501,14 +5466,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
-    that._showLoading();
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
 
     //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
-    console.time("auxProc");
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
     for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
@@ -5605,10 +5568,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log(i + "redraw after")
       //console.log(that);
     }
-    console.timeEnd("auxProc");
     that.vars.chart.redraw();
     that._hideLoading();
-    console.timeEnd("switch");
     //console.log(this.vars.chart.series);
   },
 
