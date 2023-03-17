@@ -5540,44 +5540,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that._isChannelSelected()){
         that._showLoading();
         let i = that.vars.selectedChannelIndex;
-        let max = that._getMaxChannelData(i);
-        let min = that._getMinChannelData(i);
-        let realMax = that._getMaxRealYData(i);
-        let realMin = that._getMinRealYData(i);
-        // console.log(max);
-        // console.log(min);
-        // console.log(that.vars.chart.series);
-        // console.log(that.vars.chart.yAxis);
-        flipFactor = that._getFlipFactorForChannel(that.vars.currentWindowData.channels[i]);
-        var maxId = "channel" + i + "max";
-        var minId = "channel" + i + "max";
-        that.vars.chart.yAxis[0].removePlotLine(maxId);
-        that.vars.chart.yAxis[0].removePlotLine(minId);
-        var maxOptions = {
-          id: maxId,
-          color: "#26a69a",
-          value: max,
-          width: 1,
-          label: {
-            text: flipFactor == 1 ? realMax : realMin,
-            x: -30,
-            y: 2
-          }
-        };
-        var minOptions = {
-          id: minId,
-          color: "#26a69a",
-          value: min,
-          width: 1,
-          label: {
-            text: flipFactor == 1 ? realMin : realMax,
-            x: -30,
-            y: 2
-          }
-        };
-        that.vars.chart.yAxis[0].addPlotLine(maxOptions);
-        that.vars.chart.yAxis[0].addPlotLine(minOptions);
-        that._hideLoading();
+        that._addMaxMinLines(i);
       }
     });
     $(".hide-max-min").click(function(){
@@ -5586,7 +5549,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._showLoading();
         let i = that.vars.selectedChannelIndex;
         var maxId = "channel" + i + "max";
-        var minId = "channel" + i + "max";
+        var minId = "channel" + i + "min";
         that.vars.chart.yAxis[0].removePlotLine(maxId);
         that.vars.chart.yAxis[0].removePlotLine(minId);
         that._hideLoading();
@@ -5597,6 +5560,55 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // Note doesnt really slow anything down since there are no more jQuery in _populateGraph
     that._populateGraph();
 
+    
+  },
+
+  _addMaxMinLines: function(i){
+    that._showLoading();
+    let max = that._getMaxChannelData(i);
+    let min = that._getMinChannelData(i);
+    let realMax = that._getMaxRealYData(i);
+    let realMin = that._getMinRealYData(i);
+    flipFactor = that._getFlipFactorForChannel(that.vars.currentWindowData.channels[i]);
+    if (that.vars.polarity.hasOwnProperty(i)) {
+      console.log(that.vars.polarity);
+      reversedPolarity = that.vars.polarity[i];
+      console.log(reversedPolarity);
+    } else {
+      reversedPolarity = 1;
+    }
+    var flipFactorAndReversePolarity = flipFactor * reversedPolarity;
+    console.log(flipFactorAndReversePolarity);
+    var maxId = "channel" + i + "max";
+    var minId = "channel" + i + "min";
+    that.vars.chart.yAxis[0].removePlotLine(maxId);
+    that.vars.chart.yAxis[0].removePlotLine(minId);
+    var maxOptions = {
+      id: maxId,
+      color: "#26a69a",
+      value: max,
+      width: 1,
+      label: {
+        text: flipFactorAndReversePolarity == 1 ? realMax : realMin,
+        x: -30,
+        y: 2
+      }
+    };
+    var minOptions = {
+      id: minId,
+      color: "#26a69a",
+      value: min,
+      width: 1,
+      label: {
+        text: flipFactorAndReversePolarity == 1 ? realMin : realMax,
+        x: -30,
+        y: 2
+      }
+    };
+    that.vars.chart.yAxis[0].addPlotLine(maxOptions);
+    that.vars.chart.yAxis[0].addPlotLine(minOptions);
+    console.log(that.vars.chart.yAxis[0].plotLinesAndBands);
+    that._hideLoading();
     
   },
 
@@ -6193,7 +6205,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           minorTickInterval: 0.5,
           min: that.vars.currentWindowStart,
           max: that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds,
-          // THEY KILLED KENNY THOSE BASTARDS
           unit: [["second", 1]],
           events: {
             setExtremes: function (e) {
@@ -9347,6 +9358,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
 
     var that = this;
+    console.log(that.vars.chart.yAxis[0].plotLinesAndBands);
     if (that._isChannelSelected() === true) {
       // checks if a channel is selected
       channel = that.vars.allChannels[index];
@@ -9380,11 +9392,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._savePreferences({
           polarity: that.vars.polarity,
         });
+        var idTest = "channel" + index + "max";
+        if(that.vars.chart.yAxis[0].plotLinesAndBands.find(el => el.id == idTest)){
+          that._addMaxMinLines(index);
+        }
       } else {
         that.vars.polarity[index] = -1;
         that._savePreferences({
           polarity: that.vars.polarity,
         });
+        var idTest = "channel" + index + "max";
+        if(that.vars.chart.yAxis[0].plotLinesAndBands.find(el => el.id == idTest)){
+          that._addMaxMinLines(index);
+        }
       }
     }
   },
