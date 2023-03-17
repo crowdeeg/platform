@@ -751,10 +751,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       numberOfAnnotationsInCurrentWindow: 0,
       specifiedTrainingWindows: undefined,
       requiredName: "",
-      valueOptions: 0,
       allChannels: undefined,
       currType: "",
-      increaseOnce: 0,
       oldIndex: -1,
       xAxisScaleInSeconds: 60,
       currentTrainingWindowIndex: 0,
@@ -788,6 +786,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         sleep_stage_rem: "REM Sleep",
         sleep_stage_unknown: "Unknown",
       },
+      windowsToRequest: [],
       windowsCacheLength: 15,
       windowsCache: {},
       // windowCache is an object, keeping track of data that is loaded in the background:
@@ -2866,7 +2865,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           target_sampling_rate: that.options.targetSamplingRate,
           use_high_precision_sampling: that.options.useHighPrecisionSampling,
         };
-        that._requestData(options, function (data, error) {
+        that._requestData(options).then(function ([data, realData]) {
+          ++numWindowsLoaded;
+          updateLoadingProgress();
+        }).catch((error) => {
           if (error) {
             console.log(error);
           }
@@ -4459,9 +4461,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("_switchToWindow.that:", that);
     // can be ignored for now, something to do with the machine learning component of the app
     // console.log(!that._isCurrentWindowSpecifiedTrainingWindow());
-
     if (!that._isCurrentWindowSpecifiedTrainingWindow()) {
-      console.log("0");
       if (that.options.visibleRegion.start !== undefined) {
         console.log("0-1");
         start_time = Math.max(that.options.visibleRegion.start, start_time);
@@ -4510,6 +4510,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._setNumberOfAnnotationsInCurrentWindow(0); // reset the number of annotations in the current window
     }
 
+    that._showLoading();
+
     that.vars.currentWindowStart = start_time; // update the current window start
     that.vars.currentWindowRecording = that.options.recordingName; // update the current window recording
     that._updateJumpToClosestDisagreementWindowButtonsEnabledStatus();
@@ -4548,7 +4550,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log("4-1");
       that._saveUserEventWindowBegin();
     }
-    console.log(that.options.context.preferences);
     that._savePreferences({ startTime: start_time });
 
     var windowsToRequest = [
@@ -4598,6 +4599,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     
     //console.log(that);
     that.vars.reprint = 0;
+    that.vars.windowsToRequest = windowsToRequest;
     windowsToRequest.forEach((windowStartTime) => {
       //console.log("6, windowStartTime:", windowStartTime);
       // gets the data for all the prefetched windows
@@ -4617,40 +4619,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       };
       //console.log(that);
       
-      that._requestData(options, (data, errorData,realData) => {
-        var windowAvailable = !errorData;
-        // console.log(errorData);
-        if (
-          windowAvailable &&
-          windowStartTime == that.vars.currentWindowStart && that.options.graphPopulated
-        ) {
-          that._applyFrequencyFilters(data, (dataFiltered) => {
-            //console.log(that);
-            let real = that._alignRealDataandData(realData,dataFiltered);
-            that.vars.currentWindowData = dataFiltered;
-            that.vars.real = real;
-            // console.log(real);
-            // console.log(dataFiltered);
-            
-            //console.log(that);
-            //that._populateGraph(that.vars.currentWindowData,real);
+      that._requestData(options).then(([data, realData]) => {
+        let requestedIndex = that.vars.windowsToRequest.indexOf(windowStartTime);
+        if (requestedIndex < 0) {
+          return;
+        } else {
+          that.vars.windowsToRequest.splice(requestedIndex, 1);
+        }
+        if (windowStartTime === that.vars.currentWindowStart) {
+          that.vars.currentWindowData = data;
+          that.vars.real = realData;
+
+          if (that.options.graphPopulated) {
             that._populateGraph();
             that._displayCrosshair(that.vars.crosshairPosition);
-          });
-        } else if (windowAvailable &&
-          windowStartTime == that.vars.currentWindowStart && !that.options.graphPopulated){
-            that._applyFrequencyFilters(data, (dataFiltered) => {
-              //console.log(that);
-              let real = that._alignRealDataandData(realData,dataFiltered);
-              that.vars.currentWindowData = dataFiltered;
-              that.vars.real = real;
-              // console.log(real);
-              // console.log(dataFiltered);
-              //console.log(that);
-              //that._setupGraphFunctions(that.vars.currentWindowData,real);
-              that._setupGraphFunctions();
-            });
+          } else {
+            that._setupGraphFunctions();
           }
+        }
 
         if (!that.options.experiment.running) {
           if (that._isInNoTimelockMode()) {
@@ -4666,30 +4652,65 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               case that.vars.currentWindowStart + window_length:
                 if (that.options.visibleRegion.end === undefined) {
                   //console.log('winAva:', windowAvailable);
-                  that._setForwardEnabledStatus(windowAvailable);
-                  if (!windowAvailable) {
-                    that._lastWindowReached();
-                  }
+                  that._setForwardEnabledStatus(true);
                 }
 
               case that.vars.currentWindowStart +
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.end === undefined) {
 
-                  that._setFastForwardEnabledStatus(windowAvailable);
+                  that._setFastForwardEnabledStatus(true);
                 }
               // break;
               case that.vars.currentWindowStart - window_length:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setBackwardEnabledStatus(windowAvailable);
+                  that._setBackwardEnabledStatus(true);
                 }
               // break;
               case that.vars.currentWindowStart -
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setFastBackwardEnabledStatus(windowAvailable);
+                  that._setFastBackwardEnabledStatus(true);
                 }
               // break;
+            }
+          }
+        }
+      }).catch((err) => {
+        console.log("Request data error", err);
+        if (!that.options.experiment.running) {
+          if (that._isInNoTimelockMode()) {
+            that._setForwardEnabledStatus(false);
+            that._setFastForwardEnabledStatus(false);
+            that._setBackwardEnabledStatus(false);
+            that._setFastBackwardEnabledStatus(false);
+          } else {
+            // enable/disable the forward backward buttons according to the current position
+
+            switch (windowStartTime) {
+              case that.vars.currentWindowStart + window_length:
+                if (that.options.visibleRegion.end === undefined) {
+                  //console.log('winAva:', windowAvailable);
+                  that._setForwardEnabledStatus(false);
+                  that._lastWindowReached();
+                }
+              case that.vars.currentWindowStart +
+                window_length * that.options.windowJumpSizeFastForwardBackward:
+                if (that.options.visibleRegion.end === undefined) {
+
+                  that._setFastForwardEnabledStatus(false);
+                }
+                break;
+              case that.vars.currentWindowStart - window_length:
+                if (that.options.visibleRegion.start === undefined) {
+                  that._setBackwardEnabledStatus(false);
+                }
+              case that.vars.currentWindowStart -
+                window_length * that.options.windowJumpSizeFastForwardBackward:
+                if (that.options.visibleRegion.start === undefined) {
+                  that._setFastBackwardEnabledStatus(false);
+                }
+                break;
             }
           }
         }
@@ -4722,50 +4743,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _alignRealDataandData: function(realData,data){
-    /*
-    let big_lst = [];
-    for(var dataId in realData.channel_values){
-      let j = 0;
-      for (var name in realData.channel_values[dataId]){
-        lst = [];
-        lst.push(realData.channel_values[dataId][name][0]);
-
-        for (let i = 1;i<data.channels[j].values.length;i++){
-          if(realData.channel_values[dataId][name][i] != 
-            realData.channel_values[dataId][name][i-1]){
-              lst.push(realData.channel_values[dataId][name][i]);
-            }
-        }
-        big_lst.push(lst);
-        j++;
-      }
-    }
-
-    let other_lst = [];
-    for(var index in data.channels){
-
-      lst = [];
-      lst.push(data.channels[index].values[0]);
-      for (let i = 1;i<data.channels[index].values.length;i++){
-        if (data.channels[index].values[i] != 
-          data.channels[index].values[i-1]){
-            lst.push(data.channels[index].values[i]);
-          }
-      }
-      other_lst.push(lst);
-    }
-    let output_lst = [];
-    for(var index in data.channels){
-      real = big_lst[index];
-      other = other_lst[index];
-      lst = [];
-      for(let i = 0;i<data.channels[index].values.length;i++){
-        let j = other.indexOf(data.channels[index].values[i]);
-        lst.push(real[j]);
-
-      }
-      output_lst.push(lst);
-    }*/
     output_lst = [];
     for(var dataId in realData.channel_values){
       let j = 0;
@@ -4851,13 +4828,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     );
   },
 
-  _addToWindowsCache: function (identifierKey, data, realData, options) {
+  _addToWindowsCache: function (identifierKey, promise, options) {
     var that = this;
     while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
       let keyToDelete = undefined;
       let farthestKeyDist = -1;
       Object.keys(that.vars.windowsCache).forEach((key) => {
-        if (!that.vars.windowsCache[key] || !that.vars.windowsCache[key].data || !that.vars.windowsCache[key].startTime) {
+        if (!that.vars.windowsCache[key] || !that.vars.windowsCache[key].startTime) {
           keyToDelete = key;
           farthestKeyDist = -2;
         } else if (farthestKeyDist > -2) {
@@ -4873,12 +4850,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     that.vars.windowsCache[identifierKey] = {};
     // transform the data before storing or displaying them
-    that.vars.windowsCache[identifierKey].data = data;
-    that.vars.windowsCache[identifierKey].realData = realData;
+    that.vars.windowsCache[identifierKey].promise = promise;
     that.vars.windowsCache[identifierKey].startTime = options.start_time;
   },
 
-  _requestData: function (options, callback) {
+  _requestData: function (options) {
     var that = this;
     // console.log(that.vars.allRecordings);
     // identifierKey includes:
@@ -4892,19 +4868,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       "No data available for window with options " + JSON.stringify(options);
 
     if (options.start_time < 0) {
-      that.vars.windowsCache[identifierKey] = false;
+      return Promise.reject("Invalid start time.");
       //console.log("options.start_time < 0");
     } else if (options.start_time > that.vars.recordingLengthInSeconds) {
-      that.vars.windowsCache[identifierKey] = false;
+      return Promise.reject("Invalid start time.");
       //console.log("options.start_time > that.vars.recordingLengthInSeconds");
-    }
-    if (that.vars.windowsCache[identifierKey] === false) {
-      if (callback) {
-        //console.log("that.vars.windowsCache[identifierKey] === false");
-
-        callback(null, noDataError);
-      }
-      return;
     }
 
     var reprint = that.vars.reprint;
@@ -4912,60 +4880,48 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.windowsCache = {};
     } else if (
       that.vars.windowsCache[identifierKey] &&
-      that.vars.windowsCache[identifierKey].data &&
-      callback
+      that.vars.windowsCache[identifierKey].promise
     ) {
-      callback(that.vars.windowsCache[identifierKey].data, null, that.vars.windowsCache[identifierKey].realData);
-      return;
+      return that.vars.windowsCache[identifierKey].promise;
     }
-    const numSecondsToPadBeforeAndAfter = 0;
 
     const optionsPadded = JSON.parse(JSON.stringify(options));
 
-    optionsPadded.start_time -= numSecondsToPadBeforeAndAfter;
-
-    optionsPadded.start_time = Math.max(0, optionsPadded.start_time);
-
     optionsPadded.maskedChannels = that.options.maskedChannels;
 
-    const numSecondsPaddedBefore =
-      options.start_time - optionsPadded.start_time;
-
     optionsPadded.window_length =
-      options.window_length +
-      numSecondsPaddedBefore +
-      numSecondsToPadBeforeAndAfter;
+      options.window_length;
     // console.log(optionsPadded.window_length);
     // console.log(options.window_length);
     optionsPadded.low_resolution_data =
       that._isInNoTimelockMode() ||
-      optionsPadded.window_length >
-      300 + numSecondsPaddedBefore + numSecondsToPadBeforeAndAfter;
-    Meteor.call("get.edf.data", optionsPadded, (error, data) => {
-      if (error) {
-        //console.log(error.message);
-        callback(null, error.message);
-        return;
-      }
-      //console.log("edf.data", data);
-      if (!that._isDataValid(data)) {
-        that.vars.windowsCache[identifierKey] = false;
-        if (callback) {
-          callback(null, noDataError);
+      optionsPadded.window_length > 300;
+    let promise = new Promise((resolve, reject) => {
+      Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
+        if (error) {
+          //console.log(error.message);
+          return reject(error.message);
         }
-      } else {
-        let transformedData = that._transformData(
-          data,
-          numSecondsPaddedBefore,
-          options.window_length,
-          numSecondsToPadBeforeAndAfter
-        );
-        that._addToWindowsCache(identifierKey, transformedData, data, options);
-        if (callback) {
-          callback(transformedData, null, data);
+        //console.log("edf.data", data);
+        if (!that._isDataValid(realData)) {
+          return reject(noDataError);
+        } else {
+          let transformedData = that._transformData(
+            realData,
+            0,
+            options.window_length,
+            0
+          );
+
+          that._applyFrequencyFilters(transformedData, (data) => {
+            let real = that._alignRealDataandData(realData,data);
+            return resolve([data, real]);
+          });
         }
-      }
+      });
     });
+    that._addToWindowsCache(identifierKey, promise, options);
+    return promise;
   },
 
   _transformData: function (
@@ -4977,10 +4933,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // //console.log("inside here");
     var that = this;
     var channels = [];
-    var options = that.vars.valueOptions;
-    if (options == null) {
-      options = 0;
-    }
 
     var channelAudioRepresentations = {};
     var channelNumSamples = {};
@@ -5014,8 +4966,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         //gets the max value in the values array
         var scaleFactorAmplitude = Math.max(...values.map(Math.abs));
 
-        var maxIn = scaleFactorAmplitude;
-
         var valuesLength = values.length;
 
         // var y95 = 0;
@@ -5028,17 +4978,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // is the average of the values
         var avg = values.reduce((a, b) => a + b) / valuesLength;
         avg = Math.abs(avg);
-        ////console.log(avg);
-
-        // adds up the difference of the values from the average
-        var changeVal = values.reduce((a, b) => a + Math.abs(avg - b));
-        ////console.log(changeVal);
-
-        // //console.log(name);
-        //   //console.log(scaleFactorAmplitude) ;
-
-        // scaleValueChange = Math.pow(scaleFactorAmplitude, 2);
-        var scaleValueChange = maxIn * scaleFactorAmplitude;
 
         // checks if there are negative and positive values in the values array
         const hasNegativeValues = values.some((v) => v <= 0);
@@ -5063,191 +5002,116 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         }
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
         var scaleFault = 0;
-        if (options == 0) {
-          // if the amplitude is not scaled (default amplitude)
-          switch (name) {
-            case "F4-A1":
-              scaleFault = 1;
-              break;
+        // if the amplitude is not scaled (default amplitude)
+        switch (name) {
+          case "F4-A1":
+            scaleFault = 1;
+            break;
 
-            case "C4-A1":
-              scaleFault = 1;
-              break;
-            case "O2-A1":
-              scaleFault = 1;
-              break;
-            case "LOC-A2":
-              scaleFault = 1;
-              break;
-            case "ROC-A1":
-              scaleFault = 1;
-              break;
-            case "Chin 1-Chin 2":
-              scaleFault = 500;
-              break;
-            // case "eeg-ch1":
-            // 	scaleFault = 0.05;
-            // 	break;
-            // case "eeg-ch2":
-            // 	scaleFault = 0.5;
-            // 	break;
-            // case "eeg-ch3":
-            // 	scaleFault = 0.05;
-            // 	break;
-            // case "eeg-ch4":
-            // 	scaleFault = 0.05;
-            // 	break;
+          case "C4-A1":
+            scaleFault = 1;
+            break;
+          case "O2-A1":
+            scaleFault = 1;
+            break;
+          case "LOC-A2":
+            scaleFault = 1;
+            break;
+          case "ROC-A1":
+            scaleFault = 1;
+            break;
+          case "Chin 1-Chin 2":
+            scaleFault = 500;
+            break;
+          // case "eeg-ch1":
+          // 	scaleFault = 0.05;
+          // 	break;
+          // case "eeg-ch2":
+          // 	scaleFault = 0.5;
+          // 	break;
+          // case "eeg-ch3":
+          // 	scaleFault = 0.05;
+          // 	break;
+          // case "eeg-ch4":
+          // 	scaleFault = 0.05;
+          // 	break;
 
-            case "ECG":
-              scaleFault = 100;
-              break;
-            case "Leg/L":
-              scaleFault = 50;
-              break;
-            case "Leg/R":
-              scaleFault = 50;
-              break;
-            case "Snore":
-              scaleFault = 600;
-              break;
-            case "Airflow":
-              scaleFault = 100;
-              break;
-            case "Nasal Pressure":
-              scaleFault = 100;
-              break;
-            case "Thor":
-              scaleFault = 500;
-              break;
+          case "ECG":
+            scaleFault = 100;
+            break;
+          case "Leg/L":
+            scaleFault = 50;
+            break;
+          case "Leg/R":
+            scaleFault = 50;
+            break;
+          case "Snore":
+            scaleFault = 600;
+            break;
+          case "Airflow":
+            scaleFault = 100;
+            break;
+          case "Nasal Pressure":
+            scaleFault = 100;
+            break;
+          case "Thor":
+            scaleFault = 500;
+            break;
 
-            case "Abdo":
-              scaleFault = 100;
-              break;
-            case "SpO2":
-              scaleFault = 1.5;
-              break;
-            case "Pleth":
-              scaleFault = 0.03;
-              break;
-            case "Accl Pitch":
-              scaleFault = 10;
-              break;
-            case "Accl Roll":
-              scaleFault = 10;
-              break;
-            case "Resp Effort":
-              scaleFault = 100;
-              break;
-            case "HR(bpm)":
-              scaleFault = 3.5;
-              break;
-            case "SpO2(%)":
-              scaleFault = 3.5;
-              break;
-            case "PI(%)":
-              scaleFault = 85;
-              break;
-            case "PAT(ms)":
-              scaleFault = 0.1;
-              break;
-            case "Chest Temp(A C)":
-              scaleFault = 10;
-              break;
-            case "Limb Temp(A C)":
-              scaleFault = 10;
-              break;
-            case "Temp":
-              scaleFault = 100;
-              break;
-            case "light":
-              scaleFault = 100;
-              break;
-            case "ENMO":
-              scaleFault = 100;
-              break;
-            case "z-angle":
-              scaleFault = 100;
-              break;
-          }
-          scaleFactorAmplitude = scaleFactorAmplitude * scaleFault;
-          sessionStorage.setItem(
-            dataId + name + "scaleFactorAmplitude",
-            scaleFault
-          );
-
-          ////console.log(name);
-          // //console.log(scaleFactorAmplitude);
-        } else if (options == 2) {
-          ////console.log(changeVal);
-          // //console.log(scaleFactorAmplitude);
-          while (
-            changeVal > 0 &&
-            scaleValueChange > 0 &&
-            changeVal < 10000 &&
-            scaleValueChange * 10 < 500
-          ) {
-            //       //console.log(changeVal);
-            scaleFactorAmplitude = scaleFactorAmplitude * 3;
-            //scaleValueChange = scaleFactorAmplitude*maxIn;
-            //  //console.log(scaleFactorAmplitude*maxIn);
-            changeVal = changeVal * 7;
-          }
-          // //console.log(name);
-          //  //console.log(scaleFactorAmplitude);
-          sessionStorage.setItem(
-            dataId + name + "scaleFactorAmplitude",
-            scaleFactorAmplitude
-          );
-        } else if (options == 1) {
-          //if the amplitude has to be scaled
-          //requiredName = "Thor"//sessionStorage.getItem("requiredName");
-          let channelOnChange = that.vars.channelAmplitudeOnChange;
-          // //console.log(requiredName);
-          var scaleFault = sessionStorage.getItem(
-            dataId + name + "scaleFactorAmplitude"
-          );
-          var oncecheck = that.vars.increaseOnce;
-          if (
-            name === channelOnChange.name &&
-            dataId === channelOnChange.dataId &&
-            oncecheck == 1
-          ) {
-            scaleFault = scaleFault * 5;
-            that.vars.increaseOnce = 0;
-          }
-
-          sessionStorage.setItem(
-            dataId + name + "scaleFactorAmplitude",
-            scaleFault
-          );
-          //sessionStorage.setItem(("requiredName"),"");
-          scaleFactorAmplitude = scaleFactorAmplitude * scaleFault;
-          // //console.log(sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault));
-          //  //console.log(scaleFault);
-          ////console.log(scaleFactorAmplitude);
-        } else if (options == -1) {
-          //requiredName = "Thor"//sessionStorage.getItem("requiredName");
-          var scaleFault = sessionStorage.getItem(
-            dataId + name + "scaleFactorAmplitude"
-          );
-          let channelOnChange = that.vars.channelAmplitudeOnChange;
-          var oncecheck = that.vars.increaseOnce;
-          if (
-            name === channelOnChange.name &&
-            dataId === channelOnChange.dataId &&
-            oncecheck == 1
-          ) {
-            scaleFault = scaleFault / 5;
-            that.vars.increaseOnce = 0;
-          }
-          // //console.log(sessionStorage.setItem((name+"scaleFactorAmplitude"), scaleFault));
-          ////console.log(scaleFault);
-          sessionStorage.setItem(
-            dataId + name + "scaleFactorAmplitude",
-            scaleFault
-          );
-          scaleFactorAmplitude = scaleFactorAmplitude * scaleFault;
+          case "Abdo":
+            scaleFault = 100;
+            break;
+          case "SpO2":
+            scaleFault = 1.5;
+            break;
+          case "Pleth":
+            scaleFault = 0.03;
+            break;
+          case "Accl Pitch":
+            scaleFault = 10;
+            break;
+          case "Accl Roll":
+            scaleFault = 10;
+            break;
+          case "Resp Effort":
+            scaleFault = 100;
+            break;
+          case "HR(bpm)":
+            scaleFault = 3.5;
+            break;
+          case "SpO2(%)":
+            scaleFault = 3.5;
+            break;
+          case "PI(%)":
+            scaleFault = 85;
+            break;
+          case "PAT(ms)":
+            scaleFault = 0.1;
+            break;
+          case "Chest Temp(A C)":
+            scaleFault = 10;
+            break;
+          case "Limb Temp(A C)":
+            scaleFault = 10;
+            break;
+          case "Temp":
+            scaleFault = 100;
+            break;
+          case "light":
+            scaleFault = 100;
+            break;
+          case "ENMO":
+            scaleFault = 100;
+            break;
+          case "z-angle":
+            scaleFault = 100;
+            break;
         }
+        scaleFactorAmplitude = scaleFactorAmplitude * scaleFault;
+        sessionStorage.setItem(
+          dataId + name + "scaleFactorAmplitude",
+          scaleFault
+        );
         /*   
                     if(scaleValueChange > 500 ){
                         scaleValueChange = 500/maxIn;
@@ -5333,7 +5197,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         buffer.length,
         that.vars.audioContextSampleRate
       );
-      var valuesFiltered = data.channels[c].valuesFilteredHolder;
       var bufferSource = offlineCtx.createBufferSource();
       bufferSource.buffer = buffer;
       var currentNode = bufferSource;
@@ -5487,10 +5350,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // if the chart object does not yet exist, because the user is loading the page for the first time
       // or refreshing the page, then it's necessary to initialize the plot area
       // if this is the first pageload, then we'll need to load the entire
-      console.time("_initGraph");
       that._initGraph(that.vars.currentWindowData);
-      //console.log("[[time end]]");
-      console.timeEnd("_initGraph");
       // if the plot area has already been initialized, simply update the data displayed using AJAX calls
 
       that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
@@ -5770,14 +5630,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var original_series = [];
     /* plot all of the points to the chart */
     var that = this;
-    that._showLoading();
     // if the chart object does not yet exist, because the user is loading the page for the first time
     // or refreshing the page, then it's necessary to initialize the plot area
 
     //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
-    console.log(this.vars.chart.series);
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
     for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
@@ -5803,7 +5661,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.recordPolarity = false;
     that.vars.recordTranslation = false;
 
-    
+    // zeroPosition + (point - zeroPosition) * (1 + scaleFactor) + value
     // checks if the object is empty
     if (!that._objectIsEmpty(that.vars.scalingFactors)) {
       for (var index in that.vars.scalingFactors) {
@@ -5875,7 +5733,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //console.log(that);
     }
     that.vars.chart.redraw();
-    console.log(that.vars.scalingFactors);
     that._hideLoading();
     //console.log(this.vars.chart.series);
   },
@@ -6029,47 +5886,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // stores in the series that we input into the funciton, at index c
         series[c].setData(seriesData, false, false, false);
         series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
-      } //else {
-        // using them, we get the flipfactor and gain
-        /*
-        var flipFactor = that._getFlipFactorForChannel(channel);
-        
-        var gain = that._getGainForChannelIndex(c);
-
-        if (gain === undefined) {
-          gain = 1.0;
-        }
-
-        var flipFactorAndGain = flipFactor * gain;
-
-        // gets some additional information needed to graph using channel and c
-        var offsetPreScale = that._getOffsetForChannelPreScale(channel);
-        var offsetPostScale = that._getOffsetForChannelIndexPostScale(c);
-        
-        // gets the values
-        samplesScaledAndOffset = channel.values.map(function (value, v) {
-          return (value + offsetPreScale) * flipFactorAndGain + offsetPostScale;
-        });
-
-        // creates an array that stores all the data
-        var seriesData = xValues.map(function (x, i) {
-          return [x, samplesScaledAndOffset[i]];
-        });
-        // adds the offset needed to the start of the graph
-        seriesData.unshift([-that.vars.xAxisScaleInSeconds, offsetPostScale]);
-        
-        // adds the offset needed to the end of the graphID
-        seriesData.push([recordingEndInSecondsSnapped, offsetPostScale]);
-        
-        // stores in the series that we input into the funciton, at index c
-        
-        series[c].setData(seriesData, false, false, false);
-        
-        series[c].realyData = [series[c].yData[0]].concat(real[c]).concat(series[c].yData[-1]);
-        series[c].yData = [];
-        //console.log(channel);
-        */
-      //}
+      }
       
     });
   },
@@ -6532,73 +6349,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
     console.log("proper init");
   },
-
-  /*_changeAmplitude: function (index, channels) {
-    var that = this;
-    
-
-        var check;
-        var cid = "channel-" + index; // channel id
-        console.log("channel-index:" + cid)
-        var checker = that.vars.oldIndex;
-
-        console.log("checker: " + checker)
-        console.log("that.vars.oldIndex:" +that.vars.oldIndex)
-
-        if(checker > -1){
-            $("#increase-"+(checker)).css("visibility", "hidden");
-            $("#decrease-"+(checker)).css("visibility", "hidden");
-            $("#default-"+(checker)).css("visibility", "hidden");
-            $("#myPopup-"+(checker)).css("visibility", "hidden");
-            that.vars.oldIndex = -1;
-        } 
-
-        var channel = channels[index];
-        console.log("channel: " + channel);
-
-        check = that.vars.popUpActive;
-        console.log("check: " + check)
-
-        if(check == 1 ){
-            $("#myPopup-"+(index)).css("visibility", "visible");
-            $("#increase-"+(index)).css("visibility", "visible");
-            $("#decrease-"+(index)).css("visibility", "visible");
-            $("#default-"+(index)).css("visibility", "visible");
-        }
-        console.log("check: " + check)
-
-
-        that.vars.popUpActive = 2;
-        that.vars.oldIndex =index; // checks if any channel has been clicked before 
-        var increaser = $("#increase-"+(index)).on('click', (evt) => {
-            that.vars.valueOptions = 1;
-            that.vars.increaseOnce = 1;
-            that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-            that.vars.reprint = 1;
-            that._switchToWindow(that.options.allRecordings, that.vars.currentWindowStart, that.vars.xAxisScaleInSeconds);
-          
-    
-        });
-    
-        var decreaser = $("#decrease-"+(index)).on('click', (evt) => {
-            that.vars.valueOptions = -1;
-            that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-            that.vars.increaseOnce = 1;
-            that.vars.reprint = 1;
-            that._reloadCurrentWindow();
-
-        });
-        var defaulter = $("#default-"+(index)).on('click', (evt) => {
-            that.vars.valueOptions = 0;
-            that.vars.channelAmplitudeOnChange = { name: channel.name, dataId: channel.dataId };
-            that.vars.reprint = 1;
-            that._reloadCurrentWindow();
-           
-            
-        });
-
-        
-  },*/
 
   _formatXAxisLabel: function () {
     // Format x-axis at HH:MM:SS
@@ -10517,8 +10267,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
         ).fetch();
       }
-
-      console.log("Annotations:", Annotations.find({}).fetch());
   
       that.vars.annotationsLoaded = true;
   
