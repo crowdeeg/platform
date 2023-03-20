@@ -3262,7 +3262,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // If we provide a diff parameter, use this parameter as the alignment time difference offset.
     var that = this;
     let crosshairPosition = that.vars.crosshairPosition;
-    let ids = crosshairPosition.map((rec) => rec.dataId);
+    //let ids = crosshairPosition.map((rec) => rec.dataId);
+    let ids = that.options.context.dataset.map((rec)=> rec._id);
     let currentDiff = ids.map((id) => that.vars.channelTimeshift[id]);
     if (crosshairPosition.length === 2 || diff) {
       // calculate the difference between two recordings after adding the current difference
@@ -3285,6 +3286,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that.vars.channelTimeshift[ids[1]] = -remainder;
           }
         } else {
+          console.log(that.vars.channelTimeshift)
           that.vars.channelTimeshift[ids[0]] = currentDiff[0]
             ? currentDiff[0] + diff
             : diff;
@@ -3318,6 +3320,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that._savePreferences({
         channelTimeshift: that.vars.channelTimeshift,
       });
+      console.log(that.vars.channelTimeshift);
 
       $("#alignment-alert").hide();
       that._reloadCurrentWindow();
@@ -4761,7 +4764,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   },
 
   _reloadCurrentWindow: function () {
-    //console.log("_reloadCurrentWindow");
+    console.log("_reloadCurrentWindow");
     var that = this;
     that.vars.annotationsCache = {};
     that.vars.windowsCache = {};
@@ -11069,13 +11072,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       } else {
         fileName = fileName + recordName + "_";
       }
-      //console.log([key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]])
+      console.log([key, that.options.context.preferences.annotatorConfig]);
       return (JSON.stringify({
         'filename': record.Record,
         'fileId': key,
         'startTime': record.StartingTime,
         'channels': channels[key].join('//'),
-        'alignment' : [key, that.options.context.preferences.annotatorConfig.channelTimeshift[key]],
+        'alignment' : [key, that.options.context.preferences.annotatorConfig.channelTimeshift ? that.options.context.preferences.annotatorConfig[key] : 0],
       }))
     })).join(',')
 
@@ -11105,7 +11108,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // console.log(annotations);
     var obj = that.options.context.preferences.annotatorConfig.channelTimeshift;
     console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
-    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
+    console.log(that.options.context);
+    var channelWithValue = Object.keys(obj).filter(el => obj[el] != 0);
+    var lag = obj[channelWithValue];
+    var newObj = {
+      "filename1": that.options.context.dataset[0].name,
+      "filename2": that.options.context.dataset[1].name,
+      "lag": lag
+    }
+    console.log(channelWithValue);
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(newObj));
     var downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     let fileName = "";
@@ -11289,7 +11301,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             const data = that._CSVToArray(text);
             diff = that.options.alignmentFromCSV ? that.options.alignmentFromCSV[1] : null;
             if(diff != null){
-              that._performOffsetSync();
+              // that._performOffsetSync();
+              that.vars.channelTimeshift = {};
+              that.vars.reprint = 1;
+              that.vars.currentTimeDiff = 0;
               that._performCrosshairSync(diff);
             }
             that._redrawAnnotationsFromObjects(data);
@@ -11297,11 +11312,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             const text = e.target.result;
             console.log(text);
             const data = JSON.parse(text);
-            diff = data[Object.keys(data)[0]];
+            console.log(data);
+            diff = data.lag;
+            console.log(diff);
             that._showLoading();
-            that._performOffsetSync();
+            // that._performOffsetSync();
+            that.vars.channelTimeshift = {};
+            that.vars.reprint = 1;
+            that.vars.currentTimeDiff = 0;
             that._performCrosshairSync(diff);
-            that._hideLoading();
             alignmentLoaded = true;
           }
           // else {
