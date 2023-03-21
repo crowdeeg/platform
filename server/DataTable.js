@@ -67,6 +67,8 @@ TabularTables.Data = new Tabular.Table({
             })
             return assignees;
           }},
+        {title: "Manage Assignments",
+          tmpl: Meteor.isClient && Template.manageButton},
         {title: "Delete",
           tmpl: Meteor.isClient && Template.deleteButton},
         {title: "Selected", 
