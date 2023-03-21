@@ -922,11 +922,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     <button type="button" class="btn btn-default feedback" id="feedback_button" aria-label="Feedback"> \
                     Feedback\
                     </button> \
+                    <button type="button" class="btn btn-default red" id="delete_button" aria-label="Delete"> \
+                    Delete Assignment\
+                    </button> \
                   </div>\
                   <div class="btn-toolbar col s1">\
                   <div class="loader" id="loader" style="border: 16px solid #f3f3f3; border-top: 16px solid #1b948e; border-radius: 50%; width: 35px; height: 35px; animation: spin 2s linear infinite; margin: auto"></div>\
                   </div>\
                 </div>\
+                <div id="delete-assignment-dialog">Are you sure you want to delete this assignment?</div>\
                 <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a class="y-mask-btn">Mask Channel</a></li>\
                   <li><a class="y-unmask-btn">Restore Masked Channels</a></li>\
@@ -1984,6 +1988,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupTimeSyncPanel();
     that._setupIOPanel();
     that._setupDoneButton();
+    that._setupDeleteButton();
     that._setupLatestClick();
     that._setupTitleButton();
     that._setupRejectButton();
@@ -3610,6 +3615,37 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
        //window.location.href='/';
       }
 
+    });
+  },
+
+  _setupDeleteButton: function () {
+    $("#delete-assignment-dialog").dialog({
+      autoOpen: false,
+      dialogClass: "no-close",
+      buttons: [
+        {
+          text: "Delete",
+          click: () => {
+            Meteor.call("deleteAssignment", that.options.context.assignment._id, (err, res) => {
+              if (err) {
+                return;
+              }
+              window.location.href = '/';
+            });
+            $("#delete-assignment-dialog").dialog("close");
+          }
+        }, {
+          text: "Cancel",
+          click: () => {
+            $("#delete-assignment-dialog").dialog("close");
+          }
+        }
+      ],
+      title: "Delete Assignment"
+    });
+
+    $("#delete_button").off("click").on("click", (e) => {
+      $("#delete-assignment-dialog").dialog("open");
     });
   },
 

@@ -674,28 +674,65 @@ function indexOfChannel(channelArray, index, dataId) {
   return channelArray.findIndex(isChannel, { name: index, dataId: dataId });
 }
 
+let deleteAssignment = (ids, callback) => {
+  Preferences.remove({ assignment: { $in: ids } }, (err) => {
+    if (err) {
+      if (callback) {
+        return callback(err)
+      } else {
+        return;
+      }
+    }
+
+    Annotations.remove({ assignment: { $in: ids } }, (err) => {
+      if (err) {
+        if (callback) {
+          return callback(err)
+        } else {
+          return;
+        }
+      }
+
+      Assignments.remove({ _id: { $in: ids } }, (err) => {
+        if (err) {
+          if (callback) {
+            return callback(err)
+          } else {
+            return;
+          }
+        }
+        return callback(null);
+      });
+    });
+  });
+}
+
 Meteor.methods({
 
   "removeFile"(fileName){
     return new Promise((resolve, reject) => {
       EDFFile.then(result =>{
         let dataId = Data.findOne({ name: fileName, path: { $nin: ["/physionet/edfx/PSG.edf", "/physionet/edfx/ANNE.edf"]}})._id;
-        Assignments.remove({dataFiles: {$eq: dataId}}, (err)=> {
+        let assignmentIds = Assignments.find({dataFiles: dataId}, { fields: { _id: 1 } }).fetch();
+        assignmentIds = assignmentIds.map((assignment) => {
+          return assignment._id;
+        });
+        deleteAssignment(assignmentIds, (err)=> {
           if(err){
-            reject();
+            return reject(err);
           } else {
             Data.remove({ _id: dataId}, (err) => {
               if (err) {
-                reject(err);
+                return reject(err);
               } else {
                 result.remove({name: fileName},function(error){
                   if (error){
                     console.error("File wasn't removed, error: " + error.reason)
-                    reject(error);
+                    return reject(error);
                   }
                   else{
                     console.info("File successfully removed");
-                    resolve(dataId);
+                    return resolve(dataId);
                   }
                 });
               }
@@ -705,15 +742,21 @@ Meteor.methods({
       });
     });
   },
-  "deleteFromAssignments"(dataId){
+  "deleteAssignment"(id){
     return new Promise((resolve, reject) => {
-      Assignments.remove({dataFiles: {$eq: dataId}}, (err)=> {
-        if(err){
-          reject(err);
-        } else {
-          resolve();
+      let userId = Meteor.userId();
+
+      if (!Roles.userIsInRole(userId, "admin")) {
+        let assignment = Assignments.findOne({ _id: id, users: userId });
+        if (!assignment) {
+          return reject("Could not delete assignment.");
         }
-      });
+      }
+
+      deleteAssignment([id], (err) => {
+        if (err) return reject(err);
+        return resolve();
+      })
     });
   },
 

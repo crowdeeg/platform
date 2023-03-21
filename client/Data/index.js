@@ -173,21 +173,22 @@ let deleteFile = (fileName) => {
   });
 };
 
-let deleteAssignments = (dataId) => {
-  let tasks = Assignments.find({}).fetch();
-  console.log(dataId);
-  console.log(tasks);
-  return new Promise((resolve, reject) => {
-    Meteor.call('deleteFromAssignments', dataId, function(res, err){
-      if (err){
-        console.log(err);
-        reject();
-        return;
+Template.Data.onRendered(() => {
+  // Destroy existing dialogs to avoid duplicates.
+  $(".ui-dialog-content").dialog("destroy");
+
+  $("#assignment-delete-dialog").dialog({
+    autoOpen: false,
+    buttons: [{
+      text: "Close",
+      click: () => {
+        $("#assignment-delete-dialog").dialog("close");
       }
-      resolve();
-    });
+    }],
+    title: "Manage Assignments",
+    width: "auto"
   });
-};
+});
 
 Template.Data.events({
   'click .btn.local': function () {
@@ -1261,6 +1262,8 @@ Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
           })
           return assignees;
         }},
+      {title: "Manage Assignments",
+        tmpl: Meteor.isClient && Template.manageButton},
       {title: "Delete",
         tmpl: Meteor.isClient && Template.deleteButton},
       {title: "Selected", 
@@ -1350,6 +1353,39 @@ Template.selected.events({
       delete selectedData[dataId];
     }
     selectedDataG.set(selectedData);
+  }
+});
+
+Template.manageButton.events({
+  'click .manage-button': function(event,template){
+    const dataId = this._id;
+
+    let assignments = Assignments.find({ dataFiles: dataId }).fetch();
+    let tableBody = $(".assignment-delete-table-body");
+    tableBody.empty();
+    assignments.forEach((assignment) => {
+      let task = Tasks.findOne({ _id: assignment.task }).name;
+      tableBody.append(`<tr class="assignment-delete-table-row" assignmentId=${assignment._id}>
+          <td class="assignment-delete-task">${task}</td>
+          <td class="assignment-delete-files">${assignment.dataPath()}</td>
+          <td class="assignment-delete-users">${assignment.userNames()}</td>
+          <td class="assignment-delete-created">${assignment.createdAt}</td>
+          <td class="assignment-delete-delete"><button class="btn assignment-delete-delete-button delete-button">DELETE</button></td>
+        </tr>`);
+    });
+
+    $(".assignment-delete-delete-button").off("click.assignmentDelete").on("click.assignmentDelete", (e) => {
+      let assignmentId = $(e.currentTarget).closest(".assignment-delete-table-row").attr("assignmentId");
+      Meteor.call("deleteAssignment", assignmentId, (err, res) => {
+        if (err) {
+          window.alert(err);
+          return;
+        }
+        $(e.currentTarget).closest(".assignment-delete-table-row").remove();
+      });
+    });
+
+    $("#assignment-delete-dialog").dialog("open");
   }
 });
 
