@@ -787,8 +787,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         sleep_stage_unknown: "Unknown",
       },
       windowsToRequest: [],
-      windowsCacheLength: 15,
-      windowsCache: {},
+      windowsCacheLength: 20,
+      windowsCacheEdgeLength: 5,
+      windowsCache: [],
       // windowCache is an object, keeping track of data that is loaded in the background:
       //
       // {
@@ -2870,7 +2871,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           target_sampling_rate: that.options.targetSamplingRate,
           use_high_precision_sampling: that.options.useHighPrecisionSampling,
         };
-        that._requestData(options).then(function ([data, realData]) {
+        that._requestData(options).then(function (data) {
           ++numWindowsLoaded;
           updateLoadingProgress();
         }).catch((error) => {
@@ -3047,10 +3048,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     that._setJumpToLastDisagreementWindowEnabledStatus(false);
     that._setJumpToNextDisagreementWindowEnabledStatus(false);
-    that._setForwardEnabledStatus(false);
-    that._setFastForwardEnabledStatus(false);
-    that._setBackwardEnabledStatus(false);
-    that._setFastBackwardEnabledStatus(false);
+    that._setForwardEnabledStatus(true);
+    that._setFastForwardEnabledStatus(true);
+    that._setBackwardEnabledStatus(true);
+    that._setFastBackwardEnabledStatus(true);
 
     if (that.options.showBackToLastActiveWindowButton) {
       $(that.element)
@@ -4595,7 +4596,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //stores all "pre loaded" windows
       start_time,
     ];
-    if (
+    console.log("Torequest", windowsToRequest);
+    /*if (
       !that._isCurrentWindowSpecifiedTrainingWindow() &&
       !that.options.experiment.running &&
       !that._isInNoTimelockMode() // stop caching windows if in no timelock mode
@@ -4634,7 +4636,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           windowsToRequest.push(window);
         }
       }
-    }
+    }*/
     
     //console.log(that);
     that.vars.reprint = 0;
@@ -4658,7 +4660,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       };
       //console.log(that);
       
-      that._requestData(options).then(([data, realData]) => {
+      that._requestData(options).then((realData) => {
         let requestedIndex = that.vars.windowsToRequest.indexOf(windowStartTime);
         if (requestedIndex < 0) {
           return;
@@ -4666,15 +4668,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.windowsToRequest.splice(requestedIndex, 1);
         }
         if (windowStartTime === that.vars.currentWindowStart) {
-          that.vars.currentWindowData = data;
-          that.vars.real = realData;
+          let transformedData = that._transformData(
+            realData,
+            0,
+            options.window_length,
+            0
+          );
+  
+          that._applyFrequencyFilters(transformedData, (data) => {
+            let real = that._alignRealDataandData(realData,data);
 
-          if (that.options.graphPopulated) {
-            that._populateGraph();
-            that._displayCrosshair(that.vars.crosshairPosition);
-          } else {
-            that._setupGraphFunctions();
-          }
+            that.vars.currentWindowData = data;
+            that.vars.real = real;
+
+            if (that.options.graphPopulated) {
+              that._populateGraph();
+              that._displayCrosshair(that.vars.crosshairPosition);
+            } else {
+              that._setupGraphFunctions();
+            }
+          });
         }
 
         if (!that.options.experiment.running) {
@@ -4719,10 +4732,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         console.log("Request data error", err);
         if (!that.options.experiment.running) {
           if (that._isInNoTimelockMode()) {
-            that._setForwardEnabledStatus(false);
-            that._setFastForwardEnabledStatus(false);
-            that._setBackwardEnabledStatus(false);
-            that._setFastBackwardEnabledStatus(false);
+            that._setForwardEnabledStatus(true);
+            that._setFastForwardEnabledStatus(true);
+            that._setBackwardEnabledStatus(true);
+            that._setFastBackwardEnabledStatus(true);
           } else {
             // enable/disable the forward backward buttons according to the current position
 
@@ -4730,24 +4743,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               case that.vars.currentWindowStart + window_length:
                 if (that.options.visibleRegion.end === undefined) {
                   //console.log('winAva:', windowAvailable);
-                  that._setForwardEnabledStatus(false);
+                  that._setForwardEnabledStatus(true);
                   that._lastWindowReached();
                 }
               case that.vars.currentWindowStart +
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.end === undefined) {
 
-                  that._setFastForwardEnabledStatus(false);
+                  that._setFastForwardEnabledStatus(true);
                 }
                 break;
               case that.vars.currentWindowStart - window_length:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setBackwardEnabledStatus(false);
+                  that._setBackwardEnabledStatus(true);
                 }
               case that.vars.currentWindowStart -
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setFastBackwardEnabledStatus(false);
+                  that._setFastBackwardEnabledStatus(true);
                 }
                 break;
             }
@@ -4869,7 +4882,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _addToWindowsCache: function (identifierKey, promise, options) {
     var that = this;
-    while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
+
+    // Maintain sorted order of the cache.
+    let i = 0;
+    for (i = 0; i < that.vars.windowsCache.length; i++) {
+      if (that.vars.windowsCache[i].startTime > options.start_time) {
+        break;
+      }
+    }
+
+    that.vars.windowsCache.splice(i, 0, {
+      promise: promise,
+      startTime: options.start_time,
+      windowLength: options.window_length
+    });
+    /*while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
       let keyToDelete = undefined;
       let farthestKeyDist = -1;
       Object.keys(that.vars.windowsCache).forEach((key) => {
@@ -4890,9 +4917,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.windowsCache[identifierKey] = {};
     // transform the data before storing or displaying them
     that.vars.windowsCache[identifierKey].promise = promise;
-    that.vars.windowsCache[identifierKey].startTime = options.start_time;
+    that.vars.windowsCache[identifierKey].startTime = options.start_time;*/
   },
 
+  /* Options: recordings: allRecordings,
+        channels_displayed: that._getChannelsDisplayed(), // get all channels we would like to display
+        start_time: startTime,
+        channel_timeshift: that.vars.channelTimeshift,
+        window_length: window_length,
+        target_sampling_rate: that.options.targetSamplingRate,
+        use_high_precision_sampling: that.options.useHighPrecisionSampling, */
   _requestData: function (options) {
     var that = this;
     // console.log(that.vars.allRecordings);
@@ -4902,6 +4936,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // 'window_length'
     // 'channels_displayed'
     var identifierKey = that._getIdentifierKeyForDataRequest(options);
+    // Round to nearest multiple of sampling rate so we can cache data more effectively.
+
+    const optionsPadded = JSON.parse(JSON.stringify(options));
+
+    optionsPadded.maskedChannels = that.options.maskedChannels;
+
+    optionsPadded.window_length =
+      options.window_length;
+    // console.log(optionsPadded.window_length);
+    // console.log(options.window_length);
+    optionsPadded.low_resolution_data =
+      that._isInNoTimelockMode() ||
+      optionsPadded.window_length > 300;
     //console.log("identifierKey", identifierKey);
     var noDataError =
       "No data available for window with options " + JSON.stringify(options);
@@ -4916,51 +4963,126 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var reprint = that.vars.reprint;
     if (reprint === 1 || that._isInNoTimelockMode()) {
-      that.vars.windowsCache = {};
-    } else if (
-      that.vars.windowsCache[identifierKey] &&
-      that.vars.windowsCache[identifierKey].promise
-    ) {
-      return that.vars.windowsCache[identifierKey].promise;
+      that.vars.windowsCache = [];
     }
 
-    const optionsPadded = JSON.parse(JSON.stringify(options));
+    let startTime = options.start_time;
+    let windowLength = options.window_length;
+    let i = that.vars.windowsCache.length - 1;
+    let miss = false;
 
-    optionsPadded.maskedChannels = that.options.maskedChannels;
+    // Cache is in sorted order, so first/last elements are at the min/max start time.
+    if (!that.vars.windowsCache.length || that.vars.windowsCache[0].startTime > startTime || that.vars.windowsCache[i].startTime + that.vars.windowsCache[i].windowLength < startTime + windowLength) {
+      // Total cache miss. This likely means it is a non-local request (i.e. the user jumped to an annotation) so clear the cache completely and reset the area.
+      console.log("Non-local");
+      miss = true;
+    } else {
+      // For now we ensure the cache is contiguous, so as long as the window is between min and max it should be in the cache.
+      console.log("Cache hit", startTime);
+      while (i > -1 && that.vars.windowsCache[i].startTime > startTime) {
+        i--;
+      }
+  
+      if (i > -1) {
+        let promises = [];
 
-    optionsPadded.window_length =
-      options.window_length;
-    // console.log(optionsPadded.window_length);
-    // console.log(options.window_length);
-    optionsPadded.low_resolution_data =
-      that._isInNoTimelockMode() ||
-      optionsPadded.window_length > 300;
-    let promise = new Promise((resolve, reject) => {
-      Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
-        if (error) {
-          //console.log(error.message);
-          return reject(error.message);
+        while (i < that.vars.windowsCache.length && that.vars.windowsCache[i].startTime < startTime + windowLength) {
+          promises.push(that.vars.windowsCache[i].promise);
+          i++;
         }
-        //console.log("edf.data", data);
-        if (!that._isDataValid(realData)) {
-          return reject(noDataError);
-        } else {
-          let transformedData = that._transformData(
-            realData,
-            0,
-            options.window_length,
-            0
-          );
 
-          that._applyFrequencyFilters(transformedData, (data) => {
-            let real = that._alignRealDataandData(realData,data);
-            return resolve([data, real]);
+        return Promise.all(promises).then((dataValues) => {
+          let realData = {
+            ...dataValues[0],
+            startTime: startTime
+          };
+          if (dataValues.length > 1) {
+            realData.channel_values = {};
+            let indexStart = Math.floor((startTime - dataValues[0].startTime) * dataValues[0].sampling_rate);
+            Object.keys(dataValues[0].channel_values).forEach((dataFile) => {
+              realData.channel_values[dataFile] = {};
+              Object.keys(dataValues[0].channel_values[dataFile]).forEach((channel) => {
+                realData.channel_values[dataFile][channel] = [...dataValues[0].channel_values[dataFile][channel].slice(indexStart)];
+              });
+            });
+
+            for (let j = 1; j < dataValues.length - 1; j++) {
+              Object.keys(dataValues[j].channel_values).forEach((dataFile) => {
+                Object.keys(dataValues[j].channel_values[dataFile]).forEach((channel) => {
+                  realData.channel_values[dataFile][channel].concat([...dataValues[j].channel_values[dataFile][channel]]);
+                });
+              });
+            }
+
+            let lastWindow = dataValues[dataValues.length - 1];
+            let indexEnd = Math.floor((startTime + windowLength - lastWindow.startTime) * lastWindow.sampling_rate);
+
+            Object.keys(lastWindow.channel_values).forEach((dataFile) => {
+              Object.keys(lastWindow.channel_values[dataFile]).forEach((channel) => {
+                realData.channel_values[dataFile][channel] = realData.channel_values[dataFile][channel].concat([...lastWindow.channel_values[dataFile][channel].slice(0, indexEnd)]);
+              });
+            });
+
+            // Turn js arrays back to Float32 arrays.
+            Object.keys(realData.channel_values).forEach((dataFile) => {
+              Object.keys(realData.channel_values[dataFile]).forEach((channel) => {
+                realData.channel_values[dataFile][channel] = realData.channel_values[dataFile][channel] = new Float32Array(realData.channel_values[dataFile][channel]);
+              });
+            });
+          }
+
+          return realData;
+        });
+      } else {
+        miss = true;
+      }
+    }
+
+    if (miss) {
+      console.log("Total cache miss.");
+      that.vars.windowsCache = [];
+      windowsToRequest = [startTime];
+
+      for (let j = 1; j < Math.ceil(that.vars.windowsCacheLength / 2); j++) {
+        windowsToRequest.push(startTime - windowLength * j);
+      }
+
+      for (let j = 1; j <= Math.floor(that.vars.windowsCacheLength / 2); j++) {
+        windowsToRequest.push(startTime + windowLength * j);
+      }
+
+      let toReturn = undefined;
+      windowsToRequest.forEach((window) => {
+        let requestOptions = optionsPadded;
+        requestOptions.start_time = window;
+        let promise = new Promise((resolve, reject) => {
+          Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
+            if (error) {
+              //console.log(error.message);
+              return reject(error.message);
+            }
+            //console.log("edf.data", data);
+            if (!that._isDataValid(realData)) {
+              return reject(noDataError);
+            } else {
+              realData.startTime = window;
+              return resolve(realData);
+            }
           });
+        });
+
+        that._addToWindowsCache(identifierKey, promise, requestOptions);
+
+        if (window === startTime) {
+          toReturn = promise;
         }
       });
-    });
-    that._addToWindowsCache(identifierKey, promise, options);
-    return promise;
+
+
+      return toReturn;
+    }
+
+    return Promise.reject();
   },
 
   _transformData: function (
