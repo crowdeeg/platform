@@ -4596,7 +4596,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //stores all "pre loaded" windows
       start_time,
     ];
-    console.log("Torequest", windowsToRequest);
     /*if (
       !that._isCurrentWindowSpecifiedTrainingWindow() &&
       !that.options.experiment.running &&
@@ -4970,6 +4969,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let windowLength = options.window_length;
     let i = that.vars.windowsCache.length - 1;
     let miss = false;
+    let toReturn = undefined;
 
     // Cache is in sorted order, so first/last elements are at the min/max start time.
     if (!that.vars.windowsCache.length || that.vars.windowsCache[0].startTime > startTime || that.vars.windowsCache[i].startTime + that.vars.windowsCache[i].windowLength < startTime + windowLength) {
@@ -4984,6 +4984,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
   
       if (i > -1) {
+        let index = i;
         let promises = [];
 
         while (i < that.vars.windowsCache.length && that.vars.windowsCache[i].startTime < startTime + windowLength) {
@@ -4991,7 +4992,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           i++;
         }
 
-        return Promise.all(promises).then((dataValues) => {
+        toReturn = Promise.all(promises).then((dataValues) => {
           let realData = {
             ...dataValues[0],
             startTime: startTime
@@ -5032,6 +5033,47 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           }
 
           return realData;
+        });
+
+        let windowsToRequest = [];
+        if (index < that.vars.windowsCacheEdgeLength) {
+          let requestStartTime = that.vars.windowsCache[0].startTime;
+          that.vars.windowsCache = that.vars.windowsCache.slice(0, that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength);
+
+          for (let j = 1; j <= Math.ceil(that.vars.windowsCacheEdgeLength); j++) {
+            windowsToRequest.push(requestStartTime - windowLength * j);
+          }
+          console.log("back request", that.vars.windowsCache);
+        } else if (index >= that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength) {
+          console.log("forward request");
+          let requestStartTime = that.vars.windowsCache[that.vars.windowsCache.length - 1].startTime + that.vars.windowsCache[that.vars.windowsCache.length - 1].windowLength;
+          that.vars.windowsCache = that.vars.windowsCache.slice(that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength);
+
+          for (let j = 0; j < Math.ceil(that.vars.windowsCacheEdgeLength); j++) {
+            windowsToRequest.push(requestStartTime + windowLength * j);
+          }
+        }
+
+        windowsToRequest.forEach((window) => {
+          let requestOptions = optionsPadded;
+          requestOptions.start_time = window;
+          let promise = new Promise((resolve, reject) => {
+            Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
+              if (error) {
+                //console.log(error.message);
+                return reject(error.message);
+              }
+              //console.log("edf.data", data);
+              if (!that._isDataValid(realData)) {
+                return reject(noDataError);
+              } else {
+                realData.startTime = window;
+                return resolve(realData);
+              }
+            });
+          });
+  
+          that._addToWindowsCache(identifierKey, promise, requestOptions);
         });
       } else {
         miss = true;
@@ -5079,6 +5121,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       });
 
 
+      return toReturn;
+    }
+
+    if (toReturn) {
       return toReturn;
     }
 
