@@ -3528,7 +3528,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //that.options.latestClick = event.originalEvent.point.x ? event.originalEvent.point.x : event.originalEvent.xAxis[0].value;
       if(event.originalEvent.point != undefined){
         that.options.latestClick = event.originalEvent.point.x;
-      } else {
+      } else if (event.originalEvent.xAxis) {
         that.options.latestClick = event.originalEvent.xAxis[0].value;
       }
       console.log(that.options.latestClick);
@@ -8241,7 +8241,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (that.options.isReadOnly) return;
 
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
-      var nextAnnotation = that.vars.chart.annotations.allItems.find((a) => a.metadata.id === that.vars.universalChangePointAnnotationsCache[index].id);
+      var nextAnnotation = that.vars.universalChangePointAnnotationsCache[index] ? that.vars.chart.annotations.allItems.find((a) => a.metadata.id === that.vars.universalChangePointAnnotationsCache[index].id) : undefined;
 
       that._nukeAnnotation(annotation);
 
