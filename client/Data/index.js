@@ -316,6 +316,110 @@ Template.Data.events({
     $(Template.instance().find('table')).table2csv();
     loading.set(false);
   },
+  'click .btn.batchAlignment': function(){
+    console.log("hello");
+    const files = document.getElementById("CSVs");
+    let allFiles = files.files;
+    console.log(allFiles);
+    window.alert("Creating Assignments from the CSV file, please wait while loading");
+    loading.set(true);
+    for(i=0; i < allFiles.length; i++){
+      const input = allFiles[i];
+      if (input) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const text = e.target.result;
+          var rowData = text.split('\n');
+          console.log(rowData.length);
+          for(j=1; j<rowData.length-1 ; j++){
+            var info = rowData[j].split(',');
+            var file1 = info[0];
+            var file2 = info[1];
+            var assignee = info[2];
+            var task = info[3];
+            var preference = info[4];
+
+            if(!file1 || !file2 || !assignee || !task){
+              var row = j+1;
+              window.alert("There is missing information starting from row " + row + ". Please fill that information in and try again.");
+              loading.set(false);
+
+              $('input[type="file"]').val(null);
+              return;
+            }
+
+            try{
+              var file1Id = Data.findOne({name: file1})._id;
+              var file2Id = Data.findOne({name: file2})._id;
+              var assigneeId = Meteor.users.findOne({username: assignee})._id;
+              var taskId = Tasks.findOne({name: task})._id;
+            } catch(err){
+              var row = j+1;
+              window.alert("Some of the information in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+              loading.set(false);
+              $('input[type="file"]').val(null);
+              return;
+            }
+            var dataFiles = [file1Id, file2Id];
+            var obj = {
+              users: [assigneeId],
+              task: taskId,
+              dataFiles: dataFiles,
+              reviewer: Meteor.userId(),
+            }
+            console.log(dataFiles);
+
+            if(!Assignments.findOne(obj)){
+              var assignmentId = Assignments.insert(obj, function(err, docInserted){
+                if(err){
+                  console.log(err);
+                  return;
+                }
+                console.log(docInserted._id);
+                assignmentId = docInserted._id;
+  
+              });
+              console.log(assignmentId);
+            
+  
+              if(preference){
+                var preferenceFile= PreferencesFiles.findOne({name: preference});
+                if(preferenceFile){
+                  var preferenceAnnotatorConfig = preferenceFile.annotatorConfig;
+                  Preferences.insert({
+                    assignment: assignmentId,
+                    user: assigneeId,
+                    dataFiles: dataFiles,
+                    annotatorConfig: preferenceAnnotatorConfig,
+                  })
+                } else {
+                  var row = j+1;
+                  window.alert("The Preferences File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                  loading.set(false);
+                  $('input[type="file"]').val(null);
+                  return;
+                }
+                
+              }
+            } else {
+            }
+            
+            
+
+          }
+          console.log("done");
+          loading.set(false);
+          alert("Assignments Created");
+          $('input[type="file"]').val(null);
+          
+
+        };
+        reader.readAsText(input);
+      } else {
+        loading.set(false);
+      }
+    }
+  },
   'click .btn.upload': function () {
     const files = document.getElementById("File");
     const folderFiles = document.getElementById("Folder");
