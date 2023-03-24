@@ -4703,25 +4703,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               case that.vars.currentWindowStart + window_length:
                 if (that.options.visibleRegion.end === undefined) {
                   //console.log('winAva:', windowAvailable);
-                  that._setForwardEnabledStatus(true);
+                  that._setForwardEnabledStatus(false);
                 }
 
               case that.vars.currentWindowStart +
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.end === undefined) {
 
-                  that._setFastForwardEnabledStatus(true);
+                  that._setFastForwardEnabledStatus(false);
                 }
               // break;
               case that.vars.currentWindowStart - window_length:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setBackwardEnabledStatus(true);
+                  that._setBackwardEnabledStatus(false);
                 }
               // break;
               case that.vars.currentWindowStart -
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setFastBackwardEnabledStatus(true);
+                  that._setFastBackwardEnabledStatus(false);
                 }
               // break;
             }
@@ -5059,12 +5059,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           let requestOptions = optionsPadded;
           requestOptions.start_time = window;
           let promise = new Promise((resolve, reject) => {
-            Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
+            Meteor.call("get.edf.data", requestOptions, (error, realData) => {
               if (error) {
                 //console.log(error.message);
                 return reject(error.message);
               }
-              //console.log("edf.data", data);
               if (!that._isDataValid(realData)) {
                 return reject(noDataError);
               } else {
@@ -5099,7 +5098,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         let requestOptions = optionsPadded;
         requestOptions.start_time = window;
         let promise = new Promise((resolve, reject) => {
-          Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
+          Meteor.call("get.edf.data", requestOptions, (error, realData) => {
             if (error) {
               //console.log(error.message);
               return reject(error.message);
