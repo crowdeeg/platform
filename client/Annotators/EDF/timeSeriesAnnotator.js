@@ -5036,20 +5036,21 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         });
 
         let windowsToRequest = [];
+        let replacementLength = that.vars.windowsCacheEdgeLength + Math.floor((that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength * 2) / 4);
         if (index < that.vars.windowsCacheEdgeLength) {
           let requestStartTime = that.vars.windowsCache[0].startTime;
-          that.vars.windowsCache = that.vars.windowsCache.slice(0, that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength);
+          that.vars.windowsCache = that.vars.windowsCache.slice(0, that.vars.windowsCacheLength - replacementLength);
 
-          for (let j = 1; j <= Math.ceil(that.vars.windowsCacheEdgeLength); j++) {
+          for (let j = 1; j <= replacementLength; j++) {
             windowsToRequest.push(requestStartTime - windowLength * j);
           }
           console.log("back request", that.vars.windowsCache);
         } else if (index >= that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength) {
           console.log("forward request");
           let requestStartTime = that.vars.windowsCache[that.vars.windowsCache.length - 1].startTime + that.vars.windowsCache[that.vars.windowsCache.length - 1].windowLength;
-          that.vars.windowsCache = that.vars.windowsCache.slice(that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength);
+          that.vars.windowsCache = that.vars.windowsCache.slice(replacementLength);
 
-          for (let j = 0; j < Math.ceil(that.vars.windowsCacheEdgeLength); j++) {
+          for (let j = 0; j < replacementLength; j++) {
             windowsToRequest.push(requestStartTime + windowLength * j);
           }
         }
