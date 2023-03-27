@@ -11646,6 +11646,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if ($("#annotation-manager-dialog").dialog("isOpen")) {
       that._populateAnnotationManagerTable(that._getAnnotationsOnly());
     }
+    that._refreshAnnotations();
 
     function updateCache() {
       that.vars.annotationsCache = {};
@@ -11671,6 +11672,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
     that._saveAnnotations(newAnnotations);
+    //window.alert("Annotations Uploaded");
 
   },
 
@@ -11701,12 +11703,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       },
     })
 
+    console.log(obj["Annotation"]);
     newAnnotation.metadata.annotationLabel = obj["Annotation"];
     // newAnnotation.metadata.id = obj["ID"];
     newAnnotation.metadata.comment = obj["Comment"];
     newAnnotation.metadata.creator = obj["User"];
-    // that._saveFeatureAnnotation(newAnnotation);
+   // that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
+    // that._updateChangePointLabelLeft(newAnnotation);
+    // that._updateControlPoint(newAnnotation);
     return newAnnotation
   },
 
@@ -11718,7 +11723,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     newAnnotation.metadata.annotationLabel = obj["Annotation"];
     newAnnotation.metadata.comment = obj["Comment"];
     newAnnotation.metadata.creator = obj["User"];
-    // that._saveFeatureAnnotation(newAnnotation);
+    //that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
     that._updateChangePointLabelLeft(newAnnotation);
     return newAnnotation
