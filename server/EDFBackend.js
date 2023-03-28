@@ -532,8 +532,8 @@ let parseChannelsDisplayed = (channelsDisplayed, recordingId) => {
   let channelsDisplayedParsed = {
     subtractions: [],
   };
-  console.log('fffffff')
-  console.log(channelsDisplayed)
+  //console.log('fffffff')
+  //console.log(channelsDisplayed)
 
   // console.log(channelsDisplayed);
   channelsDisplayed.forEach((channel) => {
@@ -1029,7 +1029,12 @@ Meteor.methods({
         currDataFrame.samplingRate = Number.POSITIVE_INFINITY;
       }
       // console.log("794 currDataFrame.samplingRate: " + currDataFrame.samplingRate);
-      if (!Object.keys(collections).length) return currDataFrame;
+      if (!Object.keys(collections).length) {
+        let toReturn = {...currDataFrame};
+        toReturn.samplingRate = {};
+        toReturn.samplingRate[recording._id] = currDataFrame.samplingRate;
+        return toReturn;
+      }
       collections.channelInfo = collections.channelInfo.concat(
         currDataFrame.channelInfo
       );
@@ -1052,10 +1057,18 @@ Meteor.methods({
       );
       // console.log("816 collections.samplingRate: " + collections.samplingRate);
       // console.log("817 currDataFrame.samplingRate: " +currDataFrame.samplingRate);
-      collections.samplingRate = Math.min(
-        collections.samplingRate,
-        currDataFrame.samplingRate
-      );
+      if (!collections.samplingRate) {
+        collections.samplingRate = {};
+      }
+      
+      if (collections.samplingRate[recording._id]) {
+        collections.samplingRate[recording._id] = Math.min(
+          collections.samplingRate[recording._id],
+          currDataFrame.samplingRate
+        );
+      } else {
+        collections.samplingRate[recording._id] = currDataFrame.samplingRate;
+      }
       // console.dir(collections);
       return collections;
     }, {});
