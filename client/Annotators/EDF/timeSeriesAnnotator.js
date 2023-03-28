@@ -3274,10 +3274,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // calculate the difference between two recordings after adding the current difference
       if (!diff) {
         diff =
-          crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
+          crosshairPosition.find((pos) => pos.dataId === ids[0]).timeInSeconds - crosshairPosition.find((pos) => pos.dataId === ids[1]).timeInSeconds;
       }
       that.vars.currentTimeDiff += diff;
-      console.log("=======" + diff + "======");
       $(".time_sync").text("Time Difference: " + that.vars.currentTimeDiff + " s");
       if (diff > 0) {
         if (currentDiff[1]) {
@@ -4975,11 +4974,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var channelAudioRepresentations = {};
     var channelNumSamples = {};
-    var samplingRate = input.sampling_rate;
     // console.log("samplingRate", samplingRate);
     // console.log(that.options.targetSamplingRate);
     // for each dataId in the channelvalues array
     for (var dataId in input.channel_values) {
+      let samplingRate = input.sampling_rate[dataId];
 
       // console.log(that._getCurrentMontage());
       //console.log(
@@ -5225,9 +5224,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     //console.log(this.vars.chart);
     var numRemainingChannelsToFilter = data.channels.length;
-    var maxDetectableFrequencyInHz = data.sampling_rate / 2;
     var frequencyFilters = that.vars.frequencyFilters || [];
     data.channels.forEach((channel, c) => {
+      let maxDetectableFrequencyInHz = data.sampling_rate[channel.dataId] / 2;
       var staticFrequencyFilters =
         that._getStaticFrequencyFiltersForChannel(channel);
       var buffer = channel.audio.buffer;
@@ -5332,6 +5331,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (!data.channel_values) return false;
     for (let dataId in data.channel_values) {
       if (Object.keys(data.channel_values[dataId]).length == 0) return false;
+      if (!data.sampling_rate[dataId]) return false;
     }
     return true;
   },
@@ -5815,7 +5815,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets the xValues for the graph using from the data object i.e the time values
     var xValues = channel.values.map(function (value, i) {
-        return that.vars.currentWindowStart + i / data.sampling_rate;
+        return that.vars.currentWindowStart + i / data.sampling_rate[channel.dataId];
     });
 
     // gets the recording end in seconds snapped to the nearest second
@@ -5883,12 +5883,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(data.channels);
     //console.log(that);
 
+    let dataIds = [...new Set(data.channels.map((channel) => channel.dataId))];
     //gets the xValues for the graph using from the data object i.e the time values
-    var xValues = Array.from(
-      data.channels[0].values.map(function (value, index) {
-        return that.vars.currentWindowStart + index / data.sampling_rate;
-      })
-    );
+    let xValues = {};
+    dataIds.forEach((dataId) => {
+      xValues[dataId] = Array.from(
+        data.channels.find((channel) => channel.dataId === dataId).values.map(function (value, index) {
+          return that.vars.currentWindowStart + index / data.sampling_rate[dataId];
+        })
+      );
+    });
 
     // gets the recording end in seconds snapped to the nearest second
     var recordingEndInSecondsSnapped = that._getRecordingEndInSecondsSnapped();
@@ -5924,7 +5928,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         
 
         // creates an array that stores all the data
-        var seriesData = xValues.map(function (x, i) {
+        var seriesData = xValues[channel.dataId].map(function (x, i) {
           return [x, samplesScaledAndOffset[i]];
         });
 
@@ -5944,7 +5948,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _initSeries: function (data) {
     var that = this;
-    var samplingRate = data.sampling_rate;
     var channels = data.channels;
     var recordingEndInSecondsSnapped = that._getRecordingEndInSecondsSnapped();
     return channels.map(function (channel, c) {
