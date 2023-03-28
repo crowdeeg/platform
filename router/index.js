@@ -160,6 +160,40 @@ Router.route('/preferences', {
     }
 });
 
+Router.route('/alignments', {
+    name: 'alignments',
+    waitOn: function () {
+        return [
+            Meteor.subscribe('roles'),
+            Meteor.subscribe('all'),
+        ];
+    },
+    action: function () {
+        if (!Roles.userIsInRole(Meteor.userId(), 'admin')) {
+            this.redirect('home');
+            return;
+        }
+        this.render('Alignments');
+    }
+});
+
+Router.route('/annotations', {
+    name: 'annotations',
+    waitOn: function () {
+        return [
+            Meteor.subscribe('roles'),
+            Meteor.subscribe('all'),
+        ];
+    },
+    action: function () {
+        if (!Roles.userIsInRole(Meteor.userId(), 'admin')) {
+            this.redirect('home');
+            return;
+        }
+        this.render('Annotations');
+    }
+});
+
 Router.route('/arbitrations', {
     name: 'arbitrations',
     waitOn: function () {

@@ -1,4 +1,4 @@
-import { Data, Tasks, Assignments, Patients, PreferencesFiles} from '/collections';
+import { Data, Tasks, Assignments, Patients, PreferencesFiles, AlignmentFiles, AnnotationFiles} from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
@@ -155,6 +155,51 @@ TabularTables.PreferencesFiles = new Tabular.Table({
     infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
 });
 
+TabularTables.AlignmentFiles = new Tabular.Table({
+  name: "AlignmentFiles",
+  collection: AlignmentFiles,
+  columns: [
+    {data: "filename", title: "FileName"},
+    {data: "file1", title: "File 1"},
+    {data: "file2", title: "File 2"},
+    {data: "lag", title: "Lag"},
+    {title: "Delete",
+      tmpl: Meteor.isClient && Template.deleteButtonAlignment},
+    {title: "Selected", 
+      tmpl: Meteor.isClient && Template.selectedAlignment}
+    ],
+  initComplete: function() {
+    $('.dataTables_empty').html('processing');
+  },
+  processing: false,
+  skipCount: true,
+  pagingType: 'simple',
+  infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
+});
+
+
+TabularTables.AnnotationFiles = new Tabular.Table({
+  name: "AnnotationFiles",
+  collection: AnnotationFiles,
+  columns: [
+    {data: "filename", title: "Filename"},
+    {data: "annotations", title: "# of Annotations", 
+    render:function(val){
+      return Object.keys(val).length;
+    }},
+    {title: "Delete",
+      tmpl: Meteor.isClient && Template.deleteButtonAnnotation},
+    {title: "Selected", 
+      tmpl: Meteor.isClient && Template.selectedAnnotations}
+    ],
+  initComplete: function() {
+    $('.dataTables_empty').html('processing');
+  },
+  processing: false,
+  skipCount: true,
+  pagingType: 'simple',
+  infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
+});
 
 Template.selectedPreferences.helpers({
     id(){

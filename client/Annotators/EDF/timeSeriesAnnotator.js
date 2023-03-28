@@ -10148,12 +10148,33 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log("getting preference");
     var that = this;
     console.log(that);
-    let timeshiftFromPreference =
-      that.options.context.preferences.annotatorConfig.channelTimeshift;
-    that.vars.channelTimeshift = timeshiftFromPreference
+    let timeshiftFromPreference = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    
+    console.log('1');
+    
+    if(typeof timeshiftFromPreference == "number"){
+      console.log('2');
+      var fileId;
+      if(timeshiftFromPreference < 0){
+        fileId = that.options.context.dataset[1]._id;
+      } else {
+        fileId = that.options.context.dataset[0]._id;
+      }
+      console.log(fileId);
+      console.log(timeshiftFromPreference)
+      var obj = {[fileId]: Math.abs(timeshiftFromPreference)};
+      console.log(obj);
+      that.vars.channelTimeshift = obj;
+      timeshiftFromPreference = obj;
+      that._savePreferences({"channelTimeshift" : obj});
+      console.log(timeshiftFromPreference);
+
+    } else {
+      that.vars.channelTimeshift = timeshiftFromPreference
       ? timeshiftFromPreference
       : {};
-    console.log(timeshiftFromPreference);
+      console.log(timeshiftFromPreference);
+    }
     if (timeshiftFromPreference && timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]]) {
       $(".time_sync").text("Time Difference: " + timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]] + " s");
     }
@@ -11166,7 +11187,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     console.log(that.options.context);
     var channelWithValue = Object.keys(obj).filter(el => obj[el] != 0);
+    console.log(channelWithValue[0]);
     var lag = obj[channelWithValue];
+    console.log(that.options.context.dataset[1]._id)
+    // if the channel with lag is the second one then make the lag negative so we know which one to move
+    if(channelWithValue[0] == that.options.context.dataset[1]._id && lag > 0){
+      console.log("here")
+      lag = -Number(lag);
+      console.log(lag);
+    }
     var newObj = {
       "filename1": that.options.context.dataset[0].name,
       "filename2": that.options.context.dataset[1].name,

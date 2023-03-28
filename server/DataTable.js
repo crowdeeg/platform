@@ -1,5 +1,5 @@
 import { Tabular } from "meteor/aldeed:tabular";
-import { Data, Tasks, Assignments, Patients, PreferencesFiles} from '/collections';
+import { Data, Tasks, Assignments, Patients, PreferencesFiles, AlignmentFiles, AnnotationFiles} from '/collections';
 
 TabularTables = {};
 Meteor.isClient && Template.registerHelper('TabularTables',TabularTables);
@@ -105,4 +105,49 @@ TabularTables.PreferencesFiles = new Tabular.Table({
     skipCount: true,
     pagingType: 'simple',
     infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
+});
+
+TabularTables.AlignmentFiles = new Tabular.Table({
+  name: "AlignmentFiles",
+  collection: AlignmentFiles,
+  columns: [
+    {data: "filename", title: "FileName"},
+    {data: "file1", title: "File 1"},
+    {data: "file2", title: "File 2"},
+    {data: "lag", title: "Lag"},
+    {title: "Delete",
+      tmpl: Meteor.isClient && Template.deleteButtonAlignment},
+    {title: "Selected", 
+      tmpl: Meteor.isClient && Template.selectedAlignment}
+    ],
+  initComplete: function() {
+    $('.dataTables_empty').html('processing');
+  },
+  processing: false,
+  skipCount: true,
+  pagingType: 'simple',
+  infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
+});
+
+TabularTables.AnnotationFiles = new Tabular.Table({
+  name: "AnnotationFiles",
+  collection: AnnotationFiles,
+  columns: [
+    {data: "filename", title: "Filename"},
+    {data: "annotations", title: "# of Annotations", 
+    render:function(val){
+      return Object.keys(val).length;
+    }},
+    {title: "Delete",
+      tmpl: Meteor.isClient && Template.deleteButtonPreferences},
+    {title: "Selected", 
+      tmpl: Meteor.isClient && Template.selectedPreferences}
+    ],
+  initComplete: function() {
+    $('.dataTables_empty').html('processing');
+  },
+  processing: false,
+  skipCount: true,
+  pagingType: 'simple',
+  infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
 });
