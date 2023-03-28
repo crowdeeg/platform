@@ -463,7 +463,19 @@ Template.Data.events({
                   var allAnnotations = annotationFile.annotations;
                   Object.values(allAnnotations).forEach(info => {
                     var value = {};
+                    if(info.channels == "All"){
+                      var f1Channels = Data.findOne({name: file1}).metadata.wfdbdesc.Groups[0].Signals.length;
+                      var f2Channels = Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length;
+
+                      var totalChannels = f1Channels + f2Channels;
+                      var channels = {}
+                      for(j=0; j < totalChannels; j++){
+                        channels[j] = j;
+                      }
+                    }
+                    console.log(channels);
                     var position = {
+                      channels: channels,
                       start: Number(info.time),
                       end: Number(info.time) + Number(info.duration)
                     };

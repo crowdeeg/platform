@@ -134,6 +134,40 @@ Template.Annotations.events({
         loading.set(false);
     },
     'click .btn.download': function(){
+      console.log("downloading");
+      var allAnnotations = selectedAnnotationsG.get();
+      if(Object.keys(allAnnotations).length < 1){
+        window.alert("No Annotations Selected To Download");
+      } else {
+        Object.values(allAnnotations).forEach((item)=>{
+          var fileInfo = item.info.replace(/""+/g, '"');
+          fileInfo = [fileInfo + "\n"];
+          console.log(fileInfo);
+
+          fileInfo.push(["Index", "Time", "Type", "Annotation", "Channels", "Duration", "User", "Comment"] + '\n');
+
+          Object.values(item.annotations).forEach(arr=>{
+           console.log(arr);
+           fileInfo.push([arr.index, arr.time, arr.type, arr.annotation, arr.channels, arr.duration, arr.user, arr.comment] + '\n');
+          });
+
+          const blob = new Blob(fileInfo, { type: "text/csv" });
+          const href = URL.createObjectURL(blob);
+          fileName = item.filename;
+          const a = Object.assign(document.createElement("a"),
+            {
+              href,
+              style: "display:none",
+              download: fileName,
+            }
+          )
+          document.body.appendChild(a);
+          a.click();
+          URL.revokeObjectURL(href);
+          a.remove();
+
+        })
+      }
     //   console.log("hellp");
     //   var allPreferences = selectedPreferencesG.get();
     //   if(Object.keys(allPreferences).length < 1){

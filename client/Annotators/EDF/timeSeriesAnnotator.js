@@ -11187,7 +11187,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     console.log(that.options.context);
     var channelWithValue = Object.keys(obj).filter(el => obj[el] != 0);
+    console.log(channelWithValue);
     var lag = obj[channelWithValue];
+    // if the channel with lag is the second one then make the lag negative so we know which one to move
+    if(channelWithValue[0] == that.options.context.dataset[1]._id){
+      lag = Number(lag) * -1;
+    }
     var newObj = {
       "filename1": that.options.context.dataset[0].name,
       "filename2": that.options.context.dataset[1].name,
