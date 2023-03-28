@@ -36,4 +36,16 @@ Meteor.methods({
             console.log(err);
         }
     },
+      // function that inserts a list of annotations
+    insertAnnotations(data){
+        try{
+            console.log(data);
+            for(i = 0; i < data.length; i++){
+                Annotations.insert(data[i]);
+            }
+        } catch(err){
+            console.log(err);
+
+        }
+    },
 })

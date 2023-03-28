@@ -9,7 +9,6 @@ import dataTablesBootstrap from 'datatables.net-bs';
 import 'datatables.net-bs/css/dataTables.bootstrap.css';
 import { connections } from 'mongoose';
 
-
 // double dictionary for task inference
 let taskDictionary = {};
 let dataDictionary = {};
@@ -19,16 +18,17 @@ let cond = {}
 var selectedDataG = new ReactiveVar({});
 var selectedAssigneesG = new ReactiveVar({});
 var selectedTaskG = new ReactiveVar(false);
-var selectedPreferencesG = new ReactiveVar({});
-console.log(PreferencesFiles.find())
-console.log(Data.find());
+var selectedAnnotationsG = new ReactiveVar({});
+var loading = new ReactiveVar(false);
 
-Template.Preferences.events({
+
+Template.Annotations.events({
     'click .btn.upload': function () {
         const files = document.getElementById("File");
         const folderFiles = document.getElementById("Folder");
+        loading.set(true);
     
-        let allFilesUnfiltered = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase() === "json"));
+        let allFilesUnfiltered = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase() === "csv"));
         const allFiles = allFilesUnfiltered.filter((file, i) => {
           return allFilesUnfiltered.findIndex((e) => {
             return e.name === file.name;
@@ -56,9 +56,30 @@ Template.Preferences.events({
             var reader = new FileReader();
             reader.onload = function(e){
                 const text = e.target.result;
-                const data = JSON.parse(text);
-                console.log(data);
-                var check = PreferencesFiles.findOne({"name" : fileName});
+                //const data = JSON.parse(text);
+                const splitText = text.split('\n');
+                //info is for the purposes of downloading which is a TODO
+                const info = splitText[0];
+                var csvAnnotations = {};
+                console.log(splitText);
+                for(i=2; i < splitText.length; i++){
+                    const data = splitText[i].split(',');
+                    console.log(data);
+                    var obj = {
+                        index: data[0],
+                        time: data[1],
+                        type: data[2],
+                        annotation: data[3],
+                        channels: data[4],
+                        duration: data[5],
+                        user: data[6],
+                        comments: data[7],
+                    }
+                    console.log(obj)
+                    csvAnnotations[data[0]]=obj;
+                    console.log(csvAnnotations);
+                }
+                var check = AnnotationFiles.findOne({"filename" : fileName});
                 if(check != undefined){
                     overwritePromise = new Promise((oResolve, oReject) => {
                         const modalTransitionTimeInMilliSeconds = 300;
@@ -89,8 +110,10 @@ Template.Preferences.events({
                     overwritePromise.then(() => {
                       if (overwriteDuplicates) {
                         try{
-                            PreferencesFiles.remove(check._id);
-                            PreferencesFiles.insert({"name": fileName, "annotatorConfig": data});
+                            AnnotationFiles.remove(check._id);
+                            AnnotationFiles.insert({"filename": fileName, info: info, "annotations": csvAnnotations});
+                            console.log(AnnotationFiles.find({}))
+                            //AnnotationFiles.insert({"filename": fileName, "csvAnnotationInfo": info, "csvAnnotations": csvAnnotations});
                         } catch (err){
                             console.log(err);
                             window.prompt("There has been an error, please try again");
@@ -100,108 +123,64 @@ Template.Preferences.events({
                       }
                     });
                 } else {
-                    PreferencesFiles.insert({"name": fileName, "annotatorConfig": data});
+                    AnnotationFiles.insert({"filename": fileName, "info": info, "annotations": csvAnnotations});
+                    // AnnotationFiles.insert({"filename": fileName, "csvAnnotationInfo": info, "csvAnnotations": csvAnnotations});
                 }
             }
             // need this or the onload wont work
             reader.readAsText(file);
         }
-        selectedPreferencesG.set({});
+        selectedAnnotationsG.set({});
+        loading.set(false);
     },
     'click .btn.download': function(){
-      console.log("hellp");
-      var allPreferences = selectedPreferencesG.get();
-      if(Object.keys(allPreferences).length < 1){
-        window.alert("No Preferences Selected To Download");
-      } else {
-        Object.values(allPreferences).forEach((item)=>{
-          var annotatorConfigObj = item.annotatorConfig;
-          console.log(item);
-          var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotatorConfigObj));
-          var downloadAnchorNode = document.createElement('a');
-          downloadAnchorNode.setAttribute("href", dataStr);
-          let fileName = item.name;
-          downloadAnchorNode.setAttribute("download", fileName);
-          document.body.appendChild(downloadAnchorNode); // required for firefox
-          downloadAnchorNode.click();
-          downloadAnchorNode.remove();
-        });
+    //   console.log("hellp");
+    //   var allPreferences = selectedPreferencesG.get();
+    //   if(Object.keys(allPreferences).length < 1){
+    //     window.alert("No Preferences Selected To Download");
+    //   } else {
+    //     Object.values(allPreferences).forEach((item)=>{
+    //       var annotatorConfigObj = item.annotatorConfig;
+    //       console.log(item);
+    //       var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotatorConfigObj));
+    //       var downloadAnchorNode = document.createElement('a');
+    //       downloadAnchorNode.setAttribute("href", dataStr);
+    //       let fileName = item.name;
+    //       downloadAnchorNode.setAttribute("download", fileName);
+    //       document.body.appendChild(downloadAnchorNode); // required for firefox
+    //       downloadAnchorNode.click();
+    //       downloadAnchorNode.remove();
+    //     });
 
-      }
+    //   }
     }
 });
 
 
-TabularTables.PreferencesFiles = new Tabular.Table({
-    name: "PreferencesFiles",
-    collection: PreferencesFiles,
-    columns: [
-      {data: "name", title: "Name"},
-      {data: "annotatorConfig", title: "Channels Required", 
-      render:function(val){
-        return Object.keys(val.scalingFactors).length;
-      }},
-      {title: "Delete",
-        tmpl: Meteor.isClient && Template.deleteButtonPreferences},
-      {title: "Selected", 
-        tmpl: Meteor.isClient && Template.selectedPreferences}
-      ],
-    initComplete: function() {
-      $('.dataTables_empty').html('processing');
-    },
-    processing: false,
-    skipCount: true,
-    pagingType: 'simple',
-    infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
-});
+// TabularTables.AnnotationFiles = new Tabular.Table({
+//     name: "AnnotationFiles",
+//     collection: AnnotationFiles,
+//     columns: [
+//       {data: "filename", title: "Filename"},
+//       {data: "csvAnnotations", title: "# of Annotations", 
+//       render:function(val){
+//         return Object.entries(val).length;
+//       }},
+//       {title: "Delete",
+//         tmpl: Meteor.isClient && Template.deleteButtonPreferences},
+//       {title: "Selected", 
+//         tmpl: Meteor.isClient && Template.selectedPreferences}
+//       ],
+//     initComplete: function() {
+//       $('.dataTables_empty').html('processing');
+//     },
+//     processing: false,
+//     skipCount: true,
+//     pagingType: 'simple',
+//     infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
+//   });
 
-TabularTables.AlignmentFiles = new Tabular.Table({
-  name: "AlignmentFiles",
-  collection: AlignmentFiles,
-  columns: [
-    {data: "filename", title: "FileName"},
-    {data: "file1", title: "File 1"},
-    {data: "file2", title: "File 2"},
-    {data: "lag", title: "Lag"},
-    {title: "Delete",
-      tmpl: Meteor.isClient && Template.deleteButtonAlignment},
-    {title: "Selected", 
-      tmpl: Meteor.isClient && Template.selectedAlignment}
-    ],
-  initComplete: function() {
-    $('.dataTables_empty').html('processing');
-  },
-  processing: false,
-  skipCount: true,
-  pagingType: 'simple',
-  infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
-});
-
-
-TabularTables.AnnotationFiles = new Tabular.Table({
-  name: "AnnotationFiles",
-  collection: AnnotationFiles,
-  columns: [
-    {data: "filename", title: "Filename"},
-    {data: "annotations", title: "# of Annotations", 
-    render:function(val){
-      return Object.keys(val).length;
-    }},
-    {title: "Delete",
-      tmpl: Meteor.isClient && Template.deleteButtonAnnotation},
-    {title: "Selected", 
-      tmpl: Meteor.isClient && Template.selectedAnnotations}
-    ],
-  initComplete: function() {
-    $('.dataTables_empty').html('processing');
-  },
-  processing: false,
-  skipCount: true,
-  pagingType: 'simple',
-  infoCallback: (settings, start, end, total) => `Total: ${total}, Showing ${start} to ${end} `,
-});
-
-Template.selectedPreferences.helpers({
+Template.selectedAnnotations.helpers({
     id(){
       return this._id;
     },
@@ -211,18 +190,24 @@ Template.selectedPreferences.helpers({
     }
   });
   
-  Template.selectedPreferences.events({
-    'change .select-prefereneces': function (event, template) {
+  Template.Annotations.helpers({
+    loading(){
+        //console.log(Template.instance());
+        return Template.instance().loading.get();
+      },
+  })
+  Template.selectedAnnotations.events({
+    'change .select-annotation': function (event, template) {
       const target = $(event.target);
       const isSelected = target.is(':checked');
       const id = this._id;
       console.log(this);
-      let selectedPreferences = selectedPreferencesG.get();
+      let selectedAnnotations = selectedAnnotationsG.get();
       //console.log(Template.Data);
       if (isSelected) {
-        const preferenece = PreferencesFiles.findOne(id);
-        console.log(preferenece);
-        selectedPreferences[id] = preferenece;
+        const annotation = AnnotationFiles.findOne(id);
+        console.log(annotation);
+        selectedAnnotations[id] = annotation;
   
         let user = Meteor.user();
   
@@ -230,14 +215,14 @@ Template.selectedPreferences.helpers({
   
       }
       else {
-        delete selectedPreferences[id];
+        delete selectedAnnotations[id];
       }
-      selectedPreferencesG.set(selectedPreferences);
-      console.log(selectedPreferencesG.get());
+      selectedAnnotationsG.set(selectedAnnotations);
+      console.log(selectedAnnotationsG.get());
     }
   });
   
-  Template.deleteButtonPreferences.events({
+  Template.deleteButtonAnnotation.events({
     'click .delete-button': function(event,template){
       
       console.log(this);
@@ -247,7 +232,7 @@ Template.selectedPreferences.helpers({
     // since we only have to deal with one collection we can simply do a try/catch without
     // any crazy conditions or checks
       try{
-        PreferencesFiles.remove(dataId);
+        AnnotationFiles.remove(dataId);
       } catch(err){
         console.log(err);
       }
@@ -257,9 +242,10 @@ Template.selectedPreferences.helpers({
   });
   
   // Tabular does not do well with parent-child relationships with the ReactiveVars so global variable had to be made
-  Template.Preferences.onCreated(function () {
-    this.selectedPreferences = selectedPreferencesG;
+  Template.Annotations.onCreated(function () {
+    this.selectedAnnotations = selectedAnnotationsG;
+    this.loading = loading;
   });
   
-  Template.selectedPreferences.onCreated(function(){
+  Template.selectedAnnotations.onCreated(function(){
   });

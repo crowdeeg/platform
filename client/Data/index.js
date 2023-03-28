@@ -1,4 +1,4 @@
-import { PreferencesFiles, Preferences, Data, Tasks, Assignments, Patients} from '/collections';
+import { PreferencesFiles, Preferences, Data, Tasks, Assignments, Patients, AnnotationFiles, AlignmentFiles, Annotations} from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
@@ -333,11 +333,14 @@ Template.Data.events({
           console.log(rowData.length);
           for(j=1; j<rowData.length-1 ; j++){
             var info = rowData[j].split(',');
+            console.log(info);
             var file1 = info[0];
             var file2 = info[1];
             var assignee = info[2];
             var task = info[3];
             var preference = info[4];
+            var alignment = info[5];
+            var annotations = info[6];
 
             if(!file1 || !file2 || !assignee || !task){
               var row = j+1;
@@ -386,6 +389,25 @@ Template.Data.events({
                 var preferenceFile= PreferencesFiles.findOne({name: preference});
                 if(preferenceFile){
                   var preferenceAnnotatorConfig = preferenceFile.annotatorConfig;
+                  if(alignment){
+                    console.log(alignment);
+                    if(typeof alignment == "number"){
+                      preferenceAnnotatorConfig.channelTimeshift = Number(alignment);
+                    } else {
+                      var alignmentFile = AlignmentFiles.findOne({filename: alignment});
+                      if(alignmentFile){
+                        var lag = alignmentFile.lag;
+                        console.log(lag);
+                        preferenceAnnotatorConfig.channelTimeshift = Number(lag);
+                      } else{
+                        var row = j+1;
+                        window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                        loading.set(false);
+                        $('input[type="file"]').val(null);
+                        return;
+                      }
+                    }
+                  }
                   Preferences.insert({
                     assignment: assignmentId,
                     user: assigneeId,
@@ -401,6 +423,74 @@ Template.Data.events({
                 }
                 
               }
+              // if there is no preference file but there is an alignment file
+              if(!preference && alignment){
+                console.log(alignment);
+                var sampleAnnotatorConfig = {
+                  startTime: 0
+                }
+                console.log(alignment)
+                if(typeof alignment != "object"){
+                  sampleAnnotatorConfig.channelTimeshift = Number(alignment);
+                } else {
+                  var alignmentFile = AlignmentFiles.findOne({filename: alignment});
+                  if(alignmentFile){
+                    var lag = alignmentFile.lag;
+                    console.log(lag);
+                    sampleAnnotatorConfig.channelTimeshift = Number(lag);
+                  } else{
+                    var row = j+1;
+                    window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                    loading.set(false);
+                    $('input[type="file"]').val(null);
+                    return;
+                  }
+                }
+                Preferences.insert({
+                  assignment: assignmentId,
+                  user: assigneeId,
+                  dataFiles: dataFiles,
+                  annotatorConfig: sampleAnnotatorConfig,
+                })
+              }
+
+              console.log(1);
+              if(annotations){
+                console.log(2)
+                var annotationFile = AnnotationFiles.findOne({filename: annotations});
+                console.log(annotationFile);
+                if(annotationFile){
+                  var allAnnotations = annotationFile.annotations;
+                  Object.values(allAnnotations).forEach(info => {
+                    var value = {};
+                    var position = {
+                      start: Number(info.time),
+                      end: Number(info.time) + Number(info.duration)
+                    };
+                    var metadata = {
+                      annotationLabel: info.annotation,
+                    }
+                    value.position = position;
+                    value.metadata = metadata;
+                    var obj = {
+                      assignment: assignmentId,
+                      user: assigneeId,
+                      dataFiles: dataFiles,
+                      // placeholder for now
+                      type: info.type == "Event" ? "SIGNAL_ANNOTATION" : "SIGNAL_ANNOTATION",
+                      value: value
+                    }
+                    console.log(obj);
+                    Annotations.insert(obj);
+                  })
+                } else {
+                  var row = j+1;
+                  window.alert("The Annotations File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                  loading.set(false);
+                  $('input[type="file"]').val(null);
+                  return;
+                }
+              }
             } else {
             }
             
@@ -409,7 +499,7 @@ Template.Data.events({
           }
           console.log("done");
           loading.set(false);
-          alert("Assignments Created");
+          //alert("Assignments Created");
           $('input[type="file"]').val(null);
           
 
