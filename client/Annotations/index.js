@@ -66,14 +66,15 @@ Template.Annotations.events({
                     const data = splitText[i].split(',');
                     console.log(data);
                     var obj = {
-                        index: data[0],
-                        time: data[1],
-                        type: data[2],
-                        annotation: data[3],
-                        channels: data[4],
-                        duration: data[5],
-                        user: data[6],
-                        comments: data[7],
+                      //some files generate those extra quotations
+                        index: data[0] ? data[0].replace(/['"]+/g, '') : data[0],
+                        time: data[1] ? data[1].replace(/['"]+/g, '') : data[1],
+                        type: data[2] ? data[2].replace(/['"]+/g, '') : data[2],
+                        annotation: data[3] ? data[3].replace(/['"]+/g, '') : data[3],
+                        channels: data[4] ? data[4].replace(/['"]+/g, '') : data[4],
+                        duration: data[5] ? data[5].replace(/['"]+/g, '') : data[5],
+                        user: data[6] ? data[6].replace(/['"]+/g, '') : data[6],
+                        comments: data[7] ? data[7].replace(/['"]+/g, '') : data[7],
                     }
                     console.log(obj)
                     csvAnnotations[data[0]]=obj;
@@ -168,25 +169,6 @@ Template.Annotations.events({
 
         })
       }
-    //   console.log("hellp");
-    //   var allPreferences = selectedPreferencesG.get();
-    //   if(Object.keys(allPreferences).length < 1){
-    //     window.alert("No Preferences Selected To Download");
-    //   } else {
-    //     Object.values(allPreferences).forEach((item)=>{
-    //       var annotatorConfigObj = item.annotatorConfig;
-    //       console.log(item);
-    //       var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotatorConfigObj));
-    //       var downloadAnchorNode = document.createElement('a');
-    //       downloadAnchorNode.setAttribute("href", dataStr);
-    //       let fileName = item.name;
-    //       downloadAnchorNode.setAttribute("download", fileName);
-    //       document.body.appendChild(downloadAnchorNode); // required for firefox
-    //       downloadAnchorNode.click();
-    //       downloadAnchorNode.remove();
-    //     });
-
-    //   }
     }
 });
 

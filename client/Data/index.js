@@ -333,6 +333,8 @@ Template.Data.events({
           console.log(rowData.length);
           for(j=1; j<rowData.length-1 ; j++){
             var info = rowData[j].split(',');
+            console.log(j);
+            console.log(rowData.length);
             console.log(info);
             var file1 = info[0];
             var file2 = info[1];
@@ -348,7 +350,7 @@ Template.Data.events({
               loading.set(false);
 
               $('input[type="file"]').val(null);
-              return;
+              break;
             }
 
             try{
@@ -361,7 +363,7 @@ Template.Data.events({
               window.alert("Some of the information in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
               loading.set(false);
               $('input[type="file"]').val(null);
-              return;
+              break;
             }
             var dataFiles = [file1Id, file2Id];
             var obj = {
@@ -404,7 +406,7 @@ Template.Data.events({
                         window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
                         loading.set(false);
                         $('input[type="file"]').val(null);
-                        return;
+                        break;
                       }
                     }
                   }
@@ -419,7 +421,7 @@ Template.Data.events({
                   window.alert("The Preferences File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
                   loading.set(false);
                   $('input[type="file"]').val(null);
-                  return;
+                  break;
                 }
                 
               }
@@ -443,7 +445,7 @@ Template.Data.events({
                     window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
                     loading.set(false);
                     $('input[type="file"]').val(null);
-                    return;
+                    break;
                   }
                 }
                 Preferences.insert({
@@ -461,6 +463,7 @@ Template.Data.events({
                 console.log(annotationFile);
                 if(annotationFile){
                   var allAnnotations = annotationFile.annotations;
+                  var docs = [];
                   Object.values(allAnnotations).forEach(info => {
                     var value = {};
                     if(info.channels == "All"){
@@ -468,10 +471,12 @@ Template.Data.events({
                       var f2Channels = Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length;
 
                       var totalChannels = f1Channels + f2Channels;
-                      var channels = {}
-                      for(j=0; j < totalChannels; j++){
-                        channels[j] = j;
+                      var channels = []
+                      for(k=0; k < totalChannels; k++){
+                        channels.push(k);
                       }
+                    } else {
+                      window.alert("Skipping Annotation, as it does not match the file (Not for all channels)")
                     }
                     console.log(channels);
                     var position = {
@@ -488,24 +493,23 @@ Template.Data.events({
                       assignment: assignmentId,
                       user: assigneeId,
                       dataFiles: dataFiles,
-                      // placeholder for now
+                      // placeholder for now (other annotations are also signal_annotation?)
                       type: info.type == "Event" ? "SIGNAL_ANNOTATION" : "SIGNAL_ANNOTATION",
                       value: value
                     }
                     console.log(obj);
                     Annotations.insert(obj);
-                  })
+                    //docs.push(obj);
+                  });
                 } else {
                   var row = j+1;
                   window.alert("The Annotations File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
                   loading.set(false);
                   $('input[type="file"]').val(null);
-                  return;
+                  break;
                 }
               }
-            } else {
-            }
-            
+            }          
             
 
           }
