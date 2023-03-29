@@ -453,6 +453,40 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         value: 15,
       },
     ],
+    fastforwardAdjust: [
+      {
+        name: '50%',
+        value: 0.5,
+      },
+      {
+        name: '60%',
+        value: 0.6,
+      },
+      {
+        name: '70%',
+        value: 0.7,
+      },
+      {
+        name: '80%',
+        value: 0.8,
+      },
+      {
+        name: '90%',
+        value: 0.9,
+      },
+      {
+        name: '100%',
+        value: 1,
+      },
+      {
+        name: '150%',
+        value: 1.5,
+      },
+      {
+        name: '200%',
+        value: 2,
+      },
+    ],
     keyboardInputEnabled: true,
     isReadOnly: false,
     startTime: 0,
@@ -1102,6 +1136,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
                   <li><a id="toggle_title" class="toggle-title">Toggle Title</a></li>\
                   <li><a id="display-xAxis-units" class="dropdown-button dropdown-submenu" data-activates="display-xAxis-submenu">Label Frequency</a></li>\
+                  <li><a id="display-adjust-fastforward" class="dropdown-button dropdown-submenu" data-activates="display-adjust-submenu">Adjust Fast Forward</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
@@ -1110,6 +1145,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="display-montage-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="display-xAxis-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="display-adjust-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="metadata-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a class="dropdown-button dropdown-submenu" data-activates="metadata-annotations-alignment-submenu">Annotations/Alignment</a></li>\
@@ -2644,6 +2681,51 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
+  _setupAdjustFastforward: function(){
+    let that = this;
+    console.log('adjust fastforward');
+    // that.options.windowJumpSizeFastForwardBackward
+    let fastforwardAdjust = that.options.fastforwardAdjust || [];
+    console.log(fastforwardAdjust);
+    let defaultOptionIndex = null;
+    let dropdown = $("#display-adjust-submenu");
+    let fastforwardDefault = 1;
+    if (that.options.context.preferences.annotatorConfig.fastforwardDefault != null) {
+      fastforwardDefault = that.options.context.preferences.annotatorConfig.fastforwardDefault;
+      // console.log(frequencyDefault);
+    }
+    console.log(fastforwardAdjust);
+    fastforwardAdjust.forEach((scale, index)=> {
+      // console.log(scale.value);
+      let selectedString = "";
+      if (scale.value == fastforwardDefault) {
+        console.log("here");
+        selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
+        defaultOptionIndex = index;
+        scale.default = true;
+        //that.vars.xAxisScaleInSeconds = +timescale.value;
+      }
+      dropdown.append(
+        `<li><a class="display-adjust-option dropdown-select-option" option=${scale.value}>${scale.name}${selectedString}</a></li>`
+      );
+    });
+
+    $(".display-adjust-option").off("click.frequencyOption").on("click.frequencyOption", (e) => {
+      that.options.windowJumpSizeFastForwardBackward = e.target.attributes.option.value;
+      that._savePreferences({
+        fastforwardDefault: e.target.attributes.option.value,
+      });
+      // that._showLoading();
+      // that.vars.chart.xAxis[0].options.labels.step = (that.vars.xAxisScaleInSeconds / e.target.attributes.option.value);
+      // that._savePreferences({
+      //   xAxisLabelFreq: e.target.attributes.option.value,
+      // });
+      //that._reloadCurrentWindow();
+      
+    });
+
+  },
+
   _setupXAxisLabelFrequency: function(){
     let that = this;
     let xAxisLabelFrequency = that.options.xAxisLabelFrequency || [];
@@ -2928,6 +3010,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._addFullRecordingToXAxisScaleOptions();
     that._setupXAxisScaleSelector();
     that._setupXAxisLabelFrequency();
+    that._setupAdjustFastforward();
     //console.log("Finish _setupXAxisScaleSelector");
     that._setupAnnotationChoice();
     //console.log("Finish _setupAnnotationChoice");
