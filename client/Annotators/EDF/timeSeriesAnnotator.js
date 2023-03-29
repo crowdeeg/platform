@@ -1136,7 +1136,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
                   <li><a id="toggle_title" class="toggle-title">Toggle Title</a></li>\
                   <li><a id="display-xAxis-units" class="dropdown-button dropdown-submenu" data-activates="display-xAxis-submenu">Label Frequency</a></li>\
-                  <li><a id="display-adjust-fastforward" class="dropdown-button dropdown-submenu" data-activates="display-adjust-submenu">Adjust Fastforward</a></li>\
+                  <li><a id="display-adjust-fastforward" class="dropdown-button dropdown-submenu" data-activates="display-adjust-submenu">Adjust Fast Forward</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
