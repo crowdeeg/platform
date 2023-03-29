@@ -1245,6 +1245,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                               <button type="button" class="btn btn-default ruler" aria-label="Ruler"> \
                                 Ruler\
                               </button> \
+                              <button type="button" class="shift-up-btn btn btn-default">&uarr;</button>\
+                              <button type="button" class="shift-down-btn btn btn-default">&darr;</button>\
+                              <button type="button" class="scale-increase-btn btn btn-default">+</button>\
+                              <button type="button" class="scale-decrease-btn btn btn-default">-</button>\
                               <button type="button" class="btn btn-default fastBackward" aria-label="Fast Backward"> \
                                   <span class="fa fa-fast-backward" aria-hidden="true"></span> \
                               </button> \
