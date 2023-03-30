@@ -331,20 +331,38 @@ Template.Data.events({
           const text = e.target.result;
           var rowData = text.split('\n');
           console.log(rowData.length);
+          var firstColumnIsNumbers = false;
+          var checkFirstColumn = rowData[0].split(',');
+          // Python generates the first column with numbers, so if thats the case the first row should have
+          // an empty space, then the normal header with File1, File2 ...
+          if(checkFirstColumn[0] == "" && checkFirstColumn[1] == "File1"){
+            firstColumnIsNumbers = true;
+          }
           for(j=1; j<rowData.length-1 ; j++){
             var info = rowData[j].split(',');
-            console.log(j);
-            console.log(rowData.length);
-            console.log(info);
-            var file1 = info[0];
-            var file2 = info[1];
-            var assignee = info[2];
-            var task = info[3];
-            var preference = info[4];
-            var alignment = info[5];
-            var annotations = info[6];
+            // console.log(j);
+            // console.log(rowData.length);
+            // console.log(info);
+            if(firstColumnIsNumbers){
+              var file1 = info[1];
+              var file2 = info[2];
+              var assignee = info[3];
+              var task = info[4];
+              var preference = info[5];
+              var alignment = info[6];
+              var annotations = info[7];
+            } else {
+              var file1 = info[0];
+              var file2 = info[1];
+              var assignee = info[2];
+              var task = info[3];
+              var preference = info[4];
+              var alignment = info[5];
+              var annotations = info[6];
+            }
+            
 
-            if(!file1 || !file2 || !assignee || !task){
+            if(!file1 || !file2 || !assignee){
               var row = j+1;
               window.alert("There is missing information starting from row " + row + ". Please fill that information in and try again.");
               loading.set(false);
@@ -354,10 +372,16 @@ Template.Data.events({
             }
 
             try{
-              var file1Id = Data.findOne({name: file1})._id;
+              var file1Info = Data.findOne({name: file1});
+              var file1Id = file1Info._id;
               var file2Id = Data.findOne({name: file2})._id;
               var assigneeId = Meteor.users.findOne({username: assignee})._id;
-              var taskId = Tasks.findOne({name: task})._id;
+              var taskId;
+              if(!task){
+                taskId = Tasks.findOne({name: "edf annotation from template: " + file1Info.name})._id;
+              } else {
+                var taskId = Tasks.findOne({name: task})._id;
+              }
             } catch(err){
               var row = j+1;
               window.alert("Some of the information in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
@@ -372,7 +396,7 @@ Template.Data.events({
               dataFiles: dataFiles,
               reviewer: Meteor.userId(),
             }
-            console.log(dataFiles);
+            //console.log(dataFiles);
 
             if(!Assignments.findOne(obj)){
               var assignmentId = Assignments.insert(obj, function(err, docInserted){
@@ -384,25 +408,24 @@ Template.Data.events({
                 assignmentId = docInserted._id;
   
               });
-              console.log(assignmentId);
+              // console.log(assignmentId);
             
-  
+              // console.log(preference);
               if(preference){
                 var preferenceFile= PreferencesFiles.findOne({name: preference});
                 if(preferenceFile){
                   var preferenceAnnotatorConfig = preferenceFile.annotatorConfig;
                   if(alignment){
-                    console.log(alignment);
-                    if(typeof alignment == "number"){
+                    if(!isNaN(alignment)){
                       preferenceAnnotatorConfig.channelTimeshift = Number(alignment);
                     } else {
                       var alignmentFile = AlignmentFiles.findOne({filename: alignment});
                       if(alignmentFile){
                         var lag = alignmentFile.lag;
-                        console.log(lag);
                         preferenceAnnotatorConfig.channelTimeshift = Number(lag);
                       } else{
                         var row = j+1;
+                        console.log(alignment);
                         window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
                         loading.set(false);
                         $('input[type="file"]').val(null);
@@ -431,8 +454,7 @@ Template.Data.events({
                 var sampleAnnotatorConfig = {
                   startTime: 0
                 }
-                console.log(alignment)
-                if(typeof alignment != "object"){
+                if(!isNaN(alignment)){
                   sampleAnnotatorConfig.channelTimeshift = Number(alignment);
                 } else {
                   var alignmentFile = AlignmentFiles.findOne({filename: alignment});
@@ -466,40 +488,46 @@ Template.Data.events({
                   var docs = [];
                   Object.values(allAnnotations).forEach(info => {
                     var value = {};
-                    if(info.channels == "All"){
-                      var f1Channels = Data.findOne({name: file1}).metadata.wfdbdesc.Groups[0].Signals.length;
-                      var f2Channels = Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length;
-
-                      var totalChannels = f1Channels + f2Channels;
-                      var channels = []
-                      for(k=0; k < totalChannels; k++){
-                        channels.push(k);
+                    // To ensure we arent reading the last line of the csv file which would just be { index: '' }
+                    if(info.channels){
+                      if(info.channels == "All"){
+                        var f1Channels = Data.findOne({name: file1}).metadata.wfdbdesc.Groups[0].Signals.length;
+                        var f2Channels = Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length;
+  
+                        var totalChannels = f1Channels + f2Channels;
+                        var channels = []
+                        for(k=0; k < totalChannels; k++){
+                          channels.push(k);
+                        }
+                      } else {
+                        console.log(info);
+                        
+                        window.alert("Skipping Annotation, as it does not match the file (Not for all channels)")
                       }
-                    } else {
-                      window.alert("Skipping Annotation, as it does not match the file (Not for all channels)")
+                      // console.log(channels);
+                      var position = {
+                        channels: channels,
+                        start: Number(info.time),
+                        end: Number(info.time) + Number(info.duration)
+                      };
+                      var metadata = {
+                        annotationLabel: info.annotation,
+                      }
+                      value.position = position;
+                      value.metadata = metadata;
+                      var obj = {
+                        assignment: assignmentId,
+                        user: assigneeId,
+                        dataFiles: dataFiles,
+                        // placeholder for now (other annotations are also signal_annotation?)
+                        type: info.type == "Event" ? "SIGNAL_ANNOTATION" : "SIGNAL_ANNOTATION",
+                        value: value
+                      }
+                      // console.log(obj);
+                      Annotations.insert(obj);
+                      //docs.push(obj);
                     }
-                    console.log(channels);
-                    var position = {
-                      channels: channels,
-                      start: Number(info.time),
-                      end: Number(info.time) + Number(info.duration)
-                    };
-                    var metadata = {
-                      annotationLabel: info.annotation,
-                    }
-                    value.position = position;
-                    value.metadata = metadata;
-                    var obj = {
-                      assignment: assignmentId,
-                      user: assigneeId,
-                      dataFiles: dataFiles,
-                      // placeholder for now (other annotations are also signal_annotation?)
-                      type: info.type == "Event" ? "SIGNAL_ANNOTATION" : "SIGNAL_ANNOTATION",
-                      value: value
-                    }
-                    console.log(obj);
-                    Annotations.insert(obj);
-                    //docs.push(obj);
+                    
                   });
                 } else {
                   var row = j+1;
