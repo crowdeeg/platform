@@ -4759,9 +4759,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             options.window_length,
             0
           );
+          console.log("Transformed", transformedData);
   
           that._applyFrequencyFilters(transformedData, (data) => {
+            console.log("Freq", data);
             let real = that._alignRealDataandData(realData,data);
+            console.log("Aligned", real);
 
             that.vars.currentWindowData = data;
             that.vars.real = real;
@@ -5037,6 +5040,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("identifierKey", identifierKey);
     var noDataError =
       "No data available for window with options " + JSON.stringify(options);
+    console.log("Options", optionsPadded);
 
     if (options.start_time < 0) {
       return Promise.reject("Invalid start time.");
@@ -5241,6 +5245,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // );
       for (var name in input.channel_values[dataId]) {
         var values = input.channel_values[dataId][name];
+        if (!values.length) {
+          if (!channelAudioRepresentations[dataId]) channelAudioRepresentations[dataId] = {};
+          channelAudioRepresentations[dataId][name] = {
+            buffer: null,
+            scaleFactors: {
+              frequency: scaleFactorFrequency,
+              amplitude: scaleFactorAmplitude,
+            },
+          };
+
+          if (!channelNumSamples[dataId]) channelNumSamples[dataId] = {};
+          channelNumSamples[dataId][name] = {
+            paddedBefore: 0,
+            dataOfInterest: 0,
+            paddedAfter: 0,
+          };
+          continue;
+        }
         // console.log("Channel Name:" + name);
         // console.log(values);
         ////console.log(that.vars.audioContextSampleRate);
@@ -5447,10 +5469,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           audio: channelAudioRepresentations[dataId][name],
           numSamples: channelNumSamples[dataId][name],
         };
-        let arrayLength = Math.max(
+        let arrayLength = channel.audio.buffer ? Math.max(
           channel.audio.buffer.length - channel.numSamples.paddedBefore,
           1
-        );
+        ) : 0;
         channel.valuesPadded = new Float32Array(arrayLength);
         channels.push(channel);
       }
@@ -5482,6 +5504,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var frequencyFilters = that.vars.frequencyFilters || [];
     data.channels.forEach((channel, c) => {
       let maxDetectableFrequencyInHz = data.sampling_rate[channel.dataId] / 2;
+      if (!channel.audio.buffer) {
+        channel.valuesPadded = new Float32Array();
+        channel.values = new Float32Array();
+        --numRemainingChannelsToFilter;
+        return;
+      }
+
       var staticFrequencyFilters =
         that._getStaticFrequencyFiltersForChannel(channel);
       var buffer = channel.audio.buffer;
@@ -5942,7 +5971,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
+    console.log("window data", that.vars.currentWindowData);
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
+    console.log("Updated series", that.vars.chart.series);
     for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
 
@@ -6029,6 +6060,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.options.maskedChannels.forEach((channelIndex) => {
       that.vars.chart.series[channelIndex].hide();
     });
+    console.log("series", that.vars.chart.series);
+    console.log("data", that.vars.currentWindowData);
     //that.vars.chart.redraw();
 
     for (let i = 0;i< that.options.y_axis_limited.length;i++){
@@ -6142,11 +6175,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //gets the xValues for the graph using from the data object i.e the time values
     let xValues = {};
     dataIds.forEach((dataId) => {
-      xValues[dataId] = Array.from(
-        data.channels.find((channel) => channel.dataId === dataId).values.map(function (value, index) {
+      let channel = data.channels.find((channel) => channel.dataId === dataId && channel.values.length > 0);
+      xValues[dataId] = channel ? Array.from(
+        channel.values.map(function (value, index) {
           return that.vars.currentWindowStart + index / data.sampling_rate[dataId];
         })
-      );
+      ) : [];
     });
 
     // gets the recording end in seconds snapped to the nearest second
