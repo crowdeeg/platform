@@ -4759,12 +4759,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             options.window_length,
             0
           );
-          console.log("Transformed", transformedData);
   
           that._applyFrequencyFilters(transformedData, (data) => {
-            console.log("Freq", data);
             let real = that._alignRealDataandData(realData,data);
-            console.log("Aligned", real);
 
             that.vars.currentWindowData = data;
             that.vars.real = real;
@@ -5089,8 +5086,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           };
           if (dataValues.length > 1) {
             realData.channel_values = {};
-            let indexStart = Math.floor((startTime - dataValues[0].startTime) * dataValues[0].sampling_rate);
             Object.keys(dataValues[0].channel_values).forEach((dataFile) => {
+              let indexStart = Math.floor((startTime - dataValues[0].startTime) * dataValues[0].sampling_rate[dataFile]);
               realData.channel_values[dataFile] = {};
               Object.keys(dataValues[0].channel_values[dataFile]).forEach((channel) => {
                 realData.channel_values[dataFile][channel] = [...dataValues[0].channel_values[dataFile][channel].slice(indexStart)];
@@ -5106,9 +5103,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             }
 
             let lastWindow = dataValues[dataValues.length - 1];
-            let indexEnd = Math.floor((startTime + windowLength - lastWindow.startTime) * lastWindow.sampling_rate);
 
             Object.keys(lastWindow.channel_values).forEach((dataFile) => {
+              let indexEnd = Math.floor((startTime + windowLength - lastWindow.startTime) * lastWindow.sampling_rate[dataFile]);
               Object.keys(lastWindow.channel_values[dataFile]).forEach((channel) => {
                 realData.channel_values[dataFile][channel] = realData.channel_values[dataFile][channel].concat([...lastWindow.channel_values[dataFile][channel].slice(0, indexEnd)]);
               });
@@ -5117,11 +5114,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             // Turn js arrays back to Float32 arrays.
             Object.keys(realData.channel_values).forEach((dataFile) => {
               Object.keys(realData.channel_values[dataFile]).forEach((channel) => {
-                realData.channel_values[dataFile][channel] = realData.channel_values[dataFile][channel] = new Float32Array(realData.channel_values[dataFile][channel]);
+                realData.channel_values[dataFile][channel] = new Float32Array(realData.channel_values[dataFile][channel]);
               });
             });
           }
 
+          console.log("Data", realData);
           return realData;
         });
 
@@ -5314,6 +5312,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
           valuesScaled = values.map((v) => v / scaleFactorAmplitude);
           //console.log(valuesScaled);
+        } else {
+          valuesScaled = values;
         }
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
         var scaleFault = 0;
@@ -5794,13 +5794,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
       });
-      that._populateGraph();
       that._flushAnnotations();
       that._getAnnotations(
         that.vars.currentWindowRecording,
         that.vars.currentWindowStart,
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
       );
+      that._reloadCurrentWindow();
     });
 
     $(that.element).find(".restore-btn").click(function () {
@@ -5971,9 +5971,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(that);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
-    console.log("window data", that.vars.currentWindowData);
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
-    console.log("Updated series", that.vars.chart.series);
     for(let i = 0;i<that.vars.chart.series.length;i++){
       original_series[i] = that.vars.chart.series[i].yData;
 
@@ -6058,10 +6056,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
 
     that.options.maskedChannels.forEach((channelIndex) => {
-      that.vars.chart.series[channelIndex].hide();
+      that.vars.chart.series[channelIndex].setVisible(false, false);
     });
-    console.log("series", that.vars.chart.series);
-    console.log("data", that.vars.currentWindowData);
     //that.vars.chart.redraw();
 
     for (let i = 0;i< that.options.y_axis_limited.length;i++){
