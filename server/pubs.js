@@ -1,4 +1,4 @@
-import { Patients, Data, Tasks, Guidelines, Instructions, Propositions, Assignments, Annotations, Arbitrations, Preferences, PreferencesFiles } from '/collections'
+import { Patients, Data, Tasks, Guidelines, Instructions, Propositions, Assignments, Annotations, Arbitrations, Preferences, PreferencesFiles, AlignmentFiles, AnnotationFiles } from '/collections'
 
 const annotationFields = {
    'value.metadata.annotatorConfig': 0,
@@ -19,6 +19,8 @@ Meteor.publish('all', function() {
         Assignments.find({}),
         Arbitrations.find({}),
         PreferencesFiles.find({}),
+        AlignmentFiles.find({}),
+        AnnotationFiles.find({}),
     ]
 });
 

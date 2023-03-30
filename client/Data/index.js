@@ -1,4 +1,4 @@
-import { PreferencesFiles, Preferences, Data, Tasks, Assignments, Patients} from '/collections';
+import { PreferencesFiles, Preferences, Data, Tasks, Assignments, Patients, AnnotationFiles, AlignmentFiles, Annotations} from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
 import { EDFFile } from '/collections';
@@ -316,11 +316,221 @@ Template.Data.events({
     $(Template.instance().find('table')).table2csv();
     loading.set(false);
   },
+  'click .btn.batchAlignment': function(){
+    console.log("hello");
+    const files = document.getElementById("CSVs");
+    let allFiles = files.files;
+    console.log(allFiles);
+    window.alert("Creating Assignments from the CSV file, please wait while loading");
+    loading.set(true);
+    for(i=0; i < allFiles.length; i++){
+      const input = allFiles[i];
+      if (input) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const text = e.target.result;
+          var rowData = text.split('\n');
+          console.log(rowData.length);
+          for(j=1; j<rowData.length-1 ; j++){
+            var info = rowData[j].split(',');
+            console.log(j);
+            console.log(rowData.length);
+            console.log(info);
+            var file1 = info[0];
+            var file2 = info[1];
+            var assignee = info[2];
+            var task = info[3];
+            var preference = info[4];
+            var alignment = info[5];
+            var annotations = info[6];
+
+            if(!file1 || !file2 || !assignee || !task){
+              var row = j+1;
+              window.alert("There is missing information starting from row " + row + ". Please fill that information in and try again.");
+              loading.set(false);
+
+              $('input[type="file"]').val(null);
+              break;
+            }
+
+            try{
+              var file1Id = Data.findOne({name: file1})._id;
+              var file2Id = Data.findOne({name: file2})._id;
+              var assigneeId = Meteor.users.findOne({username: assignee})._id;
+              var taskId = Tasks.findOne({name: task})._id;
+            } catch(err){
+              var row = j+1;
+              window.alert("Some of the information in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+              loading.set(false);
+              $('input[type="file"]').val(null);
+              break;
+            }
+            var dataFiles = [file1Id, file2Id];
+            var obj = {
+              users: [assigneeId],
+              task: taskId,
+              dataFiles: dataFiles,
+              reviewer: Meteor.userId(),
+            }
+            console.log(dataFiles);
+
+            if(!Assignments.findOne(obj)){
+              var assignmentId = Assignments.insert(obj, function(err, docInserted){
+                if(err){
+                  console.log(err);
+                  return;
+                }
+                console.log(docInserted._id);
+                assignmentId = docInserted._id;
+  
+              });
+              console.log(assignmentId);
+            
+  
+              if(preference){
+                var preferenceFile= PreferencesFiles.findOne({name: preference});
+                if(preferenceFile){
+                  var preferenceAnnotatorConfig = preferenceFile.annotatorConfig;
+                  if(alignment){
+                    console.log(alignment);
+                    if(typeof alignment == "number"){
+                      preferenceAnnotatorConfig.channelTimeshift = Number(alignment);
+                    } else {
+                      var alignmentFile = AlignmentFiles.findOne({filename: alignment});
+                      if(alignmentFile){
+                        var lag = alignmentFile.lag;
+                        console.log(lag);
+                        preferenceAnnotatorConfig.channelTimeshift = Number(lag);
+                      } else{
+                        var row = j+1;
+                        window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                        loading.set(false);
+                        $('input[type="file"]').val(null);
+                        break;
+                      }
+                    }
+                  }
+                  Preferences.insert({
+                    assignment: assignmentId,
+                    user: assigneeId,
+                    dataFiles: dataFiles,
+                    annotatorConfig: preferenceAnnotatorConfig,
+                  })
+                } else {
+                  var row = j+1;
+                  window.alert("The Preferences File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                  loading.set(false);
+                  $('input[type="file"]').val(null);
+                  break;
+                }
+                
+              }
+              // if there is no preference file but there is an alignment file
+              if(!preference && alignment){
+                console.log(alignment);
+                var sampleAnnotatorConfig = {
+                  startTime: 0
+                }
+                console.log(alignment)
+                if(typeof alignment != "object"){
+                  sampleAnnotatorConfig.channelTimeshift = Number(alignment);
+                } else {
+                  var alignmentFile = AlignmentFiles.findOne({filename: alignment});
+                  if(alignmentFile){
+                    var lag = alignmentFile.lag;
+                    console.log(lag);
+                    sampleAnnotatorConfig.channelTimeshift = Number(lag);
+                  } else{
+                    var row = j+1;
+                    window.alert("The Alignment File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                    loading.set(false);
+                    $('input[type="file"]').val(null);
+                    break;
+                  }
+                }
+                Preferences.insert({
+                  assignment: assignmentId,
+                  user: assigneeId,
+                  dataFiles: dataFiles,
+                  annotatorConfig: sampleAnnotatorConfig,
+                })
+              }
+
+              console.log(1);
+              if(annotations){
+                console.log(2)
+                var annotationFile = AnnotationFiles.findOne({filename: annotations});
+                console.log(annotationFile);
+                if(annotationFile){
+                  var allAnnotations = annotationFile.annotations;
+                  var docs = [];
+                  Object.values(allAnnotations).forEach(info => {
+                    var value = {};
+                    if(info.channels == "All"){
+                      var f1Channels = Data.findOne({name: file1}).metadata.wfdbdesc.Groups[0].Signals.length;
+                      var f2Channels = Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length;
+
+                      var totalChannels = f1Channels + f2Channels;
+                      var channels = []
+                      for(k=0; k < totalChannels; k++){
+                        channels.push(k);
+                      }
+                    } else {
+                      window.alert("Skipping Annotation, as it does not match the file (Not for all channels)")
+                    }
+                    console.log(channels);
+                    var position = {
+                      channels: channels,
+                      start: Number(info.time),
+                      end: Number(info.time) + Number(info.duration)
+                    };
+                    var metadata = {
+                      annotationLabel: info.annotation,
+                    }
+                    value.position = position;
+                    value.metadata = metadata;
+                    var obj = {
+                      assignment: assignmentId,
+                      user: assigneeId,
+                      dataFiles: dataFiles,
+                      // placeholder for now (other annotations are also signal_annotation?)
+                      type: info.type == "Event" ? "SIGNAL_ANNOTATION" : "SIGNAL_ANNOTATION",
+                      value: value
+                    }
+                    console.log(obj);
+                    Annotations.insert(obj);
+                    //docs.push(obj);
+                  });
+                } else {
+                  var row = j+1;
+                  window.alert("The Annotations File in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+                  loading.set(false);
+                  $('input[type="file"]').val(null);
+                  break;
+                }
+              }
+            }          
+            
+
+          }
+          console.log("done");
+          loading.set(false);
+          //alert("Assignments Created");
+          $('input[type="file"]').val(null);
+          
+
+        };
+        reader.readAsText(input);
+      } else {
+        loading.set(false);
+      }
+    }
+  },
   'click .btn.upload': function () {
     const files = document.getElementById("File");
     const folderFiles = document.getElementById("Folder");
 
-    let allFilesUnfiltered = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase() === "edf"));
+    let allFilesUnfiltered = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.').at(-1).toLowerCase() === "edf"));
     const allFiles = allFilesUnfiltered.filter((file, i) => {
       return allFilesUnfiltered.findIndex((e) => {
         return e.name === file.name;

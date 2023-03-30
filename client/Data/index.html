@@ -60,6 +60,8 @@
                 <input type="file" accept=".edf" multiple id="File" >
                 <b>Folders:</b>
                 <input type="file" multiple id="Folder" webkitdirectory="true">
+                <b>.csv's (Alignment Assignment):</b>
+                <input type="file" accept=".csv" id="CSVs">
                 {{#if loading}}
                 <div class="loader"></div>
                 {{/if}}
@@ -67,7 +69,8 @@
             <br>
             <button class="btn download">Download Visible Rows To CSV</button>
             <button class="btn upload">Upload Chosen Recordings</button>
-            <button class="btn local">Creat Task From Local</button>
+            <button class="btn local">Create Task From Local</button>
+            <button class="btn batchAlignment">Batch Assignment For Alignment</button>
         </div>
     </div>
     <div class="row">

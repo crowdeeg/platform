@@ -90,6 +90,8 @@ let Annotations;
 let Preferences;
 let Arbitrations;
 let PreferencesFiles;
+let AlignmentFiles;
+let AnnotationFiles;
 
 if (Meteor.isClient) {
     Meteor.subscribe('all');
@@ -190,6 +192,18 @@ const SchemaHelpers = {
         label: 'Annotator Configuration',
         blackbox: true,
         defaultValue: {},
+    },
+    csvAnnotationInfo:{
+        type: Object,
+        label: "CSV Annotation File Info",
+        blackbox: true,
+        defaultValue: {}
+    },
+    csvAnnotations:{
+        type: Object,
+        label: "CSV File Annotations",
+        blackbox: true,
+        defaultValue: {}
     },
     annotationType: {
         type: String,
@@ -1670,6 +1684,51 @@ PreferencesFiles.attachSchema(Schemas.PreferencesFiles);
 PreferencesFiles.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
 PreferencesFiles.attachCollectionRevisions();
 exports.PreferencesFiles = PreferencesFiles;
+
+AlignmentFiles = new Meteor.Collection('alignmentFiles');
+Schemas.AlignmentFiles = new SimpleSchema({
+    filename: {
+    type: String,
+    label: 'filename',
+    },
+    file1: {
+        type: String,
+        label: "File 1"
+    },
+    file2: {
+        type: String,
+        label: "File 2"
+    },
+    // has to be a string or else it breaks (always get a must be integer error for some reason)
+    lag: {
+        type: String,
+        label: "Lag"
+    }
+});
+AlignmentFiles.attachSchema(Schemas.AlignmentFiles);
+AlignmentFiles.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
+AlignmentFiles.attachCollectionRevisions();
+exports.AlignmentFiles = AlignmentFiles;
+
+AnnotationFiles = new Meteor.Collection('annotationsFiles');
+Schemas.AnnotationFiles = new SimpleSchema({
+    filename: {
+    type: String,
+    label: 'filename',
+    },
+    // Need this to be a string because the JSON component at the top of the CSV file is not properly formatted into a JSON
+    info: {
+        type: String,
+        label: 'CSV Annotation Info'
+    },
+    annotations: SchemaHelpers.csvAnnotations,
+
+});
+AnnotationFiles.attachSchema(Schemas.AnnotationFiles);
+AnnotationFiles.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
+AnnotationFiles.attachCollectionRevisions();
+exports.AnnotationFiles = AnnotationFiles;
+
 
 Preferences = new Meteor.Collection('preferences');
 Schemas.Preferences = new SimpleSchema({

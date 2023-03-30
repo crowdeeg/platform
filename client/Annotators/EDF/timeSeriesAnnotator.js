@@ -453,6 +453,40 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         value: 15,
       },
     ],
+    fastforwardAdjust: [
+      {
+        name: '50%',
+        value: 0.5,
+      },
+      {
+        name: '60%',
+        value: 0.6,
+      },
+      {
+        name: '70%',
+        value: 0.7,
+      },
+      {
+        name: '80%',
+        value: 0.8,
+      },
+      {
+        name: '90%',
+        value: 0.9,
+      },
+      {
+        name: '100%',
+        value: 1,
+      },
+      {
+        name: '150%',
+        value: 1.5,
+      },
+      {
+        name: '200%',
+        value: 2,
+      },
+    ],
     keyboardInputEnabled: true,
     isReadOnly: false,
     startTime: 0,
@@ -1103,6 +1137,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="display-montage" class="dropdown-button dropdown-submenu" data-activates="display-montage-submenu">Montage</a></li>\
                   <li><a id="toggle_title" class="toggle-title">Toggle Title</a></li>\
                   <li><a id="display-xAxis-units" class="dropdown-button dropdown-submenu" data-activates="display-xAxis-submenu">Label Frequency</a></li>\
+                  <li><a id="display-adjust-fastforward" class="dropdown-button dropdown-submenu" data-activates="display-adjust-submenu">Adjust Fast Forward</a></li>\
                 </ul>\
                 <ul id="display-notch-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
@@ -1111,6 +1146,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="display-montage-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="display-xAxis-submenu" class="dropdown-content dropdown-select">\
+                </ul>\
+                <ul id="display-adjust-submenu" class="dropdown-content dropdown-select">\
                 </ul>\
                 <ul id="metadata-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a class="dropdown-button dropdown-submenu" data-activates="metadata-annotations-alignment-submenu">Annotations/Alignment</a></li>\
@@ -1246,6 +1283,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                               <button type="button" class="btn btn-default ruler" aria-label="Ruler"> \
                                 Ruler\
                               </button> \
+                              <button type="button" class="shift-up-btn btn btn-default">&uarr;</button>\
+                              <button type="button" class="shift-down-btn btn btn-default">&darr;</button>\
+                              <button type="button" class="scale-increase-btn btn btn-default">+</button>\
+                              <button type="button" class="scale-decrease-btn btn btn-default">-</button>\
                               <button type="button" class="btn btn-default fastBackward" aria-label="Fast Backward"> \
                                   <span class="fa fa-fast-backward" aria-hidden="true"></span> \
                               </button> \
@@ -2641,6 +2682,51 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   },
 
+  _setupAdjustFastforward: function(){
+    let that = this;
+    console.log('adjust fastforward');
+    // that.options.windowJumpSizeFastForwardBackward
+    let fastforwardAdjust = that.options.fastforwardAdjust || [];
+    console.log(fastforwardAdjust);
+    let defaultOptionIndex = null;
+    let dropdown = $("#display-adjust-submenu");
+    let fastforwardDefault = 1;
+    if (that.options.context.preferences.annotatorConfig.fastforwardDefault != null) {
+      fastforwardDefault = that.options.context.preferences.annotatorConfig.fastforwardDefault;
+      // console.log(frequencyDefault);
+    }
+    console.log(fastforwardAdjust);
+    fastforwardAdjust.forEach((scale, index)=> {
+      // console.log(scale.value);
+      let selectedString = "";
+      if (scale.value == fastforwardDefault) {
+        console.log("here");
+        selectedString = '<span class="dropdown-select-check"><i class="fa fa-check"></i></span>';
+        defaultOptionIndex = index;
+        scale.default = true;
+        //that.vars.xAxisScaleInSeconds = +timescale.value;
+      }
+      dropdown.append(
+        `<li><a class="display-adjust-option dropdown-select-option" option=${scale.value}>${scale.name}${selectedString}</a></li>`
+      );
+    });
+
+    $(".display-adjust-option").off("click.frequencyOption").on("click.frequencyOption", (e) => {
+      that.options.windowJumpSizeFastForwardBackward = e.target.attributes.option.value;
+      that._savePreferences({
+        fastforwardDefault: e.target.attributes.option.value,
+      });
+      // that._showLoading();
+      // that.vars.chart.xAxis[0].options.labels.step = (that.vars.xAxisScaleInSeconds / e.target.attributes.option.value);
+      // that._savePreferences({
+      //   xAxisLabelFreq: e.target.attributes.option.value,
+      // });
+      //that._reloadCurrentWindow();
+      
+    });
+
+  },
+
   _setupXAxisLabelFrequency: function(){
     let that = this;
     let xAxisLabelFrequency = that.options.xAxisLabelFrequency || [];
@@ -2925,6 +3011,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._addFullRecordingToXAxisScaleOptions();
     that._setupXAxisScaleSelector();
     that._setupXAxisLabelFrequency();
+    that._setupAdjustFastforward();
     //console.log("Finish _setupXAxisScaleSelector");
     that._setupAnnotationChoice();
     //console.log("Finish _setupAnnotationChoice");
@@ -3275,10 +3362,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // calculate the difference between two recordings after adding the current difference
       if (!diff) {
         diff =
-          crosshairPosition[0].timeInSeconds - crosshairPosition[1].timeInSeconds;
+          crosshairPosition.find((pos) => pos.dataId === ids[0]).timeInSeconds - crosshairPosition.find((pos) => pos.dataId === ids[1]).timeInSeconds;
       }
       that.vars.currentTimeDiff += diff;
-      console.log("=======" + diff + "======");
       $(".time_sync").text("Time Difference: " + that.vars.currentTimeDiff + " s");
       if (diff > 0) {
         if (currentDiff[1]) {
@@ -3529,7 +3615,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //that.options.latestClick = event.originalEvent.point.x ? event.originalEvent.point.x : event.originalEvent.xAxis[0].value;
       if(event.originalEvent.point != undefined){
         that.options.latestClick = event.originalEvent.point.x;
-      } else {
+      } else if (event.originalEvent.xAxis) {
         that.options.latestClick = event.originalEvent.xAxis[0].value;
       }
       console.log(that.options.latestClick);
@@ -5143,11 +5229,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var channelAudioRepresentations = {};
     var channelNumSamples = {};
-    var samplingRate = input.sampling_rate;
     // console.log("samplingRate", samplingRate);
     // console.log(that.options.targetSamplingRate);
     // for each dataId in the channelvalues array
     for (var dataId in input.channel_values) {
+      let samplingRate = input.sampling_rate[dataId];
 
       // console.log(that._getCurrentMontage());
       //console.log(
@@ -5393,9 +5479,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     //console.log(this.vars.chart);
     var numRemainingChannelsToFilter = data.channels.length;
-    var maxDetectableFrequencyInHz = data.sampling_rate / 2;
     var frequencyFilters = that.vars.frequencyFilters || [];
     data.channels.forEach((channel, c) => {
+      let maxDetectableFrequencyInHz = data.sampling_rate[channel.dataId] / 2;
       var staticFrequencyFilters =
         that._getStaticFrequencyFiltersForChannel(channel);
       var buffer = channel.audio.buffer;
@@ -5500,6 +5586,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (!data.channel_values) return false;
     for (let dataId in data.channel_values) {
       if (Object.keys(data.channel_values[dataId]).length == 0) return false;
+      if (!data.sampling_rate[dataId]) return false;
     }
     return true;
   },
@@ -5983,7 +6070,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //gets the xValues for the graph using from the data object i.e the time values
     var xValues = channel.values.map(function (value, i) {
-        return that.vars.currentWindowStart + i / data.sampling_rate;
+        return that.vars.currentWindowStart + i / data.sampling_rate[channel.dataId];
     });
 
     // gets the recording end in seconds snapped to the nearest second
@@ -6051,12 +6138,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log(data.channels);
     //console.log(that);
 
+    let dataIds = [...new Set(data.channels.map((channel) => channel.dataId))];
     //gets the xValues for the graph using from the data object i.e the time values
-    var xValues = Array.from(
-      data.channels[0].values.map(function (value, index) {
-        return that.vars.currentWindowStart + index / data.sampling_rate;
-      })
-    );
+    let xValues = {};
+    dataIds.forEach((dataId) => {
+      xValues[dataId] = Array.from(
+        data.channels.find((channel) => channel.dataId === dataId).values.map(function (value, index) {
+          return that.vars.currentWindowStart + index / data.sampling_rate[dataId];
+        })
+      );
+    });
 
     // gets the recording end in seconds snapped to the nearest second
     var recordingEndInSecondsSnapped = that._getRecordingEndInSecondsSnapped();
@@ -6092,7 +6183,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         
 
         // creates an array that stores all the data
-        var seriesData = xValues.map(function (x, i) {
+        var seriesData = xValues[channel.dataId].map(function (x, i) {
           return [x, samplesScaledAndOffset[i]];
         });
 
@@ -6112,7 +6203,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _initSeries: function (data) {
     var that = this;
-    var samplingRate = data.sampling_rate;
     var channels = data.channels;
     var recordingEndInSecondsSnapped = that._getRecordingEndInSecondsSnapped();
     return channels.map(function (channel, c) {
@@ -8409,7 +8499,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if (that.options.isReadOnly) return;
 
       var index = that._getUniversalAnnotationIndexByXVal(that._getAnnotationXMinFixed(annotation)) + 1;
-      var nextAnnotation = that.vars.chart.annotations.allItems.find((a) => a.metadata.id === that.vars.universalChangePointAnnotationsCache[index].id);
+      var nextAnnotation = that.vars.universalChangePointAnnotationsCache[index] ? that.vars.chart.annotations.allItems.find((a) => a.metadata.id === that.vars.universalChangePointAnnotationsCache[index].id) : undefined;
 
       that._nukeAnnotation(annotation);
 
@@ -10316,12 +10406,33 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log("getting preference");
     var that = this;
     console.log(that);
-    let timeshiftFromPreference =
-      that.options.context.preferences.annotatorConfig.channelTimeshift;
-    that.vars.channelTimeshift = timeshiftFromPreference
+    let timeshiftFromPreference = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    
+    console.log('1');
+    
+    if(typeof timeshiftFromPreference == "number"){
+      console.log('2');
+      var fileId;
+      if(timeshiftFromPreference < 0){
+        fileId = that.options.context.dataset[1]._id;
+      } else {
+        fileId = that.options.context.dataset[0]._id;
+      }
+      console.log(fileId);
+      console.log(timeshiftFromPreference)
+      var obj = {[fileId]: Math.abs(timeshiftFromPreference)};
+      console.log(obj);
+      that.vars.channelTimeshift = obj;
+      timeshiftFromPreference = obj;
+      that._savePreferences({"channelTimeshift" : obj});
+      console.log(timeshiftFromPreference);
+
+    } else {
+      that.vars.channelTimeshift = timeshiftFromPreference
       ? timeshiftFromPreference
       : {};
-    console.log(timeshiftFromPreference);
+      console.log(timeshiftFromPreference);
+    }
     if (timeshiftFromPreference && timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]]) {
       $(".time_sync").text("Time Difference: " + timeshiftFromPreference[Object.keys(timeshiftFromPreference)[0]] + " s");
     }
@@ -11334,7 +11445,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     console.log(that.options.context);
     var channelWithValue = Object.keys(obj).filter(el => obj[el] != 0);
+    console.log(channelWithValue[0]);
     var lag = obj[channelWithValue];
+    console.log(that.options.context.dataset[1]._id)
+    // if the channel with lag is the second one then make the lag negative so we know which one to move
+    if(channelWithValue[0] == that.options.context.dataset[1]._id && lag > 0){
+      console.log("here")
+      lag = -Number(lag);
+      console.log(lag);
+    }
     var newObj = {
       "filename1": that.options.context.dataset[0].name,
       "filename2": that.options.context.dataset[1].name,
@@ -11601,6 +11720,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _CSVToArray: function (str, delimiter = ",") {
     const that = this
     // slice from start of text to the first 'Index,Time' indexto get header row data
+
+    // If we cant find Index,Time, then for some reason all strings read from the csv file have quotes around them
+    if(str.indexOf("Index,Time") < 0){
+      str = str.replace(/['"]+/g, '');
+      //console.log(str);
+    }
     var headerRow = str.slice(str.indexOf("{"), str.indexOf("Index,Time"));
     var headerStr = [];
 
@@ -11622,21 +11747,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }, [])
     console.log(headerData);
     var discrepancies = headerData.length < 1 || headerData.length > 2 ? ["Failed to read header row"] : that._detectCSVMetadataDiscrepancy(headerData);
+    // console.log(discrepancies);
     const process = that._handleCSVMetadataDiscrepancy(discrepancies);
     console.log(process);
     if (process) {
+      //console.log(str);
       const remainStr = str.slice(str.indexOf("Index,Time"));
-      const alignmentArr = headerData.reduce(el => {
+      console.log(str.indexOf("Index,Time"));
+      const alignmentArr = headerData.length != 0 ? headerData.reduce(el => {
         if(el.alignment[1] != null){
           return el.alignment;
         }
-      });
+      }) : undefined;
       that.options.alignmentFromCSV = alignmentArr;
       console.log(alignmentArr);
       const headers = remainStr.slice(0, remainStr.indexOf("\n")).split(delimiter);
       console.log(headers);
       // slice from \n index + 1 to the end of the text
       // use split to create an array of each csv value row
+      console.log(remainStr);
       const rows = remainStr.slice(remainStr.indexOf("\n") + 1).trim().split("\n");
       console.log(rows);
       // Map the rows
@@ -11814,6 +11943,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if ($("#annotation-manager-dialog").dialog("isOpen")) {
       that._populateAnnotationManagerTable(that._getAnnotationsOnly());
     }
+    that._refreshAnnotations();
 
     function updateCache() {
       that.vars.annotationsCache = {};
@@ -11839,6 +11969,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
     that._saveAnnotations(newAnnotations);
+    //window.alert("Annotations Uploaded");
 
   },
 
@@ -11869,12 +12000,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       },
     })
 
+    console.log(obj["Annotation"]);
     newAnnotation.metadata.annotationLabel = obj["Annotation"];
     // newAnnotation.metadata.id = obj["ID"];
     newAnnotation.metadata.comment = obj["Comment"];
     newAnnotation.metadata.creator = obj["User"];
-    // that._saveFeatureAnnotation(newAnnotation);
+   // that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
+    // that._updateChangePointLabelLeft(newAnnotation);
+    // that._updateControlPoint(newAnnotation);
     return newAnnotation
   },
 
@@ -11886,7 +12020,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     newAnnotation.metadata.annotationLabel = obj["Annotation"];
     newAnnotation.metadata.comment = obj["Comment"];
     newAnnotation.metadata.creator = obj["User"];
-    // that._saveFeatureAnnotation(newAnnotation);
+    //that._saveFeatureAnnotation(newAnnotation);
     that._updateChangePointLabelRight(newAnnotation);
     that._updateChangePointLabelLeft(newAnnotation);
     return newAnnotation
