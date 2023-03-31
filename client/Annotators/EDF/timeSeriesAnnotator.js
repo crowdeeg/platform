@@ -4682,46 +4682,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //stores all "pre loaded" windows
       start_time,
     ];
-    /*if (
-      !that._isCurrentWindowSpecifiedTrainingWindow() &&
-      !that.options.experiment.running &&
-      !that._isInNoTimelockMode() // stop caching windows if in no timelock mode
-    ) {
-      //console.log("5");
-      for (var i = 1; i <= that.options.numberOfForwardWindowsToPrefetch; ++i) {
-        windowsToRequest.push(start_time + i * that.options.windowJumpSizeForwardBackward * window_length);
-      }
-      for (
-        var i = 1;
-        i <= that.options.numberOfFastForwardWindowsToPrefetch;
-        ++i
-      ) {
-        let window = start_time + i * that.options.windowJumpSizeFastForwardBackward * window_length;
-        if (!windowsToRequest.includes(window) && window > 0) {
-          windowsToRequest.push(window);
-        }
-      }
-      for (
-        var i = 1;
-        i <= that.options.numberOfBackwardWindowsToPrefetch;
-        ++i
-      ) {
-        let window = start_time - i * that.options.windowJumpSizeForwardBackward * window_length;
-        if (!windowsToRequest.includes(window) && window > 0) {
-          windowsToRequest.push(window);
-        }
-      }
-      for (
-        var i = 1;
-        i <= that.options.numberOfFastBackwardWindowsToPrefetch;
-        ++i
-      ) {
-        let window = start_time - i * that.options.windowJumpSizeFastForwardBackward * window_length;
-        if (!windowsToRequest.includes(window) && window > 0) {
-          windowsToRequest.push(window);
-        }
-      }
-    }*/
     
     //console.log(that);
     that.vars.reprint = 0;
@@ -4782,35 +4742,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that._setBackwardEnabledStatus(false);
             that._setFastBackwardEnabledStatus(false);
           } else {
-            // enable/disable the forward backward buttons according to the current position
-
-
-            switch (windowStartTime) {
-              case that.vars.currentWindowStart + window_length:
-                if (that.options.visibleRegion.end === undefined) {
-                  //console.log('winAva:', windowAvailable);
-                  that._setForwardEnabledStatus(false);
-                }
-
-              case that.vars.currentWindowStart +
-                window_length * that.options.windowJumpSizeFastForwardBackward:
-                if (that.options.visibleRegion.end === undefined) {
-
-                  that._setFastForwardEnabledStatus(false);
-                }
-              // break;
-              case that.vars.currentWindowStart - window_length:
-                if (that.options.visibleRegion.start === undefined) {
-                  that._setBackwardEnabledStatus(false);
-                }
-              // break;
-              case that.vars.currentWindowStart -
-                window_length * that.options.windowJumpSizeFastForwardBackward:
-                if (that.options.visibleRegion.start === undefined) {
-                  that._setFastBackwardEnabledStatus(false);
-                }
-              // break;
-            }
+            that._setForwardEnabledStatus(true);
+            that._setFastForwardEnabledStatus(true);
+            that._setBackwardEnabledStatus(true);
+            that._setFastBackwardEnabledStatus(true);
           }
         }
       }).catch((err) => {
@@ -4981,28 +4916,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       startTime: options.start_time,
       windowLength: options.window_length
     });
-    /*while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
-      let keyToDelete = undefined;
-      let farthestKeyDist = -1;
-      Object.keys(that.vars.windowsCache).forEach((key) => {
-        if (!that.vars.windowsCache[key] || !that.vars.windowsCache[key].startTime) {
-          keyToDelete = key;
-          farthestKeyDist = -2;
-        } else if (farthestKeyDist > -2) {
-          if (farthestKeyDist < 0 || Math.abs(options.start_time - that.vars.windowsCache[key].startTime) > farthestKeyDist) {
-            keyToDelete = key;
-            farthestKeyDist = Math.abs(options.start_time - that.vars.windowsCache[key].startTime);
-          }
-        }
-      });
-
-      delete that.vars.windowsCache[keyToDelete];
-    }
-
-    that.vars.windowsCache[identifierKey] = {};
-    // transform the data before storing or displaying them
-    that.vars.windowsCache[identifierKey].promise = promise;
-    that.vars.windowsCache[identifierKey].startTime = options.start_time;*/
   },
 
   /* Options: recordings: allRecordings,
@@ -5037,7 +4950,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //console.log("identifierKey", identifierKey);
     var noDataError =
       "No data available for window with options " + JSON.stringify(options);
-    console.log("Options", optionsPadded);
 
     if (options.start_time < 0) {
       return Promise.reject("Invalid start time.");
@@ -5061,11 +4973,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // Cache is in sorted order, so first/last elements are at the min/max start time.
     if (!that.vars.windowsCache.length || that.vars.windowsCache[0].startTime > startTime || that.vars.windowsCache[i].startTime + that.vars.windowsCache[i].windowLength < startTime + windowLength) {
       // Total cache miss. This likely means it is a non-local request (i.e. the user jumped to an annotation) so clear the cache completely and reset the area.
-      console.log("Non-local");
       miss = true;
     } else {
       // For now we ensure the cache is contiguous, so as long as the window is between min and max it should be in the cache.
-      console.log("Cache hit", startTime);
       while (i > -1 && that.vars.windowsCache[i].startTime > startTime) {
         i--;
       }
@@ -5119,7 +5029,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             });
           }
 
-          console.log("Data", realData);
           return realData;
         });
 
@@ -5132,9 +5041,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           for (let j = 1; j <= replacementLength; j++) {
             windowsToRequest.push(requestStartTime - windowLength * j);
           }
-          console.log("back request", that.vars.windowsCache);
         } else if (index >= that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength) {
-          console.log("forward request");
           let requestStartTime = that.vars.windowsCache[that.vars.windowsCache.length - 1].startTime + that.vars.windowsCache[that.vars.windowsCache.length - 1].windowLength;
           that.vars.windowsCache = that.vars.windowsCache.slice(replacementLength);
 
@@ -5173,12 +5080,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.windowsCache = [];
       windowsToRequest = [startTime];
 
-      for (let j = 1; j < Math.ceil(that.vars.windowsCacheLength / 2); j++) {
-        windowsToRequest.push(startTime - windowLength * j);
-      }
+      if (!that._isInNoTimelockMode()) {
+        for (let j = 1; j < Math.ceil(that.vars.windowsCacheLength / 2); j++) {
+          windowsToRequest.push(startTime - windowLength * j);
+        }
 
-      for (let j = 1; j <= Math.floor(that.vars.windowsCacheLength / 2); j++) {
-        windowsToRequest.push(startTime + windowLength * j);
+        for (let j = 1; j <= Math.floor(that.vars.windowsCacheLength / 2); j++) {
+          windowsToRequest.push(startTime + windowLength * j);
+        }
       }
 
       let toReturn = undefined;
