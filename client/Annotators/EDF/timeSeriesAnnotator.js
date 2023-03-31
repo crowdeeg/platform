@@ -3298,7 +3298,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _toggleTimeSyncMode: function (mode) {
+  _toggleTimeSyncMode: function (mode, prevMode) {
     var that = this;
     switch (mode) {
       case "crosshair":
@@ -3308,8 +3308,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.features.annotationType = "none";
         that._setupAnnotationInteraction();
         $(".timesync").prop("disabled", false);
-        that._toggleNoTimelockScroll(false);
         $(".crosshair-time-input-container").show();
+        if (prevMode === "notimelock") {
+          that._toggleNoTimelockScroll(false);
+        }
         that._displayCrosshair(that.vars.crosshairPosition);
         break;
       case "notimelock":
@@ -3324,7 +3326,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // $(".time_sync").text("");
         $(".timesync").prop("disabled", false);
         $(".crosshair-time-input-container").hide();
-        that._toggleNoTimelockScroll(false);
+        if (prevMode === "notimelock") {
+          that._toggleNoTimelockScroll(false);
+        }
         that._destroyCrosshair();
         break;
       case "undefined":
@@ -3333,8 +3337,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.features.annotationType = that.options.previousAnnotationType;
         that._setupAnnotationInteraction();
         $(".timesync").prop("disabled", true);
+        if (prevMode === "notimelock") {
+          that._toggleNoTimelockScroll(false);
+        }
         $(".crosshair-time-input-container").hide();
-        that._toggleNoTimelockScroll(false);
         that._destroyCrosshair();
         break;
     }
@@ -3488,8 +3494,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         if (defaultOptionIndex)
           delete timeSyncOption.options[defaultOptionIndex].default;
         timeSyncOption.options[select.prop("selectedIndex")].default = true;
+        let prevMode = that.vars.timeSyncMode;
         that.vars.timeSyncMode = select.val();
-        that._toggleTimeSyncMode(select.val());
+        that._toggleTimeSyncMode(select.val(), prevMode);
         that._renderAlignmentAlert();
       });
     });
@@ -5076,7 +5083,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
 
     if (miss) {
-      console.log("Total cache miss.");
       that.vars.windowsCache = [];
       windowsToRequest = [startTime];
 
