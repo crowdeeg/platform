@@ -821,8 +821,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         sleep_stage_unknown: "Unknown",
       },
       windowsToRequest: [],
-      windowsCacheLength: 15,
-      windowsCache: {},
+      windowsCacheLength: 20,
+      windowsCacheEdgeLength: 5,
+      windowsCache: [],
       // windowCache is an object, keeping track of data that is loaded in the background:
       //
       // {
@@ -2956,7 +2957,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           target_sampling_rate: that.options.targetSamplingRate,
           use_high_precision_sampling: that.options.useHighPrecisionSampling,
         };
-        that._requestData(options).then(function ([data, realData]) {
+        that._requestData(options).then(function (data) {
           ++numWindowsLoaded;
           updateLoadingProgress();
         }).catch((error) => {
@@ -3134,10 +3135,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     that._setJumpToLastDisagreementWindowEnabledStatus(false);
     that._setJumpToNextDisagreementWindowEnabledStatus(false);
-    that._setForwardEnabledStatus(false);
-    that._setFastForwardEnabledStatus(false);
-    that._setBackwardEnabledStatus(false);
-    that._setFastBackwardEnabledStatus(false);
+    that._setForwardEnabledStatus(true);
+    that._setFastForwardEnabledStatus(true);
+    that._setBackwardEnabledStatus(true);
+    that._setFastBackwardEnabledStatus(true);
 
     if (that.options.showBackToLastActiveWindowButton) {
       $(that.element)
@@ -3297,7 +3298,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
   },
 
-  _toggleTimeSyncMode: function (mode) {
+  _toggleTimeSyncMode: function (mode, prevMode) {
     var that = this;
     switch (mode) {
       case "crosshair":
@@ -3307,8 +3308,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.features.annotationType = "none";
         that._setupAnnotationInteraction();
         $(".timesync").prop("disabled", false);
-        that._toggleNoTimelockScroll(false);
         $(".crosshair-time-input-container").show();
+        if (prevMode === "notimelock") {
+          that._toggleNoTimelockScroll(false);
+        }
         that._displayCrosshair(that.vars.crosshairPosition);
         break;
       case "notimelock":
@@ -3323,7 +3326,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // $(".time_sync").text("");
         $(".timesync").prop("disabled", false);
         $(".crosshair-time-input-container").hide();
-        that._toggleNoTimelockScroll(false);
+        if (prevMode === "notimelock") {
+          that._toggleNoTimelockScroll(false);
+        }
         that._destroyCrosshair();
         break;
       case "undefined":
@@ -3332,8 +3337,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that.options.features.annotationType = that.options.previousAnnotationType;
         that._setupAnnotationInteraction();
         $(".timesync").prop("disabled", true);
+        if (prevMode === "notimelock") {
+          that._toggleNoTimelockScroll(false);
+        }
         $(".crosshair-time-input-container").hide();
-        that._toggleNoTimelockScroll(false);
         that._destroyCrosshair();
         break;
     }
@@ -3487,8 +3494,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         if (defaultOptionIndex)
           delete timeSyncOption.options[defaultOptionIndex].default;
         timeSyncOption.options[select.prop("selectedIndex")].default = true;
+        let prevMode = that.vars.timeSyncMode;
         that.vars.timeSyncMode = select.val();
-        that._toggleTimeSyncMode(select.val());
+        that._toggleTimeSyncMode(select.val(), prevMode);
         that._renderAlignmentAlert();
       });
     });
@@ -4681,46 +4689,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       //stores all "pre loaded" windows
       start_time,
     ];
-    if (
-      !that._isCurrentWindowSpecifiedTrainingWindow() &&
-      !that.options.experiment.running &&
-      !that._isInNoTimelockMode() // stop caching windows if in no timelock mode
-    ) {
-      //console.log("5");
-      for (var i = 1; i <= that.options.numberOfForwardWindowsToPrefetch; ++i) {
-        windowsToRequest.push(start_time + i * that.options.windowJumpSizeForwardBackward * window_length);
-      }
-      for (
-        var i = 1;
-        i <= that.options.numberOfFastForwardWindowsToPrefetch;
-        ++i
-      ) {
-        let window = start_time + i * that.options.windowJumpSizeFastForwardBackward * window_length;
-        if (!windowsToRequest.includes(window) && window > 0) {
-          windowsToRequest.push(window);
-        }
-      }
-      for (
-        var i = 1;
-        i <= that.options.numberOfBackwardWindowsToPrefetch;
-        ++i
-      ) {
-        let window = start_time - i * that.options.windowJumpSizeForwardBackward * window_length;
-        if (!windowsToRequest.includes(window) && window > 0) {
-          windowsToRequest.push(window);
-        }
-      }
-      for (
-        var i = 1;
-        i <= that.options.numberOfFastBackwardWindowsToPrefetch;
-        ++i
-      ) {
-        let window = start_time - i * that.options.windowJumpSizeFastForwardBackward * window_length;
-        if (!windowsToRequest.includes(window) && window > 0) {
-          windowsToRequest.push(window);
-        }
-      }
-    }
     
     //console.log(that);
     that.vars.reprint = 0;
@@ -4744,7 +4712,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       };
       //console.log(that);
       
-      that._requestData(options).then(([data, realData]) => {
+      that._requestData(options).then((realData) => {
         let requestedIndex = that.vars.windowsToRequest.indexOf(windowStartTime);
         if (requestedIndex < 0) {
           return;
@@ -4752,15 +4720,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that.vars.windowsToRequest.splice(requestedIndex, 1);
         }
         if (windowStartTime === that.vars.currentWindowStart) {
-          that.vars.currentWindowData = data;
-          that.vars.real = realData;
+          let transformedData = that._transformData(
+            realData,
+            0,
+            options.window_length,
+            0
+          );
+  
+          that._applyFrequencyFilters(transformedData, (data) => {
+            let real = that._alignRealDataandData(realData,data);
 
-          if (that.options.graphPopulated) {
-            that._populateGraph();
-            that._displayCrosshair(that.vars.crosshairPosition);
-          } else {
-            that._setupGraphFunctions();
-          }
+            that.vars.currentWindowData = data;
+            that.vars.real = real;
+
+            if (that.options.graphPopulated) {
+              that._populateGraph();
+              that._displayCrosshair(that.vars.crosshairPosition);
+            } else {
+              that._setupGraphFunctions();
+            }
+          });
         }
 
         if (!that.options.experiment.running) {
@@ -4770,45 +4749,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             that._setBackwardEnabledStatus(false);
             that._setFastBackwardEnabledStatus(false);
           } else {
-            // enable/disable the forward backward buttons according to the current position
-
-
-            switch (windowStartTime) {
-              case that.vars.currentWindowStart + window_length:
-                if (that.options.visibleRegion.end === undefined) {
-                  //console.log('winAva:', windowAvailable);
-                  that._setForwardEnabledStatus(true);
-                }
-
-              case that.vars.currentWindowStart +
-                window_length * that.options.windowJumpSizeFastForwardBackward:
-                if (that.options.visibleRegion.end === undefined) {
-
-                  that._setFastForwardEnabledStatus(true);
-                }
-              // break;
-              case that.vars.currentWindowStart - window_length:
-                if (that.options.visibleRegion.start === undefined) {
-                  that._setBackwardEnabledStatus(true);
-                }
-              // break;
-              case that.vars.currentWindowStart -
-                window_length * that.options.windowJumpSizeFastForwardBackward:
-                if (that.options.visibleRegion.start === undefined) {
-                  that._setFastBackwardEnabledStatus(true);
-                }
-              // break;
-            }
+            that._setForwardEnabledStatus(true);
+            that._setFastForwardEnabledStatus(true);
+            that._setBackwardEnabledStatus(true);
+            that._setFastBackwardEnabledStatus(true);
           }
         }
       }).catch((err) => {
         console.log("Request data error", err);
         if (!that.options.experiment.running) {
           if (that._isInNoTimelockMode()) {
-            that._setForwardEnabledStatus(false);
-            that._setFastForwardEnabledStatus(false);
-            that._setBackwardEnabledStatus(false);
-            that._setFastBackwardEnabledStatus(false);
+            that._setForwardEnabledStatus(true);
+            that._setFastForwardEnabledStatus(true);
+            that._setBackwardEnabledStatus(true);
+            that._setFastBackwardEnabledStatus(true);
           } else {
             // enable/disable the forward backward buttons according to the current position
 
@@ -4816,24 +4770,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               case that.vars.currentWindowStart + window_length:
                 if (that.options.visibleRegion.end === undefined) {
                   //console.log('winAva:', windowAvailable);
-                  that._setForwardEnabledStatus(false);
+                  that._setForwardEnabledStatus(true);
                   that._lastWindowReached();
                 }
               case that.vars.currentWindowStart +
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.end === undefined) {
 
-                  that._setFastForwardEnabledStatus(false);
+                  that._setFastForwardEnabledStatus(true);
                 }
                 break;
               case that.vars.currentWindowStart - window_length:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setBackwardEnabledStatus(false);
+                  that._setBackwardEnabledStatus(true);
                 }
               case that.vars.currentWindowStart -
                 window_length * that.options.windowJumpSizeFastForwardBackward:
                 if (that.options.visibleRegion.start === undefined) {
-                  that._setFastBackwardEnabledStatus(false);
+                  that._setFastBackwardEnabledStatus(true);
                 }
                 break;
             }
@@ -4955,30 +4909,29 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
   _addToWindowsCache: function (identifierKey, promise, options) {
     var that = this;
-    while (Object.keys(that.vars.windowsCache).length >= that.vars.windowsCacheLength) {
-      let keyToDelete = undefined;
-      let farthestKeyDist = -1;
-      Object.keys(that.vars.windowsCache).forEach((key) => {
-        if (!that.vars.windowsCache[key] || !that.vars.windowsCache[key].startTime) {
-          keyToDelete = key;
-          farthestKeyDist = -2;
-        } else if (farthestKeyDist > -2) {
-          if (farthestKeyDist < 0 || Math.abs(options.start_time - that.vars.windowsCache[key].startTime) > farthestKeyDist) {
-            keyToDelete = key;
-            farthestKeyDist = Math.abs(options.start_time - that.vars.windowsCache[key].startTime);
-          }
-        }
-      });
 
-      delete that.vars.windowsCache[keyToDelete];
+    // Maintain sorted order of the cache.
+    let i = 0;
+    for (i = 0; i < that.vars.windowsCache.length; i++) {
+      if (that.vars.windowsCache[i].startTime > options.start_time) {
+        break;
+      }
     }
 
-    that.vars.windowsCache[identifierKey] = {};
-    // transform the data before storing or displaying them
-    that.vars.windowsCache[identifierKey].promise = promise;
-    that.vars.windowsCache[identifierKey].startTime = options.start_time;
+    that.vars.windowsCache.splice(i, 0, {
+      promise: promise,
+      startTime: options.start_time,
+      windowLength: options.window_length
+    });
   },
 
+  /* Options: recordings: allRecordings,
+        channels_displayed: that._getChannelsDisplayed(), // get all channels we would like to display
+        start_time: startTime,
+        channel_timeshift: that.vars.channelTimeshift,
+        window_length: window_length,
+        target_sampling_rate: that.options.targetSamplingRate,
+        use_high_precision_sampling: that.options.useHighPrecisionSampling, */
   _requestData: function (options) {
     var that = this;
     // console.log(that.vars.allRecordings);
@@ -4988,6 +4941,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // 'window_length'
     // 'channels_displayed'
     var identifierKey = that._getIdentifierKeyForDataRequest(options);
+    // Round to nearest multiple of sampling rate so we can cache data more effectively.
+
+    const optionsPadded = JSON.parse(JSON.stringify(options));
+
+    optionsPadded.maskedChannels = that.options.maskedChannels;
+
+    optionsPadded.window_length =
+      options.window_length;
+    // console.log(optionsPadded.window_length);
+    // console.log(options.window_length);
+    optionsPadded.low_resolution_data =
+      that._isInNoTimelockMode() ||
+      optionsPadded.window_length > 300;
     //console.log("identifierKey", identifierKey);
     var noDataError =
       "No data available for window with options " + JSON.stringify(options);
@@ -5002,51 +4968,170 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var reprint = that.vars.reprint;
     if (reprint === 1 || that._isInNoTimelockMode()) {
-      that.vars.windowsCache = {};
-    } else if (
-      that.vars.windowsCache[identifierKey] &&
-      that.vars.windowsCache[identifierKey].promise
-    ) {
-      return that.vars.windowsCache[identifierKey].promise;
+      that.vars.windowsCache = [];
     }
 
-    const optionsPadded = JSON.parse(JSON.stringify(options));
+    let startTime = options.start_time;
+    let windowLength = options.window_length;
+    let i = that.vars.windowsCache.length - 1;
+    let miss = false;
+    let toReturn = undefined;
 
-    optionsPadded.maskedChannels = that.options.maskedChannels;
+    // Cache is in sorted order, so first/last elements are at the min/max start time.
+    if (!that.vars.windowsCache.length || that.vars.windowsCache[0].startTime > startTime || that.vars.windowsCache[i].startTime + that.vars.windowsCache[i].windowLength < startTime + windowLength) {
+      // Total cache miss. This likely means it is a non-local request (i.e. the user jumped to an annotation) so clear the cache completely and reset the area.
+      miss = true;
+    } else {
+      // For now we ensure the cache is contiguous, so as long as the window is between min and max it should be in the cache.
+      while (i > -1 && that.vars.windowsCache[i].startTime > startTime) {
+        i--;
+      }
+  
+      if (i > -1) {
+        let index = i;
+        let promises = [];
 
-    optionsPadded.window_length =
-      options.window_length;
-    // console.log(optionsPadded.window_length);
-    // console.log(options.window_length);
-    optionsPadded.low_resolution_data =
-      that._isInNoTimelockMode() ||
-      optionsPadded.window_length > 300;
-    let promise = new Promise((resolve, reject) => {
-      Meteor.call("get.edf.data", optionsPadded, (error, realData) => {
-        if (error) {
-          //console.log(error.message);
-          return reject(error.message);
+        while (i < that.vars.windowsCache.length && that.vars.windowsCache[i].startTime < startTime + windowLength) {
+          promises.push(that.vars.windowsCache[i].promise);
+          i++;
         }
-        //console.log("edf.data", data);
-        if (!that._isDataValid(realData)) {
-          return reject(noDataError);
-        } else {
-          let transformedData = that._transformData(
-            realData,
-            0,
-            options.window_length,
-            0
-          );
 
-          that._applyFrequencyFilters(transformedData, (data) => {
-            let real = that._alignRealDataandData(realData,data);
-            return resolve([data, real]);
+        toReturn = Promise.all(promises).then((dataValues) => {
+          let realData = {
+            ...dataValues[0],
+            startTime: startTime
+          };
+          if (dataValues.length > 1) {
+            realData.channel_values = {};
+            Object.keys(dataValues[0].channel_values).forEach((dataFile) => {
+              let indexStart = Math.floor((startTime - dataValues[0].startTime) * dataValues[0].sampling_rate[dataFile]);
+              realData.channel_values[dataFile] = {};
+              Object.keys(dataValues[0].channel_values[dataFile]).forEach((channel) => {
+                realData.channel_values[dataFile][channel] = [...dataValues[0].channel_values[dataFile][channel].slice(indexStart)];
+              });
+            });
+
+            for (let j = 1; j < dataValues.length - 1; j++) {
+              Object.keys(dataValues[j].channel_values).forEach((dataFile) => {
+                Object.keys(dataValues[j].channel_values[dataFile]).forEach((channel) => {
+                  realData.channel_values[dataFile][channel].concat([...dataValues[j].channel_values[dataFile][channel]]);
+                });
+              });
+            }
+
+            let lastWindow = dataValues[dataValues.length - 1];
+
+            Object.keys(lastWindow.channel_values).forEach((dataFile) => {
+              let indexEnd = Math.floor((startTime + windowLength - lastWindow.startTime) * lastWindow.sampling_rate[dataFile]);
+              Object.keys(lastWindow.channel_values[dataFile]).forEach((channel) => {
+                realData.channel_values[dataFile][channel] = realData.channel_values[dataFile][channel].concat([...lastWindow.channel_values[dataFile][channel].slice(0, indexEnd)]);
+              });
+            });
+
+            // Turn js arrays back to Float32 arrays.
+            Object.keys(realData.channel_values).forEach((dataFile) => {
+              Object.keys(realData.channel_values[dataFile]).forEach((channel) => {
+                realData.channel_values[dataFile][channel] = new Float32Array(realData.channel_values[dataFile][channel]);
+              });
+            });
+          }
+
+          return realData;
+        });
+
+        let windowsToRequest = [];
+        let replacementLength = that.vars.windowsCacheEdgeLength + Math.floor((that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength * 2) / 4);
+        if (index < that.vars.windowsCacheEdgeLength) {
+          let requestStartTime = that.vars.windowsCache[0].startTime;
+          that.vars.windowsCache = that.vars.windowsCache.slice(0, that.vars.windowsCacheLength - replacementLength);
+
+          for (let j = 1; j <= replacementLength; j++) {
+            windowsToRequest.push(requestStartTime - windowLength * j);
+          }
+        } else if (index >= that.vars.windowsCacheLength - that.vars.windowsCacheEdgeLength) {
+          let requestStartTime = that.vars.windowsCache[that.vars.windowsCache.length - 1].startTime + that.vars.windowsCache[that.vars.windowsCache.length - 1].windowLength;
+          that.vars.windowsCache = that.vars.windowsCache.slice(replacementLength);
+
+          for (let j = 0; j < replacementLength; j++) {
+            windowsToRequest.push(requestStartTime + windowLength * j);
+          }
+        }
+
+        windowsToRequest.forEach((window) => {
+          let requestOptions = optionsPadded;
+          requestOptions.start_time = window;
+          let promise = new Promise((resolve, reject) => {
+            Meteor.call("get.edf.data", requestOptions, (error, realData) => {
+              if (error) {
+                //console.log(error.message);
+                return reject(error.message);
+              }
+              if (!that._isDataValid(realData)) {
+                return reject(noDataError);
+              } else {
+                realData.startTime = window;
+                return resolve(realData);
+              }
+            });
           });
+  
+          that._addToWindowsCache(identifierKey, promise, requestOptions);
+        });
+      } else {
+        miss = true;
+      }
+    }
+
+    if (miss) {
+      that.vars.windowsCache = [];
+      windowsToRequest = [startTime];
+
+      if (!that._isInNoTimelockMode()) {
+        for (let j = 1; j < Math.ceil(that.vars.windowsCacheLength / 2); j++) {
+          windowsToRequest.push(startTime - windowLength * j);
+        }
+
+        for (let j = 1; j <= Math.floor(that.vars.windowsCacheLength / 2); j++) {
+          windowsToRequest.push(startTime + windowLength * j);
+        }
+      }
+
+      let toReturn = undefined;
+      windowsToRequest.forEach((window) => {
+        let requestOptions = optionsPadded;
+        requestOptions.start_time = window;
+        let promise = new Promise((resolve, reject) => {
+          Meteor.call("get.edf.data", requestOptions, (error, realData) => {
+            if (error) {
+              //console.log(error.message);
+              return reject(error.message);
+            }
+            //console.log("edf.data", data);
+            if (!that._isDataValid(realData)) {
+              return reject(noDataError);
+            } else {
+              realData.startTime = window;
+              return resolve(realData);
+            }
+          });
+        });
+
+        that._addToWindowsCache(identifierKey, promise, requestOptions);
+
+        if (window === startTime) {
+          toReturn = promise;
         }
       });
-    });
-    that._addToWindowsCache(identifierKey, promise, options);
-    return promise;
+
+
+      return toReturn;
+    }
+
+    if (toReturn) {
+      return toReturn;
+    }
+
+    return Promise.reject();
   },
 
   _transformData: function (
@@ -5073,6 +5158,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       // );
       for (var name in input.channel_values[dataId]) {
         var values = input.channel_values[dataId][name];
+        if (!values.length) {
+          if (!channelAudioRepresentations[dataId]) channelAudioRepresentations[dataId] = {};
+          channelAudioRepresentations[dataId][name] = {
+            buffer: null,
+            scaleFactors: {
+              frequency: scaleFactorFrequency,
+              amplitude: scaleFactorAmplitude,
+            },
+          };
+
+          if (!channelNumSamples[dataId]) channelNumSamples[dataId] = {};
+          channelNumSamples[dataId][name] = {
+            paddedBefore: 0,
+            dataOfInterest: 0,
+            paddedAfter: 0,
+          };
+          continue;
+        }
         // console.log("Channel Name:" + name);
         // console.log(values);
         ////console.log(that.vars.audioContextSampleRate);
@@ -5124,6 +5227,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
           valuesScaled = values.map((v) => v / scaleFactorAmplitude);
           //console.log(valuesScaled);
+        } else {
+          valuesScaled = values;
         }
         audioBuffer.copyToChannel(valuesScaled, 0, 0);
         var scaleFault = 0;
@@ -5279,10 +5384,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           audio: channelAudioRepresentations[dataId][name],
           numSamples: channelNumSamples[dataId][name],
         };
-        let arrayLength = Math.max(
+        let arrayLength = channel.audio.buffer ? Math.max(
           channel.audio.buffer.length - channel.numSamples.paddedBefore,
           1
-        );
+        ) : 0;
         channel.valuesPadded = new Float32Array(arrayLength);
         channels.push(channel);
       }
@@ -5314,6 +5419,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var frequencyFilters = that.vars.frequencyFilters || [];
     data.channels.forEach((channel, c) => {
       let maxDetectableFrequencyInHz = data.sampling_rate[channel.dataId] / 2;
+      if (!channel.audio.buffer) {
+        channel.valuesPadded = new Float32Array();
+        channel.values = new Float32Array();
+        --numRemainingChannelsToFilter;
+        return;
+      }
+
       var staticFrequencyFilters =
         that._getStaticFrequencyFiltersForChannel(channel);
       var buffer = channel.audio.buffer;
@@ -5597,13 +5709,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       maskedChannels.forEach((channelIndex) => {
         that._unmaskChannelWithIndex(channelIndex);
       });
-      that._populateGraph();
       that._flushAnnotations();
       that._getAnnotations(
         that.vars.currentWindowRecording,
         that.vars.currentWindowStart,
         that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
       );
+      that._reloadCurrentWindow();
     });
 
     $(that.element).find(".restore-btn").click(function () {
@@ -5859,7 +5971,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.chart.annotations.allItems.forEach(annotation => { that._updateControlPoint(annotation) });
 
     that.options.maskedChannels.forEach((channelIndex) => {
-      that.vars.chart.series[channelIndex].hide();
+      that.vars.chart.series[channelIndex].setVisible(false, false);
     });
     //that.vars.chart.redraw();
 
@@ -5974,11 +6086,12 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     //gets the xValues for the graph using from the data object i.e the time values
     let xValues = {};
     dataIds.forEach((dataId) => {
-      xValues[dataId] = Array.from(
-        data.channels.find((channel) => channel.dataId === dataId).values.map(function (value, index) {
+      let channel = data.channels.find((channel) => channel.dataId === dataId && channel.values.length > 0);
+      xValues[dataId] = channel ? Array.from(
+        channel.values.map(function (value, index) {
           return that.vars.currentWindowStart + index / data.sampling_rate[dataId];
         })
-      );
+      ) : [];
     });
 
     // gets the recording end in seconds snapped to the nearest second

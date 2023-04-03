@@ -916,7 +916,6 @@ Meteor.methods({
     options = options || {};
     let startTime = options.start_time || 0;
     let windowLength = options.window_length;
-    let count = 0;
     let maskedChannels = options.maskedChannels;
 
     // this is the original version of codes which display all channels specified in the options:
@@ -1201,7 +1200,11 @@ Meteor.methods({
     let dataDict = {};
     dataFrame.channelInfo.forEach((info, c) => {
       if (!dataDict[info.dataId]) dataDict[info.dataId] = {};
-      dataDict[info.dataId][info.name] = dataFrame.data[c];
+      if (maskedChannels.includes(c)) {
+        dataDict[info.dataId][info.name] = new Float32Array();
+      } else {
+        dataDict[info.dataId][info.name] = dataFrame.data[c];
+      }
     });
 
     // console.log("=====current dataFrame=====");
