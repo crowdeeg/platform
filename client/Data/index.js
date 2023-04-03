@@ -362,9 +362,18 @@ Template.Data.events({
             }
             
 
-            if(!file1 || !file2 || !assignee){
+            //if(!file1 || !file2 || !assignee){
+            if(!file1 || !assignee){
               var row = j+1;
               window.alert("There is missing information starting from row " + row + ". Please fill that information in and try again.");
+              loading.set(false);
+
+              $('input[type="file"]').val(null);
+              break;
+            }
+            if(!file2 && alignment && Number(alignment) != 0){
+              var row = j+1;
+              window.alert("A single file cannot have an alignment. Please update row:  " + row);
               loading.set(false);
 
               $('input[type="file"]').val(null);
@@ -374,7 +383,7 @@ Template.Data.events({
             try{
               var file1Info = Data.findOne({name: file1});
               var file1Id = file1Info._id;
-              var file2Id = Data.findOne({name: file2})._id;
+              var file2Id = file2 ? Data.findOne({name: file2})._id : null;
               var assigneeId = Meteor.users.findOne({username: assignee})._id;
               var taskId;
               if(!task){
@@ -389,7 +398,7 @@ Template.Data.events({
               $('input[type="file"]').val(null);
               break;
             }
-            var dataFiles = [file1Id, file2Id];
+            var dataFiles = file2Id != null ? [file1Id, file2Id] : [file1Id];
             var obj = {
               users: [assigneeId],
               task: taskId,
@@ -397,6 +406,27 @@ Template.Data.events({
               reviewer: Meteor.userId(),
             }
             //console.log(dataFiles);
+
+            if(preference){
+              var preferenceFile= PreferencesFiles.findOne({name: preference});
+              if(preferenceFile){
+                var preferenceAnnotatorConfig = preferenceFile.annotatorConfig;
+                var f1Channels = Data.findOne({name: file1}).metadata.wfdbdesc.Groups[0].Signals.length;
+                var f2Channels = file2 ? Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length : 0;
+                var totalChannels = f1Channels + f2Channels;
+
+                console.log(totalChannels);
+                var prefChannels = Object.values(preferenceAnnotatorConfig.scalingFactors).length;
+                console.log(prefChannels);
+                if(prefChannels != totalChannels){
+                  var row = j+1;
+                  window.alert("The Preferences file in row " + row + " does not match. Please change or remove that file.");
+                  loading.set(false);
+                  $('input[type="file"]').val(null);
+                  break;
+                }
+              }
+            }
 
             if(!Assignments.findOne(obj)){
               var assignmentId = Assignments.insert(obj, function(err, docInserted){
@@ -492,7 +522,7 @@ Template.Data.events({
                     if(info.channels){
                       if(info.channels == "All"){
                         var f1Channels = Data.findOne({name: file1}).metadata.wfdbdesc.Groups[0].Signals.length;
-                        var f2Channels = Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length;
+                        var f2Channels = file2 ? Data.findOne({name: file2}).metadata.wfdbdesc.Groups[0].Signals.length : 0;
   
                         var totalChannels = f1Channels + f2Channels;
                         var channels = []
