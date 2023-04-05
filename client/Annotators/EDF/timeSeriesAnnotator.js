@@ -3421,6 +3421,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(that.vars.channelTimeshift);
 
       $("#alignment-alert").hide();
+      that._hideLoading();
       that._reloadCurrentWindow();
     }
   },
@@ -11575,6 +11576,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     var alignmentLoaded = false;
 
+    that._showLoading();
+
     for (let i = 0; i < csvFile.files.length; i++) {
 
       const input = csvFile.files[i];
@@ -11914,6 +11917,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
     that._saveAnnotations(newAnnotations);
+    that._hideLoading();
     //window.alert("Annotations Uploaded");
 
   },
