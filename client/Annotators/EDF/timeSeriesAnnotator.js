@@ -12539,7 +12539,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     $(".annotation-manager-table-pagination").empty();
     for (let i = 0; i < Math.ceil(elements.length / numElements); i++) {
-      $(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}"><span>${i + 1}</span></li>`)
+      $(`<li class="${i == Math.floor(startIndex / numElements) ? "active" : ""}"><span class="annotation-manager-table-pagination-element">${i + 1}</span></li>`)
         .appendTo($(".annotation-manager-table-pagination")).prop("startIndex", i * numElements);
     }
 

@@ -236,6 +236,20 @@ dialog .input-field input {
 
 .annotation-manager-table-pagination {
   cursor: default;
+  max-width: 50vw;
+}
+
+.annotation-manager-table-pagination-element {
+  width: 5ex;
+}
+
+.pagination > li > .annotation-manager-table-pagination-element {
+  padding: 4px 12px;
+  height: 100%;
+}
+
+.pagination > li:first-child > .annotation-manager-table-pagination-element {
+  margin-left: -1px;
 }
 
 .annotation_manager_big_div{
