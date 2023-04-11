@@ -756,7 +756,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       activeFeatureType: 0,
       chart: null,
       universalChangePointAnnotationsCache: [],
-      activeAnnotations: [],
+      annotationFilters: [],
       annotationsLoaded: true,
       annotationManagerSortFunc: null,
       selectedChannelIndex: undefined,
@@ -1058,7 +1058,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a class="annotation-filter-option dropdown-select-option" option="Central Hypoapnea">Central Hypoapnea</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" option="Flow Limitation">Flow Limitation</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" option="Cortical Arousal">Cortical Arousal</a></li>\
-                  <li><a class="annotation-filter-option dropdown-select-option" option="Automatic Arousal">Autonomic Arousal</a></li>\
+                  <li><a class="annotation-filter-option dropdown-select-option" option="Autonomic Arousal">Autonomic Arousal</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" option="Desat. Event">Desat. Event</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" option="Mixed Apnea">Mixed Apnea</a></li>\
                   <li><a class="annotation-filter-option dropdown-select-option" option="Mixed Hypoapnea">Mixed Hypoapnea</a></li>\
@@ -10575,7 +10575,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       window_start,
       window_end
     );
-    that._displayAnnotations(annotations);
+    let filteredAnnotations = annotations;
+    if (that.vars.annotationFilters.length) {
+      filteredAnnotations = annotations.filter((annotation) => that.vars.annotationFilters.includes(annotation.metadata.annotationLabel));
+    }
+    that._displayAnnotations(filteredAnnotations);
     
     $(that.element).find(".annotation-filter-option").off(".filter-option");
 
@@ -10583,9 +10587,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       var type = e.target.attributes.option.value;
       var filtered_lst = [];
       if(type == "all"){
+        that.vars.annotationFilters = [];
         that._displayAnnotations(annotations);
       }
       else{
+        that.vars.annotationFilters = [type];
         annotations.forEach((item)=>{
           if(item.metadata.annotationLabel == type){
             filtered_lst.push(item);
