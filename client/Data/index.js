@@ -323,6 +323,11 @@ Template.Data.events({
     console.log(allFiles);
     window.alert("Creating Assignments from the CSV file, please wait while loading");
     loading.set(true);
+
+    //need to check here because statements execute after the for loop before the reader occasionally
+    if(allFiles.length < 1){
+      loading.set(false);
+    }
     for(i=0; i < allFiles.length; i++){
       const input = allFiles[i];
       if (input) {
@@ -607,6 +612,10 @@ Template.Data.events({
     let overwriteDuplicates = false;
 
     loading.set(true);
+    //need to check here because statements execute after the for loop before the reader occasionally
+    if(allFiles.length < 1){
+      loading.set(false);
+    }
 
     for (let i = 0; i < allFiles.length; i++) {
 
