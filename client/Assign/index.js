@@ -1,4 +1,4 @@
-import { Assignments, Tasks, Data, Patients, PreferencesFiles, Preferences} from '/collections';
+import { Assignments, Tasks, Data, Patients, PreferencesFiles, Preferences, AlignmentFiles, AnnotationFiles, Annotations} from '/collections';
 import { MaterializeModal } from '/client/Modals/modal.js'
 
 Template.Assign.events({
@@ -11,6 +11,14 @@ Template.Assign.events({
     'autocompleteselect input.preferences'(event, template, preferences) {
         console.log(preferences);
         template.selectedPreferences.set(preferences);
+    },
+    'autocompleteselect input.alignment'(event, template, alignment) {
+        console.log(alignment);
+        template.selectedAlignment.set(alignment);
+    },
+    'autocompleteselect input.annotation'(event, template, annotation) {
+        console.log(annotation);
+        template.selectedAnnotation.set(annotation);
     },
     'autocompleteselect input.data' (event, template, data) {
         const selectedData = template.selectedData.get();
@@ -265,50 +273,128 @@ Template.Assign.events({
                             return;
                         }
                         var matchingFiles = true;
-                        const preferencesAnnotatorConfig = template.selectedPreferences.get() ? template.selectedPreferences.get().annotatorConfig : null;
+                        var preferencesAnnotatorConfig = template.selectedPreferences.get() ? template.selectedPreferences.get().annotatorConfig : null;
+                        var annotationFile = template.selectedAnnotation.get();
+                        var alignmentFile = template.selectedAlignment.get();
                         Object.keys(assignmentsByAssignee).forEach((assigneeId) => {
                             const assignee = assigneesDict[assigneeId];
                             const assignments = assignmentsByAssignee[assigneeId];
                             assignments.forEach((assignment) => {
                                 if (!assignment.doAssign) return;
                                 console.log(preferencesAnnotatorConfig);
+                                var numChannels = assignment.data.metadata.wfdbdesc.Groups[0].Signals.length;
+                                console.log(numChannels);
                                 if(preferencesAnnotatorConfig && matchingFiles){
-                                    var numChannels = assignment.data.metadata.wfdbdesc.Groups[0].Signals.length;
-                                    console.log(numChannels);
                                     if(numChannels != Object.keys(preferencesAnnotatorConfig.scalingFactors).length){
                                       window.alert("Preferenes file does not match the file for this assignment. Please upload a different preferences file.");
                                       matchingFiles = false;
                                       return;
                                     }
-                                  }
-                                  
-                                  // Given that only admins can access the Data tab we can just assign reviewer to the current admin user                    
-                                  var obj = {
-                                    users: [assigneeId],
-                                    task: task._id,
-                                    dataFiles: [assignment.data._id],
-                                    reviewer: Meteor.userId(),
-                                  }
-                                  var assignmentId = Assignments.insert(obj, function(err, docInserted){
-                                    if(err){
-                                      console.log(err);
-                                      return;
+                                } 
+                                if(alignmentFile && matchingFiles){
+                                    if(assignment.data.length != 2){
+                                        window.alert("Alignment files need 2 recordings. Please ensure there are 2 recordings.");
+                                        matchingFiles = false;
+                                        return;
                                     }
-                                    console.log(docInserted._id);
-                                    assignmentId = docInserted._id;
-              
-                                  });
-                                  console.log(assignmentId);
-                                  
-              
-                                  if(preferencesAnnotatorConfig){
+                                    var numChannels = assignment.data[0].metadata.wfdbdesc.Groups[0].Signals.length + assignment.data[1].metadata.wfdbdesc.Groups[0].Signals.length;
+                                    //console.log(numChannels);
+                                    // if(numChannels != Object.keys(preferencesAnnotatorConfig.scalingFactors).length){
+                                    //   window.alert("Preferenes file does not match the file for this assignment. Please upload a different preferences file.");
+                                    //   matchingFiles = false;
+                                    //   return;
+                                    // }
+                                }
+                                
+                                // Given that only admins can access the Data tab we can just assign reviewer to the current admin user                    
+                                var obj = {
+                                users: [assigneeId],
+                                task: task._id,
+                                dataFiles: [assignment.data._id],
+                                reviewer: Meteor.userId(),
+                                }
+                                var assignmentId = Assignments.insert(obj, function(err, docInserted){
+                                if(err){
+                                    console.log(err);
+                                    return;
+                                }
+                                console.log(docInserted._id);
+                                assignmentId = docInserted._id;
+            
+                                });
+                                console.log(assignmentId);
+                                
+            
+                                if(preferencesAnnotatorConfig){
+                                    if(alignmentFile){
+                                        preferencesAnnotatorConfig.channelTimeshift = Number(alignmentFile.lag);
+                                    }
+                                    
                                     Preferences.insert({
-                                      assignment: assignmentId,
-                                      user: assigneeId,
-                                      dataFiles: [assignment.data._id],
-                                      annotatorConfig: preferencesAnnotatorConfig,
+                                        assignment: assignmentId,
+                                        user: assigneeId,
+                                        dataFiles: [assignment.data._id],
+                                        annotatorConfig: preferencesAnnotatorConfig,
                                     })
-                                  }
+                                } 
+                                if(!preferencesAnnotatorConfig && alignmentFile){
+                                    var sampleAnnotatorConfig = {
+                                        startTime: 0,
+                                        channelTimeshift: alignmentFile.lag
+                                    }
+                                    Preferences.insert({
+                                        assignment: assignmentId,
+                                        user: assigneeId,
+                                        dataFiles: [assignment.data._id],
+                                        annotatorConfig: sampleAnnotatorConfig,
+                                    })
+                                }
+                                if(annotationFile){
+                                    var allAnnotations = annotationFile.annotations;
+                                    Object.values(allAnnotations).forEach(info => {
+                                        var value = {};
+                                        // To ensure we arent reading the last line of the csv file which would just be { index: '' }
+                                        if(info.channels){
+                                            if(info.channels == "All"){
+                        
+                                            var totalChannels = numChannels;
+                                            console.log(numChannels)
+                                            var channels = []
+                                            for(k=0; k < totalChannels; k++){
+                                                channels.push(k);
+                                            }
+                                            } else {
+                                                console.log(info);
+                                                
+                                                window.alert("Skipping Annotation, as it does not match the file (Not for all channels)")
+                                            }
+                                            // console.log(channels);
+                                            var position = {
+                                                channels: channels,
+                                                start: Number(info.time),
+                                                end: Number(info.time) + Number(info.duration)
+                                            };
+                                            var metadata = {
+                                                annotationLabel: info.annotation,
+                                            }
+                                            value.position = position;
+                                            value.metadata = metadata;
+                                            var obj = {
+                                                assignment: assignmentId,
+                                                user: assigneeId,
+                                                dataFiles: [assignment.data._id],
+                                                // placeholder for now (other annotations are also signal_annotation?)
+                                                type: info.type == "Event" ? "SIGNAL_ANNOTATION" : "SIGNAL_ANNOTATION",
+                                                value: value
+                                            }
+                                            // console.log(obj);
+                                            Annotations.insert(obj);
+                                            //docs.push(obj);
+                                        }
+                                        
+                                    });
+                                }
+
                             });
                         });
 
@@ -339,6 +425,8 @@ Template.Assign.onCreated(function() {
     this.selectedAssignees = new ReactiveVar({});
     this.selectedAssigneesToCopyDataFrom = new ReactiveVar({});
     this.selectedPreferences = new ReactiveVar(null);
+    this.selectedAlignment = new ReactiveVar(null);
+    this.selectedAnnotation = new ReactiveVar(null);
 });
 
 Template.Assign.helpers({
@@ -369,8 +457,42 @@ Template.Assign.helpers({
           ]
         }
     },
+    alignmentAutoCompleteSettings(){
+        //console.log(Template.preferencesAutocomplete);
+        return {
+          limit: Number.MAX_SAFE_INTEGER,
+          rules: [
+            {
+              collection: AlignmentFiles,
+              field: 'filename',
+              matchAll: true,
+              template: Template.alignmentAutocomplete,
+            }
+          ]
+        }
+    },
+    annotationAutoCompleteSettings(){
+        //console.log(Template.preferencesAutocomplete);
+        return {
+          limit: Number.MAX_SAFE_INTEGER,
+          rules: [
+            {
+              collection: AnnotationFiles,
+              field: 'filename',
+              matchAll: true,
+              template: Template.annotationsAutocomplete,
+            }
+          ]
+        }
+    },
     preferences(){
         return Template.instance().selectedPreferences.get();
+    },
+    alignment(){
+        return Template.instance().selectedAlignment.get();
+    },
+    annotation(){
+        return Template.instance().selectedAnnotation.get();
     },
     task() {
         return Template.instance().selectedTask.get();

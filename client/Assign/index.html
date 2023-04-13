@@ -25,7 +25,7 @@
             {{#if task}}
             <div class="row">
                 <div class="col s12 text-center">
-                    <h4>Select Recordings and/or Preferences</h4>
+                    <h4>Select Recordings and/or Other Info</h4>
                 </div>
                 <div class="col s12">
                     <div class="input-group">
@@ -47,6 +47,28 @@
                     {{#if preferences}}
                     <div class="collection card">
                         <div class="collection-item"><i class="fa fa-check"></i> {{preferences.name}}</div>
+                    </div>
+                    {{/if}}
+                </div>
+                <!--div class="col s12">
+                    <div class="input-group">
+                        <span class="input-group-addon"><span>Add Alignment</span></span>
+                        {{> inputAutocomplete settings=alignmentAutoCompleteSettings class="alignment form-control autoclear"}}
+                    </div>
+                    {{#if alignment}}
+                    <div class="collection card">
+                        <div class="collection-item"><i class="fa fa-check"></i> {{alignment.filename}}</div>
+                    </div>
+                    {{/if}}
+                </div-->
+                <div class="col s12">
+                    <div class="input-group">
+                        <span class="input-group-addon"><span>Add Annotations</span></span>
+                        {{> inputAutocomplete settings=annotationAutoCompleteSettings class="annotation form-control autoclear"}}
+                    </div>
+                    {{#if annotation}}
+                    <div class="collection card">
+                        <div class="collection-item"><i class="fa fa-check"></i> {{annotation.filename}}</div>
                     </div>
                     {{/if}}
                 </div>
@@ -111,6 +133,14 @@
 
 <template name="preferencesAutocomplete">
     <span>{{name}}</span>
+</template>
+
+<template name="alignmentAutocomplete">
+    <span>{{filename}}</span>
+</template>
+
+<template name="annotationsAutocomplete">
+    <span>{{filename}}</span>
 </template>
 
 <template name="dataAutocomplete">
