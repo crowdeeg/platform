@@ -739,8 +739,8 @@ Template.Data.events({
               uploadInstance.on('end', function (error, fileObj) {
                 if (error) {
                   loading.set(false);
-                  window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
-                  filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
+                  window.alert(`Error uploading ${fileObj.name}: ` + error);
+                  filesUploadFailed += fileObj.name + ": " + error + "\n";
                   uploadsEnded++;
                   if (uploadsEnded === allFiles.length) {
                     loading.set(false);

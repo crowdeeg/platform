@@ -1,5 +1,5 @@
 import { ReactiveVar } from "meteor/reactive-var";
-import { Annotations, Preferences, Assignments, Data, EDFFile, PreferencesFiles} from "/collections";
+import { Annotations, AnnotationFiles, Preferences, Assignments, Data, EDFFile, PreferencesFiles} from "/collections";
 import swal from "sweetalert2";
 import { data } from "jquery";
 
@@ -1105,7 +1105,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                           <thead>\
                             <tr>\
                               <th class="annotation-import-table-header table-header-sort annotation-import-table-header-users">Annotators</th>\
-                              <th class="annotation-import-table-header table-header-sort annotation-import-table-header-modified">Last Modified<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
+                              <th class="annotation-import-table-header table-header-sort annotation-import-table-header-modified">Last Modified<span class="sort-arrow"><i class="fa fa-arrow-up"></i></span></th>\
                               <th class="annotation-import-table-header table-header-sort annotation-import-table-header-count">Annotations</th>\
                               <th class="annotation-import-table-header annotation-import-table-header-select">Select</th>\
                             </tr>\
@@ -1129,6 +1129,39 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <div class="dialog-row row">\
                     <button id="annotation-import-table-deselect-all" class="row-btn btn col s5">Deselect All</button>\
                     <button id="annotation-import-table-import" class="row-btn btn col s4">Import</button>\
+                  </div>\
+                </div>\
+                <div id="annotation-file-import-dialog">\
+                  <div class="dialog-row row">\
+                    <div class="annotation-file-import-table col">\
+                      <div class="row">\
+                        <table class="highlight">\
+                          <thead>\
+                            <tr>\
+                              <th class="annotation-file-import-table-header table-header-sort annotation-file-import-table-header-file">File Name</th>\
+                              <th class="annotation-file-import-table-header table-header-sort annotation-file-import-table-header-modified">Upload Date<span class="sort-arrow"><i class="fa fa-arrow-up"></i></span></th>\
+                              <th class="annotation-file-import-table-header annotation-file-import-table-header-select">Select</th>\
+                            </tr>\
+                          </thead>\
+                          <tbody class="annotation-file-import-table-body">\
+                          </tbody>\
+                        </table>\
+                      </div>\
+                      <div class="row">\
+                        <ul class="annotation-file-import-table-pagination pagination">\
+                        </ul>\
+                      </div>\
+                    </div>\
+                  </div>\
+                  <div class="dialog-row row">\
+                    <div class="input-field col s8">\
+                      <input type="text" id="annotation-file-import-table-search" class="col s12">\
+                      <label for="annotation-file-import-table-search">Search:</label>\
+                    </div>\
+                  </div>\
+                  <div class="dialog-row row">\
+                    <button id="annotation-file-import-table-deselect-all" class="row-btn btn col s5">Deselect All</button>\
+                    <button id="annotation-file-import-table-import" class="row-btn btn col s4">Import</button>\
                   </div>\
                 </div>\
                 <ul id="display-dropdown" class="dropdown-content dropdown-menu">\
@@ -1157,6 +1190,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="annotation-save">Save</a></li>\
                   <li><a id="annotation-download">Download</a></li>\
                   <li><a class="annotation-upload-dialog-open">Upload</a></li>\
+                  <li><a class="annotation-file-import-dialog-open">View Annotation Directory</a></li>\
                 </ul>\
                 <ul id="metadata-preferences-submenu" class="dropdown-content dropdown-select">\
                   <li><a id="preferences-save">Save</a></li>\
@@ -2248,26 +2282,25 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $("#annotation-import-table-search").off("input.annotationimport").on("input.annotationimport", (e) => {
       that._sortAndFilterTable($(".annotation-import-table"),
         null,
-        (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+        (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
         $(e.currentTarget).val(),
         0,
         8);
     });
 
-    $(".annotation-import-table-header-modified").prop("sortDirection", "down");
+    $(".annotation-import-table-header-modified").prop("sortDirection", "up");
     $(".annotation-import-table-header-modified").off("click.annotationimport").on("click.annotationimport", (e) => {
-      let tableBody = $(".annotation-import-table-body");
       if ($(e.currentTarget).prop("sortDirection") === "up") {
         that._sortAndFilterTable($(".annotation-import-table"),
           (a, b) => {return parseInt($(b).find(".annotation-import-modified").attr("lastModified")) - parseInt($(a).find(".annotation-import-modified").attr("lastModified"))},
-          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
           $("#annotation-import-table-search").val(),
           null,
           8);
       } else {
         that._sortAndFilterTable($(".annotation-import-table"),
           (a, b) => {return parseInt($(a).find(".annotation-import-modified").attr("lastModified")) - parseInt($(b).find(".annotation-import-modified").attr("lastModified"))},
-          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
           $("#annotation-import-table-search").val(),
           null,
           8);
@@ -2275,18 +2308,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(".annotation-import-table-header-users").off("click.annotationimport").on("click.annotationimport", (e) => {
-      let tableBody = $(".annotation-import-table-body");
       if ($(e.currentTarget).prop("sortDirection") === "up") {
         that._sortAndFilterTable($(".annotation-import-table"),
           (a, b) => {return ("" + $(b).find(".annotation-import-user").text()).localeCompare($(a).find(".annotation-import-user").text())},
-          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
           $("#annotation-import-table-search").val(),
           null,
           8);
       } else {
         that._sortAndFilterTable($(".annotation-import-table"),
           (a, b) => {return ("" + $(a).find(".annotation-import-user").text()).localeCompare($(b).find(".annotation-import-user").text())},
-          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
           $("#annotation-import-table-search").val(),
           null,
           8);
@@ -2294,18 +2326,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(".annotation-import-table-header-count").off("click.annotationimport").on("click.annotationimport", (e) => {
-      let tableBody = $(".annotation-import-table-body");
       if ($(e.currentTarget).prop("sortDirection") === "up") {
         that._sortAndFilterTable($(".annotation-import-table"),
           (a, b) => {return parseInt($(b).find(".annotation-import-count").attr("numAnnotations")) - parseInt($(a).find(".annotation-import-count").attr("numAnnotations"))},
-          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
           $("#annotation-import-table-search").val(),
           null,
           8);
       } else {
         that._sortAndFilterTable($(".annotation-import-table"),
           (a, b) => {return parseInt($(a).find(".annotation-import-count").attr("numAnnotations")) - parseInt($(b).find(".annotation-import-count").attr("numAnnotations"))},
-          (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
           $("#annotation-import-table-search").val(),
           null,
           8);
@@ -2313,7 +2344,76 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $("#annotation-import-table-deselect-all").off("click.annotationimport").on("click.annotationimport", (e) => {
-      $(that._getFilteredAnnotationImports($(".annotation-import-table-body"), $("#annotation-import-table-search").val())).find(".annotation-import-select-input").prop("checked", false).trigger("change");
+      $(that._getFilteredTableElements($(".annotation-import-table-body"), ".annotation-import-user", $("#annotation-import-table-search").val())).find(".annotation-import-select-input").prop("checked", false).trigger("change");
+    });
+
+    $("#annotation-file-import-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Close",
+        click: () => {
+          $("#annotation-file-import-dialog").dialog("close");
+        }
+      }],
+      title: "Import Annotations From File",
+      width: "auto"
+    });
+
+    $(".annotation-file-import-dialog-open").off("click.annotationfileimport").on("click.annotationfileimport", () => {
+      that._populateAnnotationFileImportTable();
+
+      $("#annotation-file-import-table-import").removeClass("disabled").addClass("disabled");
+
+      $("#annotation-file-import-dialog").dialog("open");
+    });
+
+    $("#annotation-file-import-table-search").off("input.annotationfileimport").on("input.annotationfileimport", (e) => {
+      that._sortAndFilterTable($(".annotation-file-import-table"),
+        null,
+        (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-file-import-file", filter),
+        $(e.currentTarget).val(),
+        0,
+        8);
+    });
+
+    $(".annotation-file-import-table-header-file").off("click.annotationfileimport").on("click.annotationfileimport", (e) => {
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._sortAndFilterTable($(".annotation-file-import-table"),
+          (a, b) => {return ("" + $(b).find(".annotation-file-import-file").text()).localeCompare($(a).find(".annotation-file-import-file").text())},
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-file-import-file", filter),
+          $("#annotation-file-import-table-search").val(),
+          null,
+          8);
+      } else {
+        that._sortAndFilterTable($(".annotation-file-import-table"),
+          (a, b) => {return ("" + $(a).find(".annotation-file-import-file").text()).localeCompare($(b).find(".annotation-file-import-file").text())},
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-file-import-file", filter),
+          $("#annotation-file-import-table-search").val(),
+          null,
+          8);
+      }
+    });
+
+    $(".annotation-file-import-table-header-modified").off("click.annotationfileimport").on("click.annotationfileimport", (e) => {
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._sortAndFilterTable($(".annotation-file-import-table"),
+          (a, b) => {return parseInt($(b).find(".annotation-file-import-modified").attr("lastModified")) - parseInt($(a).find(".annotation-file-import-modified").attr("lastModified"))},
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-file-import-file", filter),
+          $("#annotation-file-import-table-search").val(),
+          null,
+          8);
+      } else {
+        that._sortAndFilterTable($(".annotation-file-import-table"),
+          (a, b) => {return parseInt($(a).find(".annotation-file-import-modified").attr("lastModified")) - parseInt($(b).find(".annotation-file-import-modified").attr("lastModified"))},
+          (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-file-import-file", filter),
+          $("#annotation-file-import-table-search").val(),
+          null,
+          8);
+      }
+    });
+
+    $("#annotation-file-import-table-deselect-all").off("click.annotationfileimport").on("click.annotationfileimport", (e) => {
+      $(that._getFilteredTableElements($(".annotation-file-import-table-body"), ".annotation-file-import-file", $("#annotation-file-import-table-search").val())).find(".annotation-file-import-select-input").prop("checked", false).trigger("change");
     });
   },
 
@@ -11394,6 +11494,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     var that = this;
     // console.log(annotations);
     var obj = that.options.context.preferences.annotatorConfig.channelTimeshift;
+    if (!obj) return;
     console.log(that.options.context.preferences.annotatorConfig.channelTimeshift);
     console.log(that.options.context);
     var channelWithValue = Object.keys(obj).filter(el => obj[el] != 0);
@@ -11604,7 +11705,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               that.vars.currentTimeDiff = 0;
               that._performCrosshairSync(diff);
             }
-            that._redrawAnnotationsFromObjects(data);
+            let numSaved = that._redrawAnnotationsFromObjects(data);
+            window.alert(`Uploaded ${numSaved} annotations`);
           } else if (input.type === "application/json" && !alignmentLoaded) {
             const text = e.target.result;
             console.log(text);
@@ -11805,6 +11907,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   _saveAnnotations: function (annotations) {
     var that = this;
     let newAnnotations = annotations.map((annotation) => {
+      if (!annotation || !annotation.metadata) {
+        return undefined;
+      }
       var annotationId = annotation.metadata.id;
       var type = annotation.metadata.featureType;
       var start = that._getAnnotationXMinFixed(annotation);
@@ -11876,21 +11981,17 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     });
     newAnnotations = newAnnotations.filter(function(element) {
-      return element !== undefined
-    })
+      return element !== undefined;
+    });
+    if (!newAnnotations.length) {
+      return 0;
+    }
     const annotationsId = Annotations.batchInsert(newAnnotations);
     for (let i = 0; i < annotationsId.length; i++) {
       newAnnotations[i].id = annotationsId[i];
     }
     that._updateAnnotationManagerSelect();
     that._updateMarkAssignmentAsCompletedButtonState();
-
-    for (let i = 0; i < newAnnotations.length; i++) {
-      annotations[i].metadata.id = newAnnotations[i].id;
-      if (i === newAnnotations.length - 1) {
-        window.alert(`uploaded ${annotations.length} annotations`);
-      }
-    }
 
     updateCache();
 
@@ -11903,28 +12004,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.annotationsCache = {};
     }
 
+    return newAnnotations.length;
+
   },
 
   _redrawAnnotationsFromObjects: function (objArr) {
     var that = this;
 
-    let set = new Set();
-    that.vars.chart.annotations.allItems.forEach((element) => {
-      set.add(String(element.options.xValue) + element.metadata.annotationLabel);
-    })
-
     const newAnnotations = objArr.map((element) => {
-      if (!set.has(String(element["Time"].toFixed(2)) + element["Annotation"])) {
-        if (element["Type"] != "Stage Change") {
-          return that._redrawEventAnnotationFromObject(element);
-        } else {
-          return that._redrawChangePointAnnotationFromObject(element);
-        }
+      if (element["Type"] != "Stage Change") {
+        return that._redrawEventAnnotationFromObject(element);
+      } else {
+        return that._redrawChangePointAnnotationFromObject(element);
       }
     });
-    that._saveAnnotations(newAnnotations);
+    let numSaved = that._saveAnnotations(newAnnotations);
     that._hideLoading();
     //window.alert("Annotations Uploaded");
+    return numSaved;
 
   },
 
@@ -12149,12 +12246,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     tableBody.empty();
 
     if (!sortFunc) {
-      sortFunc = (a,b) => {return parseInt($(a).find(".annotation-import-modified").attr("lastModified")) - parseInt($(b).find(".annotation-import-modified").attr("lastModified"))};
+      sortFunc = (a,b) => {return parseInt($(b).find(".annotation-import-modified").attr("lastModified")) - parseInt($(a).find(".annotation-import-modified").attr("lastModified"))};
+
+      $(".annotation-import-table").find("thead .sort-arrow").remove();
+      $(".annotation-import-table-header-modified").append(`<span class="sort-arrow"><i class="fa fa-arrow-up"></i></span>`);
+      $(".annotation-import-table-header-modified").prop("sortDirection", "up");
     }
     Meteor.call("get.shared.annotation.data", that.options.context.assignment._id, (err, assignmentData) => {
       if (assignmentData) {
         assignmentData.forEach((data,i)=>{
-          tableBody.append(`<tr class="annotation-import-table-row" assignmentId=${data._id}>
+          tableBody.append(`<tr class="annotation-import-table-row select-table-row" assignmentId=${data._id}>
             <td class="annotation-import-user">${data.users.join(', ')}</td>
             <td class="annotation-import-modified" lastModified="${data.lastModified}">${new Date(data.lastModified).toLocaleString()}</td>
             <td class="annotation-import-count" numAnnotations="${data.numAnnotations}">${data.numAnnotations}</td>
@@ -12163,38 +12264,43 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         });
       }
 
-      $(".annotation-import-table").find("thead .sort-arrow").remove();
-      $(".annotation-import-table-header-modified").append(`<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span>`);
-      $(".annotation-import-table-header-modified").prop("sortDirection", "down");
-
       that._sortAndFilterTable($(".annotation-import-table"),
         sortFunc,
-        (tableBody, filter) => that._getFilteredAnnotationImports(tableBody, filter),
+        (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-import-user", filter),
         $("#annotation-import-table-search").val(),
         0,
         8);
 
       $("#annotation-import-table-import").off("click.annotationimport").on("click.annotationimport", (e) => {
-        let ids = $(".annotation-import-table-row .annotation-import-select input:checked").closest(".annotation-import-table-row").map((i, element) => {
+        let rows = $(".annotation-import-table-row .annotation-import-select input:checked").closest(".annotation-import-table-row")
+        let ids = rows.map((i, element) => {
           return $(element).attr("assignmentId");
         }).get();
-
-        $("#annotation-import-dialog").dialog("close");
+        let numAnnotations = $(rows).find(".annotation-import-count").map((i, element) => {
+          return $(element).attr("numAnnotations");
+        }).get().reduce((a, b) => a + b, 0);
   
-        Promise.all(ids.map((id) => {
-          return new Promise((resolve, reject) => {
-            Meteor.call("import.assignment.annotations", id, that.options.context.assignment._id, () => {
-              resolve();
+        if (numAnnotations === 0) {
+          window.alert("The selected assignments have no annotations to import.");
+        } else {
+          $("#annotation-import-dialog").dialog("close");
+
+          Promise.all(ids.map((id) => {
+            return new Promise((resolve, reject) => {
+              Meteor.call("import.assignment.annotations", id, that.options.context.assignment._id, () => {
+                resolve();
+              });
             });
+          })).then(() => {
+            that.vars.annotationsCache = {};
+            that._refreshAnnotations();
+            that._updateAnnotationManagerSelect();
+            window.alert("Annotations imported successfully.");
           });
-        })).then(() => {
-          that.vars.annotationsCache = {};
-          that._refreshAnnotations();
-        });
+        }
       });
       
       $(".annotation-import-table-row .annotation-import-select input").off("change.annotationimport").on("change.annotationimport", (e) => {
-        console.log("change");
         if ($(".annotation-import-table-row .annotation-import-select input:checked").length === 0) {
           $("#annotation-import-table-import").removeClass("disabled").addClass("disabled");
         } else {
@@ -12204,16 +12310,92 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
   },
 
-  _getFilteredAnnotationImports: function(tableBody, filter) {
+  _populateAnnotationFileImportTable: function(sortFunc) {
+    var that = this;
+    let tableBody = $(".annotation-file-import-table-body");
+    tableBody.empty();
+
+    if (!sortFunc) {
+      sortFunc = (a,b) => {return parseInt($(b).find(".annotation-file-import-modified").attr("lastModified")) - parseInt($(a).find(".annotation-file-import-modified").attr("lastModified"))};
+
+      $(".annotation-file-import-table").find("thead .sort-arrow").remove();
+      $(".annotation-file-import-table-header-modified").append(`<span class="sort-arrow"><i class="fa fa-arrow-up"></i></span>`);
+      $(".annotation-file-import-table-header-modified").prop("sortDirection", "up");
+    }
+
+    let annotationFiles = AnnotationFiles.find({}, {
+      fields: {
+        _id: 1,
+        filename: 1,
+        lastModified: 1
+      }
+    }).fetch();
+    console.log(annotationFiles);
+    if (annotationFiles.length) {
+      annotationFiles.forEach((data,i)=>{
+        tableBody.append(`<tr class="annotation-file-import-table-row select-table-row" assignmentId=${data._id}>
+          <td class="annotation-file-import-file">${data.filename}</td>
+          <td class="annotation-file-import-modified" lastModified="${new Date(data.lastModified).getTime()}">${new Date(data.lastModified).toLocaleString()}</td>
+          <td class="annotation-file-import-select"><p><input type="checkbox" id="annotation-file-import-select-${i}" class="annotation-file-import-select-input" /><label for="annotation-file-import-select-${i}"></label></p></td>
+        </tr>`);
+      });
+    }
+
+    that._sortAndFilterTable($(".annotation-file-import-table"),
+        sortFunc,
+        (tableBody, filter) => that._getFilteredTableElements(tableBody, ".annotation-file-import-file", filter),
+        $("#annotation-file-import-table-search").val(),
+        0,
+        8);
+
+    $("#annotation-file-import-table-import").off("click.annotationfileimport").on("click.annotationfileimport", (e) => {
+      let rows = $(".annotation-file-import-table-row .annotation-file-import-select input:checked").closest(".annotation-file-import-table-row")
+      let ids = rows.map((i, element) => {
+        return $(element).attr("assignmentId");
+      }).get();
+      let downloadFiles = AnnotationFiles.find({ _id: { $in: ids } }).fetch();
+      let numAnnotations = 0;
+
+      downloadFiles.forEach((file, i) => {
+        let fileInfo = file.info.replace(/""+/g, '"');
+        fileInfo = [fileInfo + "\n"];
+
+        fileInfo.push(["Index", "Time", "Type", "Annotation", "Channels", "Duration", "User", "Comment"] + '\n');
+
+        Object.values(file.annotations).forEach(arr=>{
+          fileInfo.push([arr.index, arr.time, arr.type, arr.annotation, arr.channels, arr.duration, arr.user, arr.comment] + '\n');
+        });
+
+        const fileBlob = new Blob(fileInfo, { type: "text/csv" });
+        fileBlob.text().then((text) => {
+          const data = that._CSVToArray(text);
+          numAnnotations += that._redrawAnnotationsFromObjects(data);
+          if (i === downloadFiles.length - 1) {
+            window.alert(`Uploaded ${numAnnotations} annotations`);
+          }
+        });
+      });
+    });
+
+    $(".annotation-file-import-table-row .annotation-file-import-select input").off("change.annotationimport").on("change.annotationimport", (e) => {
+      if ($(".annotation-file-import-table-row .annotation-file-import-select input:checked").length === 0) {
+        $("#annotation-file-import-table-import").removeClass("disabled").addClass("disabled");
+      } else {
+        $("#annotation-file-import-table-import").removeClass("disabled");
+      }
+    });
+  },
+
+  _getFilteredTableElements: function(tableBody, selector, filter) {
     if (!filter) {
       filter = "";
     }
 
     filter = filter.toUpperCase();
     return $(tableBody).find("tr").filter((i, element) => {
-      let userElement = $(element).find(".annotation-import-user");
-      let userText = $(userElement).text();
-      if (userText.toUpperCase().indexOf(filter) > -1) {
+      let elements = $(element).find(selector);
+      let text = $(elements).text();
+      if (text.toUpperCase().indexOf(filter) > -1) {
         return true;
       } else {
         return false;
@@ -12460,7 +12642,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     annotations.sort(sortFunc).forEach((annotation,i)=>{
       if(annotation.metadata.annotationLabel != null) {
-        tableBody.append(`<tr class="annotation-manager-table-row" annotationId=${annotation.id}>
+        tableBody.append(`<tr class="annotation-manager-table-row select-table-row" annotationId=${annotation.id}>
           <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
           <td class="annotation-duration">${that._getDisplayTime(annotation.position.end - annotation.position.start)}</td>
