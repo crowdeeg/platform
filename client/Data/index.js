@@ -368,9 +368,17 @@ Template.Data.events({
             
 
             //if(!file1 || !file2 || !assignee){
-            if(!file1 || !assignee){
+            if(!file1){
               var row = j+1;
-              window.alert("There is missing information starting from row " + row + ". Please fill that information in and try again.");
+              window.alert("File 1 is not defined in row " + row + ". Please fill that information in and try again.");
+              loading.set(false);
+
+              $('input[type="file"]').val(null);
+              break;
+            } 
+            if(!assignee){
+              var row = j+1;
+              window.alert("Assignee is not defined in row " + row + ". Please fill that information in and try again.");
               loading.set(false);
 
               $('input[type="file"]').val(null);
@@ -388,8 +396,39 @@ Template.Data.events({
             try{
               var file1Info = Data.findOne({name: file1});
               var file1Id = file1Info._id;
+            } catch(err){
+              var row = j+1;
+              
+              window.alert("File 1 in row " + row + " cannot be found in the database. Please ensure the file 1 written appears in the Data Table and is written correctly in the CSV file.");
+              loading.set(false);
+              $('input[type="file"]').val(null);
+              break;
+            }
+            try{
               var file2Id = file2 ? Data.findOne({name: file2})._id : null;
+            } catch(err){
+              var row = j+1;
+              
+              window.alert("File 2 in row " + row + " cannot be found in the database. Please ensure the file 2 written appears in the Data Table and is written correctly in the CSV file.");
+              loading.set(false);
+              $('input[type="file"]').val(null);
+              break;
+            }
+            try{
               var assigneeId = Meteor.users.findOne({username: assignee})._id;
+            } catch(err){
+              var row = j+1;
+              
+              window.alert("Assignee in row " + row + " cannot be found in the database. Please ensure the assignee username is written correctly.");
+              loading.set(false);
+              $('input[type="file"]').val(null);
+              break;
+            }
+            try{
+              // var file1Info = Data.findOne({name: file1});
+              // var file1Id = file1Info._id;
+              // var file2Id = file2 ? Data.findOne({name: file2})._id : null;
+              // var assigneeId = Meteor.users.findOne({username: assignee})._id;
               var taskId;
               if(!task){
                 taskId = Tasks.findOne({name: "edf annotation from template: " + file1Info.name})._id;
@@ -398,11 +437,13 @@ Template.Data.events({
               }
             } catch(err){
               var row = j+1;
-              window.alert("Some of the information in row " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+              
+              window.alert("The task information in " + row + " cannot be found. Please ensure that the csv file does not have any errors");
               loading.set(false);
               $('input[type="file"]').val(null);
               break;
             }
+
             var dataFiles = file2Id != null ? [file1Id, file2Id] : [file1Id];
             var obj = {
               users: [assigneeId],
