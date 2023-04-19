@@ -214,6 +214,12 @@ dialog .input-field input {
   justify-content: center;
 }
 
+.select-table-row label {
+  position: relative;
+  left: 30%;
+  top: 8px;
+}
+
 .table-header-sort {
   cursor: pointer;
   -webkit-user-select: none;
