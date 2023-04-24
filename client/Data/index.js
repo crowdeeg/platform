@@ -317,7 +317,6 @@ Template.Data.events({
     loading.set(false);
   },
   'click .btn.batchAlignment': function(){
-    console.log("hello");
     const files = document.getElementById("CSVs");
     let allFiles = files.files;
     console.log(allFiles);
@@ -393,6 +392,7 @@ Template.Data.events({
               break;
             }
 
+            //try to find file1
             try{
               var file1Info = Data.findOne({name: file1});
               var file1Id = file1Info._id;
@@ -404,8 +404,11 @@ Template.Data.events({
               $('input[type="file"]').val(null);
               break;
             }
+
+            // try to find file2 if given
             try{
-              var file2Id = file2 ? Data.findOne({name: file2})._id : null;
+              var file2Info = file2 ? Data.findOne({name: file2}) : null;
+              var file2Id = file2 ? file2Info._id : null;
             } catch(err){
               var row = j+1;
               
@@ -414,6 +417,8 @@ Template.Data.events({
               $('input[type="file"]').val(null);
               break;
             }
+
+            //try to find the assignee
             try{
               var assigneeId = Meteor.users.findOne({username: assignee})._id;
             } catch(err){
@@ -424,6 +429,8 @@ Template.Data.events({
               $('input[type="file"]').val(null);
               break;
             }
+
+            //try to get the task for file1 (if not then file2)
             try{
               // var file1Info = Data.findOne({name: file1});
               // var file1Id = file1Info._id;
@@ -431,14 +438,19 @@ Template.Data.events({
               // var assigneeId = Meteor.users.findOne({username: assignee})._id;
               var taskId;
               if(!task){
-                taskId = Tasks.findOne({name: "edf annotation from template: " + file1Info.name})._id;
+                checkTask1 = Tasks.findOne({name: "edf annotation from template: " + file1Info.name});
+                if(checkTask1){
+                  taskId = checkTask1._id;
+                } else {
+                  //if the task for file 1 doesnt exist then check file 2, if that doesnt exist then raise an error
+                  taskId = Tasks.findOne({name: "edf annotation from template: " + file2Info.name})._id;
+                }
               } else {
                 var taskId = Tasks.findOne({name: task})._id;
               }
             } catch(err){
               var row = j+1;
-              
-              window.alert("The task information in " + row + " cannot be found. Please ensure that the csv file does not have any errors");
+              window.alert("The task information in " + row + " cannot be found. Please reupload file1 and file2 to the data tab so that we can generate the task object");
               loading.set(false);
               $('input[type="file"]').val(null);
               break;
@@ -453,6 +465,8 @@ Template.Data.events({
             }
             //console.log(dataFiles);
 
+            // if the preference file exists get all the required info and check if it matches the given files
+            // (to match, the number of channels MUST be the same)
             if(preference){
               var preferenceFile= PreferencesFiles.findOne({name: preference});
               if(preferenceFile){
@@ -474,6 +488,7 @@ Template.Data.events({
               }
             }
 
+            //If the assignment does not exist then insert it, otherwise do nothing
             if(!Assignments.findOne(obj)){
               var assignmentId = Assignments.insert(obj, function(err, docInserted){
                 if(err){
@@ -487,10 +502,13 @@ Template.Data.events({
               // console.log(assignmentId);
             
               // console.log(preference);
+              // If the preference file is given then insert that into Preferebces
               if(preference){
                 var preferenceFile= PreferencesFiles.findOne({name: preference});
                 if(preferenceFile){
                   var preferenceAnnotatorConfig = preferenceFile.annotatorConfig;
+                  // To include alignment info it needs to be in the preferences, so if we are given an alignment
+                  // include that in the preferences' annotatorConfig
                   if(alignment){
                     if(!isNaN(alignment)){
                       preferenceAnnotatorConfig.channelTimeshift = Number(alignment);
@@ -524,7 +542,8 @@ Template.Data.events({
                 }
                 
               }
-              // if there is no preference file but there is an alignment file
+              // if there is no preference file but there is an alignment file, we need to create a standard
+              // annotatorConfig (Preferences) to include the alignment
               if(!preference && alignment){
                 console.log(alignment);
                 var sampleAnnotatorConfig = {
@@ -554,9 +573,10 @@ Template.Data.events({
                 })
               }
 
-              console.log(1);
+              // console.log(1);
+              // If we are given an annotation file then we create a new Annotation object for each annotation
               if(annotations){
-                console.log(2)
+                // console.log(2);
                 var annotationFile = AnnotationFiles.findOne({filename: annotations});
                 console.log(annotationFile);
                 if(annotationFile){
@@ -576,11 +596,13 @@ Template.Data.events({
                           channels.push(k);
                         }
                       } else {
+                        //TODO: We do not add annotations other than box for now, given that the others are not common.
                         console.log(info);
                         
                         window.alert("Skipping Annotation, as it does not match the file (Not for all channels)")
                       }
                       // console.log(channels);
+                      // Get all the required information ready
                       var position = {
                         channels: channels,
                         start: Number(info.time),
@@ -617,6 +639,7 @@ Template.Data.events({
             
 
           }
+          // We cant have loading after the reader.readAsText(..) as that statement is executed before the for loop starts
           console.log("done");
           loading.set(false);
           //alert("Assignments Created");
