@@ -180,7 +180,7 @@
 .hotkey-tooltip {
   margin-left: auto;
   font-size: medium;
-  font-weight: bold;
+  color: gray;
 }
 
 dialog .input-field input {

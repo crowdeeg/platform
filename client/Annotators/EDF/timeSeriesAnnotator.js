@@ -4540,8 +4540,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         let select = $("#annotation-type-select");
         select.val("cpointall").change();
         select.material_select();
-      } else if (keyCode == 72) { // H
-        that._toggleClassificationSummary();
       } else if (keyCode === 86) { // V
         let select = $("#annotation-type-select");
         select.val("cpoint").change();
