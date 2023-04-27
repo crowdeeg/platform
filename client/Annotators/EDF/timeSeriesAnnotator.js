@@ -4544,6 +4544,10 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         let select = $("#annotation-type-select");
         select.val("cpoint").change();
         select.material_select();
+      } else if (keyCode === 88) { // X
+        let select = $("#annotation-type-select");
+        select.val("none").change();
+        select.material_select();
       } else if (keyCode == 8 && that.vars.selectedAnnotation) { // Backspace
         that._nukeAnnotation(that.vars.selectedAnnotation)
       } else if (keyCode == 66 && that.options.showBookmarkCurrentPageButton) { // B
