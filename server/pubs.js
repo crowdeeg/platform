@@ -33,6 +33,12 @@ Meteor.publish('allAnnotationsGlobalPerDataObject', function() {
     ]
 });
 
+Meteor.publish('annotationFiles', function() {
+    return [
+        AnnotationFiles.find({})
+    ]
+});
+
 Meteor.publish('roles', function () {
     return Meteor.roles.find({});
 });

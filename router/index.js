@@ -39,6 +39,7 @@ Router.route('/assignment/:_id', {
         const assignmentId = this.params._id;
         return [
             Meteor.subscribe('roles'),
+            Meteor.subscribe('annotationFiles'),
             Meteor.subscribe('assignment', assignmentId),
         ];
     },
