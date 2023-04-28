@@ -168,8 +168,19 @@
   min-width: 80;
 }
 
+.dropdown-content > li > a {
+  display: flex;
+  gap: 10px;
+}
+
 .dropdown-select-check {
   float: right;
+}
+
+.hotkey-tooltip {
+  margin-left: auto;
+  font-size: medium;
+  color: gray;
 }
 
 dialog .input-field input {

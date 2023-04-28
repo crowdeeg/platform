@@ -967,23 +967,23 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 </div>\
                 <div id="delete-assignment-dialog">Are you sure you want to delete this assignment?</div>\
                 <ul id="channel-dropdown" class="dropdown-content dropdown-menu">\
-                  <li><a class="y-mask-btn">Mask Channel</a></li>\
-                  <li><a class="y-unmask-btn">Restore Masked Channels</a></li>\
-                  <li><a class="limit-y-dialog-open">Limit Y-Axis</a></li>\
-                  <li><a class="restore-btn">Restore Y-Axis Limits</a></li>\
-                  <li><a class="show-max-min">Show Max/Min</a></la>\
-                  <li><a class="hide-max-min">Hide Max/Min</a></la>\
+                  <li><a class="y-mask-btn">Mask Channel<div class="hotkey-tooltip">Ctrl + M</div></a></li>\
+                  <li><a class="y-unmask-btn">Restore Masked Channels<div class="hotkey-tooltip">Ctrl + Shift + M</div></a></li>\
+                  <li><a class="limit-y-dialog-open">Limit Y-Axis<div class="hotkey-tooltip">Ctrl + L</div></a></li>\
+                  <li><a class="restore-btn">Restore Y-Axis Limits<div class="hotkey-tooltip">Ctrl + Shift + L</div></a></li>\
+                  <li><a class="show-max-min">Show Max/Min<div class="hotkey-tooltip">Ctrl + ;</div></a></la>\
+                  <li><a class="hide-max-min">Hide Max/Min<div class="hotkey-tooltip">Ctrl + Shift + ;</div></a></la>\
                   <li class="divider"></li>\
                   <li><a id="alignment-select" class="dropdown-button dropdown-submenu" data-activates="alignment-submenu">Align</a></li>\
                   <li class="divider"></li>\
-                  <li><a class="scale-to-screen-btn">Scale To Screen</a></li>\
-                  <li><a class="scale-all-to-screen-btn">Scale All to Screen</a></li>\
-                  <li><a class="channel-dialog-open">Channel Menu</a></li>\
+                  <li><a class="scale-to-screen-btn">Scale To Screen<div class="hotkey-tooltip">Ctrl + Backspace</div></a></li>\
+                  <li><a class="scale-all-to-screen-btn">Scale All to Screen<div class="hotkey-tooltip">Ctrl + Shift + Backspace</div></a></li>\
+                  <li><a class="channel-dialog-open">Channel Menu<div class="hotkey-tooltip">Ctrl + C</div></a></li>\
                 </ul>\
                 <ul id="alignment-submenu" class="dropdown-content">\
-                  <li><a class="align-option" option=0>Top</a></li>\
-                  <li><a class="align-option" option=1>Middle</a></li>\
-                  <li><a class="align-option" option=2>Bottom</a></li>\
+                  <li><a class="align-option" option=0>Top<div class="hotkey-tooltip">Ctrl + ,</div></a></li>\
+                  <li><a class="align-option" option=1>Middle<div class="hotkey-tooltip">Ctrl + .</div></a></li>\
+                  <li><a class="align-option" option=2>Bottom<div class="hotkey-tooltip">Ctrl + /</div></a></li>\
                 </ul>\
                 <div id="limit-y-dialog">\
                   <div class="row">\
@@ -1046,9 +1046,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                 <ul id="annotation-dropdown" class="dropdown-content dropdown-menu">\
                   <li><a id="annotation-filter" class="dropdown-button dropdown-submenu" data-activates="annotation-filter-submenu">Filter</a></li>\
                   <li><a id="annotation-display" class="dropdown-button dropdown-submenu" data-activates="annotation-display-submenu">User</a></li>\
-                  <li><a class="annotation-manager-dialog-open">Annotation Manager</a></li>\
+                  <li><a class="annotation-manager-dialog-open">Annotation Manager<div class="hotkey-tooltip">Ctrl + Space</div></a></li>\
                   <li class="divider"></li>\
-                  <li><a class="annotation-import-dialog-open">Import Annotations</a></li>\
+                  <li><a class="annotation-import-dialog-open">Import Annotations<div class="hotkey-tooltip">Ctrl + I</div></a></li>\
                 </ul>\
                 <ul id="annotation-filter-submenu" class="dropdown-content dropdown-select">\
                   <li><a class="annotation-filter-option dropdown-select-option" option="all">All<span class="dropdown-select-check"><i class="fa fa-check"></i></span></a></li>\
@@ -1190,13 +1190,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                   <li><a id="annotation-save">Save</a></li>\
                   <li><a id="annotation-download">Download</a></li>\
                   <li><a class="annotation-upload-dialog-open">Upload</a></li>\
-                  <li><a class="annotation-file-import-dialog-open">View Annotation Directory</a></li>\
+                  <li><a class="annotation-file-import-dialog-open">View Annotation Directory <div class="hotkey-tooltip">Ctrl + O</div></a></li>\
                 </ul>\
-                <ul id="metadata-preferences-submenu" class="dropdown-content dropdown-select">\
+                <ul id="metadata-preferences-submenu" class="dropdown-content">\
                   <li><a id="preferences-save">Save</a></li>\
                   <li><a id="preferences-download">Download</a></li>\
                   <li><a class="preferences-upload-dialog-open">Upload</a></li>\
-                  <li><a class="preferences-manager-dialog-open">View Preferences Directory</a></li>\
+                  <li><a class="preferences-manager-dialog-open">View Preferences Directory <div class="hotkey-tooltip">Ctrl + P</div></a></li>\
                 </ul>\
                 <div id="preferences-manager-dialog">\
                   <div class="preferences-manager-row row">\
@@ -2179,6 +2179,11 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           $("#annotation-manager-dialog").dialog("close");
         }
       }],
+      open: (event, ui) => {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly());
+
+        $("#annotation-manager-table-delete").removeClass("disabled").addClass("disabled");
+      },
       title: "Annotation Manager",
       width: "auto"
     });
@@ -2191,15 +2196,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           $("#preferences-manager-dialog").dialog("close");
         }
       }],
+      open: (event, ui) => {
+        that._populatePreferencesManagerTable();
+
+        $("#preferences-manager-table-delete").removeClass("disabled").addClass("disabled");
+      },
       title: "Preferences Directory",
       width: "auto"
     });
 
     $(".preferences-manager-dialog-open").off("click.preferencesmanager").on("click.preferencesmanager", () => {
-      that._populatePreferencesManagerTable();
-
-      $("#preferences-manager-table-delete").removeClass("disabled").addClass("disabled");
-
       $("#preferences-manager-dialog").dialog("open");
     });
 
@@ -2217,10 +2223,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     });
 
     $(".annotation-manager-dialog-open").off("click.annotationmanager").on("click.annotationmanager", () => {
-      that._populateAnnotationManagerTable(that._getAnnotationsOnly());
-
-      $("#annotation-manager-table-delete").removeClass("disabled").addClass("disabled");
-
       $("#annotation-manager-dialog").dialog("open");
     });
 
@@ -2267,15 +2269,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           $("#annotation-import-dialog").dialog("close");
         }
       }],
+      open: (event, ui) => {
+        that._populateAnnotationImportTable();
+
+        $("#annotation-import-table-import").removeClass("disabled").addClass("disabled");
+      },
       title: "Import Annotations",
       width: "auto"
     });
 
     $(".annotation-import-dialog-open").off("click.annotationimport").on("click.annotationimport", () => {
-      that._populateAnnotationImportTable();
-
-      $("#annotation-import-table-import").removeClass("disabled").addClass("disabled");
-
       $("#annotation-import-dialog").dialog("open");
     });
 
@@ -2355,15 +2358,16 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           $("#annotation-file-import-dialog").dialog("close");
         }
       }],
+      open: (event, ui) => {
+        that._populateAnnotationFileImportTable();
+
+        $("#annotation-file-import-table-import").removeClass("disabled").addClass("disabled");
+      },
       title: "Import Annotations From File",
       width: "auto"
     });
 
     $(".annotation-file-import-dialog-open").off("click.annotationfileimport").on("click.annotationfileimport", () => {
-      that._populateAnnotationFileImportTable();
-
-      $("#annotation-file-import-table-import").removeClass("disabled").addClass("disabled");
-
       $("#annotation-file-import-dialog").dialog("open");
     });
 
@@ -2746,7 +2750,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     selection.forEach((typeAnnotation, t) => {
       var typeAnnotationSettings = typeAnnotation.options;
       var selectContainer = $(
-        '<div class="select_panel"><select></select></div>'
+        '<div class="select_panel"><select id="annotation-type-select"></select></div>'
       ).appendTo(that.element.find(".annotation_type_select_panel"));
 
       var select = selectContainer.find("select");
@@ -4376,131 +4380,286 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
   // handles keypress events
   _keyDownCallback: function (e) {
     var that = this;
-    if ($(e.target).is("input, textarea, select")) {
-      return;
-    }
     if (swal.isVisible()) {
       return;
     }
     var keyCode = e.which;
-    var metaKeyPressed = e.metaKey;
-    if (keyCode == 82 && metaKeyPressed) {
-      // Suppress any action on CTRL+R / CMD+R page reload
-      return;
-    }
-    if (keyCode == 72) {
-      that._toggleClassificationSummary();
-    } else if (keyCode == 8 && that.vars.selectedAnnotation) {
-      that._nukeAnnotation(that.vars.selectedAnnotation)
-    } else if (keyCode == 66 && that.options.showBookmarkCurrentPageButton) {
-      that._toggleBookmarkCurrentPage();
-      return;
-    } else if (
-      (keyCode == 37 /* || keyCode == 65 */ || keyCode == 34) &&
-      that.options.showBackwardButton
-    ) {
-      // left arrow, a, page down
-      // backward
-      e.preventDefault();
-      that._shiftChart(-1 / 5);
-      return;
-    } else if (
-      (keyCode == 39 /* || keyCode == 68 */ || keyCode == 33) &&
-      that.options.showForwardButton
-    ) {
-      // right arrow, d, page up
-      // forward
-      e.preventDefault();
-      that._shiftChart(1 / 5);
-      return;
-    } else if (keyCode == 38) {
-      // up arrow
-      // fast foward
-      e.preventDefault();
-      // that._updateChannelGain("step_increase");
-      that._shiftChart(-1);
-      return;
-    } else if (keyCode == 40) {
-      // down arrow
-      // fast backward
-      e.preventDefault();
-      // that._updateChannelGain("step_decrease");
-      that._shiftChart(1);
-      return;
-    } else if (keyCode == 65) {
-      that._jumpToClosestDisagreementWindow(-1);
-    } else if (keyCode == 68) {
-      that._jumpToClosestDisagreementWindow(1);
-    } else if (keyCode >= 48 && keyCode <= 57) {
-      e.preventDefault();
-      var annotation = that.vars.selectedAnnotation;
-
-      if (annotation) {
-        1
-        featureList = that._getAnnotationLabelFromdisplayType(annotation);
-        if (keyCode != 48) {
-          feature = featureList[keyCode - 48];
-        } else {
-          feature = featureList[featureList.length - 2];
-        }
-        if (!feature) {
-          return;
-        }
-        annotation.metadata.annotationLabel = feature;
-        if(annotation.metadata.displayType === "Box"){
-          that.vars.previousAnnotationLabelBox = feature;
-        }
-        that._saveFeatureAnnotation(annotation);
-        that._updateAnnotationManagerSelect();
-      }
-
-      // var featureClassButton = $(that.element)
-      //   .find(".feature")
-      //   .eq(keyCode - 49);
-      // if (featureClassButton) {
-      //   that._selectFeatureClass(featureClassButton);
-      // }
-      return;
-      // separate case for the numpad keys, because javascript is a stupid language
-    } else if (keyCode >= 97 && keyCode <= 105) {
-      e.preventDefault();
-      var featureClassButton = $(that.element)
-        .find(".feature")
-        .eq(keyCode - 97);
-      if (featureClassButton) {
-        that._selectFeatureClass(featureClassButton);
-      }
-      return;
-    } else if (that.options.showSleepStageButtons) {
-      var sleepStageShortCutPressed = false;
-      $(that.element)
-        .find(".sleep_stage_panel .shortcut-key")
-        .each(function () {
-          var character = $(this).text();
-          var characterKeyCodeLowerCase = character.toLowerCase().charCodeAt(0);
-          var characterKeyCodeAlternative = character
-            .toUpperCase()
-            .charCodeAt(0);
-          if (
-            characterKeyCodeLowerCase >= 48 &&
-            characterKeyCodeLowerCase <= 57
-          ) {
-            characterKeyCodeAlternative = characterKeyCodeLowerCase + 48;
+    var modifierKeyPressed = e.ctrlKey || e.metaKey;
+    var shiftKeyPressed = e.shiftKey;
+    if (modifierKeyPressed) {
+      // Ctrl or Meta key pressed.
+      if (shiftKeyPressed) {
+        // Shift key pressed.
+        if (keyCode === 8) { // Ctrl + Shift + Backspace
+          e.preventDefault();
+          that._scaleAllToScreen();
+          that.vars.chart.redraw(); //redraws the chart with the scaled data
+        } else if (keyCode === 76) { // Ctrl + Shift + L
+          if(that._isChannelSelected()){
+            let i = that.vars.selectedChannelIndex;
+    
+            that._restoreYAxisByIndex(i);
           }
-          if (
-            keyCode == characterKeyCodeLowerCase ||
-            keyCode == characterKeyCodeAlternative
-          ) {
+        } else if (keyCode === 77) { // Ctrl + Shift + M
+          e.preventDefault();
+          that._unmaskAllChannels();
+        } else if (keyCode === 186) { // Ctrl + Shift + ;
+          e.preventDefault();
+          if(that._isChannelSelected()){
+            let i = that.vars.selectedChannelIndex;
+            that._removeMaxMinLines(i);
+          }
+        }
+      } else {
+        // Shift Key Not Pressed
+        if (keyCode === 8) { // Ctrl + Backspace
+          e.preventDefault();
+          if (that._isChannelSelected()) {
+            that._scaleToScreen(that.vars.selectedChannelIndex);
+            that.vars.chart.redraw(); //redraws the chart with the scaled data
+          }
+        } else if (keyCode === 32) { // Ctrl + Space
+          let dialog = $("#annotation-manager-dialog");
+          if (dialog.dialog("isOpen")) {
+            dialog.dialog("close");
+          } else {
+            dialog.dialog("open");
+          }
+        } else if (keyCode === 38) { // Ctrl + Up Arrow
+          that._moveUp(that.vars.selectedChannelIndex);
+          that.vars.chart.redraw(); //redraws the chart with the moved channel
+        } else if (keyCode === 40) { // Ctrl + Down Arrow
+          that._moveDown(that.vars.selectedChannelIndex);
+          that.vars.chart.redraw(); //redraws the chart with the moved channel
+        } else if (keyCode >= 48 && keyCode <= 57) { // Ctrl + 0-9
+          e.preventDefault();
+          let filteredChannels = that.vars.currentWindowData.channels.map((channel, index) => {
+            return index;
+          }).filter((index) => !that.options.maskedChannels.includes(index));
+          let keyNum = keyCode === 48 ? 9 : keyCode - 49;
+          if (keyNum < filteredChannels.length) {
+            that._selectChannel(filteredChannels[keyNum]);
+          }
+        } else if (keyCode === 67) { // Ctrl + C
+          let dialog = $("#channel-dialog");
+          if (dialog.dialog("isOpen")) {
+            dialog.dialog("close");
+          } else {
+            dialog.dialog("open");
+          }
+        } else if (keyCode === 73) { // Ctrl + I
+          e.preventDefault();
+          let dialog = $("#annotation-import-dialog");
+          if (dialog.dialog("isOpen")) {
+            dialog.dialog("close");
+          } else {
+            dialog.dialog("open");
+          }
+        } else if (keyCode === 75) { // Ctrl + K
+          e.preventDefault();
+          if (that._isChannelSelected()) {
+            that._reversePolarity(that.vars.selectedChannelIndex);
+            that.vars.chart.redraw(); //redraws the chart with the scaled data
+          }
+        } else if (keyCode === 76) { // Ctrl + L
+          e.preventDefault();
+          let dialog = $("#limit-y-dialog");
+          if (dialog.dialog("isOpen")) {
+            dialog.dialog("close");
+          } else {
+            dialog.dialog("open");
+          }
+        } else if (keyCode === 77) { // Ctrl + M
+          if(that._isChannelSelected()){
             e.preventDefault();
-            sleepStageShortCutPressed = true;
-            var button = $(this).parents(".sleep_stage").first();
-            button.click();
+            that._maskChannelSelected();
           }
-        });
-      if (sleepStageShortCutPressed) {
+        } else if (keyCode === 79) { // Ctrl + O
+          e.preventDefault();
+          let dialog = $("#annotation-file-import-dialog");
+          if (dialog.dialog("isOpen")) {
+            dialog.dialog("close");
+          } else {
+            dialog.dialog("open");
+          }
+        } else if (keyCode === 80) { // Ctrl + P
+          e.preventDefault();
+          let dialog = $("#preferences-manager-dialog");
+          if (dialog.dialog("isOpen")) {
+            dialog.dialog("close");
+          } else {
+            dialog.dialog("open");
+          }
+        } else if (keyCode === 186) { // Ctrl + Shift + ;
+          e.preventDefault();
+          if(that._isChannelSelected()){
+            let i = that.vars.selectedChannelIndex;
+            that._addMaxMinLines(i);
+          }
+        } else if (keyCode === 187) { // Ctrl + Plus
+          if(that._isChannelSelected()){
+            e.preventDefault();
+            that._increaseAmplitude(that.vars.selectedChannelIndex);
+            that.vars.chart.redraw();
+          }
+        } else if (keyCode === 189) { // Ctrl + Minus
+          if(that._isChannelSelected()){
+            e.preventDefault();
+            that._decreaseAmplitude(that.vars.selectedChannelIndex);
+            that.vars.chart.redraw();
+          }
+        } else if (keyCode === 188) { // Ctrl + Comma
+          if(that._isChannelSelected()){
+            let index = that.vars.selectedChannelIndex;
+            that._alignChannel(index, 0);
+          }
+        } else if (keyCode === 190) { // Ctrl + Period
+          if(that._isChannelSelected()){
+            let index = that.vars.selectedChannelIndex;
+            that._alignChannel(index, 2);
+          }
+        } else if (keyCode === 191) { // Ctrl + Forward Slash
+          if(that._isChannelSelected()){
+            e.preventDefault();
+            let index = that.vars.selectedChannelIndex;
+            that._alignChannel(index, 1);
+          }
+        }
+      }
+    } else {
+      // Ctrl or Meta Key not Pressed.
+      // We only supress hotkeys in text inputs when the Ctrl key is not pressed, since Ctrl signals user intention.
+      if ($(e.target).is("input, textarea, select")) {
         return;
       }
-      // make it possible to choose feature classificaiton using number keys
+      if (keyCode === 66) { // B
+        let select = $("#annotation-type-select");
+        select.val("box").change();
+        select.material_select();
+      } else if (keyCode === 67) { // C
+        let select = $("#annotation-type-select");
+        select.val("cpointall").change();
+        select.material_select();
+      } else if (keyCode === 86) { // V
+        let select = $("#annotation-type-select");
+        select.val("cpoint").change();
+        select.material_select();
+      } else if (keyCode === 88) { // X
+        let select = $("#annotation-type-select");
+        select.val("none").change();
+        select.material_select();
+      } else if (keyCode == 8 && that.vars.selectedAnnotation) { // Backspace
+        that._nukeAnnotation(that.vars.selectedAnnotation)
+      } else if (keyCode == 66 && that.options.showBookmarkCurrentPageButton) { // B
+        that._toggleBookmarkCurrentPage();
+        return;
+      } else if (
+        (keyCode == 37 || keyCode == 34) &&
+        that.options.showBackwardButton
+      ) {
+        // left arrow, page down
+        // backward
+        e.preventDefault();
+        that._shiftChart(-1 / 5);
+        return;
+      } else if (
+        (keyCode == 39 || keyCode == 33) &&
+        that.options.showForwardButton
+      ) {
+        // right arrow, page up
+        // forward
+        e.preventDefault();
+        that._shiftChart(1 / 5);
+        return;
+      } else if (keyCode == 38) {
+        // up arrow
+        // fast foward
+        e.preventDefault();
+        // that._updateChannelGain("step_increase");
+        that._shiftChart(-1);
+        return;
+      } else if (keyCode == 40) {
+        // down arrow
+        // fast backward
+        e.preventDefault();
+        // that._updateChannelGain("step_decrease");
+        that._shiftChart(1);
+        return;
+      } else if (keyCode == 65) { // A
+        that._jumpToClosestDisagreementWindow(-1);
+      } else if (keyCode == 68) { // D
+        that._jumpToClosestDisagreementWindow(1);
+      } else if (keyCode >= 48 && keyCode <= 57) { // 0-9
+        e.preventDefault();
+        var annotation = that.vars.selectedAnnotation;
+  
+        if (annotation) {
+          1
+          featureList = that._getAnnotationLabelFromdisplayType(annotation);
+          if (keyCode != 48) {
+            feature = featureList[keyCode - 48];
+          } else {
+            feature = featureList[featureList.length - 2];
+          }
+          if (!feature) {
+            return;
+          }
+          annotation.metadata.annotationLabel = feature;
+          if(annotation.metadata.displayType === "Box"){
+            that.vars.previousAnnotationLabelBox = feature;
+          }
+          that._saveFeatureAnnotation(annotation);
+          that._updateAnnotationManagerSelect();
+        }
+  
+        // var featureClassButton = $(that.element)
+        //   .find(".feature")
+        //   .eq(keyCode - 49);
+        // if (featureClassButton) {
+        //   that._selectFeatureClass(featureClassButton);
+        // }
+        return;
+        // separate case for the numpad keys, because javascript is a stupid language
+      } else if (keyCode >= 97 && keyCode <= 105) { // Numpad 0-9
+        e.preventDefault();
+        var featureClassButton = $(that.element)
+          .find(".feature")
+          .eq(keyCode - 97);
+        if (featureClassButton) {
+          that._selectFeatureClass(featureClassButton);
+        }
+        return;
+      } else if (that.options.showSleepStageButtons) {
+        var sleepStageShortCutPressed = false;
+        $(that.element)
+          .find(".sleep_stage_panel .shortcut-key")
+          .each(function () {
+            var character = $(this).text();
+            var characterKeyCodeLowerCase = character.toLowerCase().charCodeAt(0);
+            var characterKeyCodeAlternative = character
+              .toUpperCase()
+              .charCodeAt(0);
+            if (
+              characterKeyCodeLowerCase >= 48 &&
+              characterKeyCodeLowerCase <= 57
+            ) {
+              characterKeyCodeAlternative = characterKeyCodeLowerCase + 48;
+            }
+            if (
+              keyCode == characterKeyCodeLowerCase ||
+              keyCode == characterKeyCodeAlternative
+            ) {
+              e.preventDefault();
+              sleepStageShortCutPressed = true;
+              var button = $(this).parents(".sleep_stage").first();
+              button.click();
+            }
+          });
+        if (sleepStageShortCutPressed) {
+          return;
+        }
+        // make it possible to choose feature classificaiton using number keys
+      }
     }
   },
 
@@ -5679,6 +5838,56 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that.vars.chart.series[index].yData = newyData;
   },
 
+  _restoreYAxisByIndex: function(index) {
+    if (that.options.maskedChannels.includes(index)) {
+      return;
+    }
+
+    that.options.y_axis_limited[index] = false;
+    const scaleFactor = that.vars.scalingFactors[index];
+    
+    that._updateSingleChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real, index);
+    that.options.y_axis_limited[index] = false;
+    that.options.y_limit_lower[index] = -200;
+    that.options.y_limit_upper[index] = 200;
+    //something is changing the scale factor afterwards
+    //that.vars.scalingFactors[i] = scaleFactor;
+
+    // set the scaling factor to the original one and save it
+    that.vars.scalingFactors[index] = that.vars.originalScalingFactors[index];
+    console.log(that.vars.originalScalingFactors);
+    that._savePreferences({
+      scalingFactors: that.vars.scalingFactors,
+    });
+
+
+    // remove any translation if there are any
+    delete that.vars.translation[index];
+
+    // save the updated translation
+    that._savePreferences({
+      translations: that.vars.translation,
+    });
+
+    // if the index is limited, remove it from our list of limited vals and save
+    that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(function(el){
+      return el.index != index;
+    });
+    console.log(that.options.y_axis_limited_values);
+    that._savePreferences({
+      limitedYAxis: that.options.y_axis_limited_values,
+    });
+
+    console.log("here we scale selected channels to screen");
+    that._scaleToScreen(index);
+    
+    that.vars.chart.redraw(); // efficiently redraw the entire window in one go
+
+    // This is the only solution to the channel not blowing up when shifting pages
+    //that.vars.scalingFactors[i] = scaleFactor;
+    that.vars.scalingFactors[index] = that.vars.originalScalingFactors[index];
+  },
+
   _setupGraphFunctions: function(){
     console.log("Setup graph func");
     /* plot all of the points to the chart */
@@ -5759,38 +5968,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that._isChannelSelected()){
         let index = that.vars.selectedChannelIndex;
         let option = e.target.attributes.option.value;
-        let offset = that._getOffsetForChannelIndexPostScale(index);
-        if(option ==0){
-          console.log('TOP ALIGN');
-          let max = that._getMaxChannelData(index);
-          let distance = max - offset;
-
-          that._alignYData(index, distance);
-
-          that.vars.chart.redraw();
-        }
-
-        if(option == 1){
-          console.log("MIDDLE ALIGN");
-          let avg = that._getAvgChannelData(index);
-          let distance = avg - offset;
-
-          that._alignYData(index, distance);
-          that.vars.chart.redraw();
-
-        }
-
-        if(option == 2){
-          console.log('BOTTOM ALIGN');
-          console.log(index);
-          let min = that._getMinChannelData(index);
-          let distance = min - offset;
-
-          that._alignYData(index, distance);
-
-          that.vars.chart.redraw();
-
-        }
+        that._alignChannel(index, option);
       }
     });
 
@@ -5798,86 +5976,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       if(that._isChannelSelected()){
         that._maskChannelSelected();
       }
-      that._flushAnnotations();
-      that._getAnnotations(
-        that.vars.currentWindowRecording,
-        that.vars.currentWindowStart,
-        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-      );
     });
     $(that.element).find(".y-unmask-btn").click(function(){
-      let maskedChannels = [...that.options.maskedChannels];
-      maskedChannels.forEach((channelIndex) => {
-        that._unmaskChannelWithIndex(channelIndex);
-      });
-      that._flushAnnotations();
-      that._getAnnotations(
-        that.vars.currentWindowRecording,
-        that.vars.currentWindowStart,
-        that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
-      );
-      that._reloadCurrentWindow();
+      that._unmaskAllChannels();
     });
 
     $(that.element).find(".restore-btn").click(function () {
       if(that._isChannelSelected()){
         let i = that.vars.selectedChannelIndex;
 
-        if (that.options.maskedChannels.includes(i)) {
-          return;
-        }
-
-        that.options.y_axis_limited[i] = false;
-        const scaleFactor = that.vars.scalingFactors[i];
-        
-        that._updateSingleChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real, i);
-        that.options.y_axis_limited[i] = false;
-        that.options.y_limit_lower[i] = -200;
-        that.options.y_limit_upper[i] = 200;
-        //something is changing the scale factor afterwards
-        //that.vars.scalingFactors[i] = scaleFactor;
-
-        // set the scaling factor to the original one and save it
-        that.vars.scalingFactors[i] = that.vars.originalScalingFactors[i];
-        console.log(that.vars.originalScalingFactors);
-        that._savePreferences({
-          scalingFactors: that.vars.scalingFactors,
-        });
-
-
-        // remove any translation if there are any
-        delete that.vars.translation[i];
-
-        // save the updated translation
-        that._savePreferences({
-          translations: that.vars.translation,
-        });
-
-        // if the index is limited, remove it from our list of limited vals and save
-        that.options.y_axis_limited_values = that.options.y_axis_limited_values.filter(function(el){
-          return el.index != i;
-        });
-        console.log(that.options.y_axis_limited_values);
-        that._savePreferences({
-          limitedYAxis: that.options.y_axis_limited_values,
-        });
-
-        console.log("here we scale selected channels to screen");
-        that._scaleToScreen(i);
-        
-        that.vars.chart.redraw(); // efficiently redraw the entire window in one go
-   
-        // This is the only solution to the channel not blowing up when shifting pages
-        //that.vars.scalingFactors[i] = scaleFactor;
-        that.vars.scalingFactors[i] = that.vars.originalScalingFactors[i];
-        
+        that._restoreYAxisByIndex(i);
       }
     });
 
     $(".show-max-min").click(function(){
       console.log("show max min");
       if(that._isChannelSelected()){
-        that._showLoading();
         let i = that.vars.selectedChannelIndex;
         that._addMaxMinLines(i);
       }
@@ -5885,13 +5999,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     $(".hide-max-min").click(function(){
       console.log("hide max min");
       if(that._isChannelSelected()){
-        that._showLoading();
         let i = that.vars.selectedChannelIndex;
-        var maxId = "channel" + i + "max";
-        var minId = "channel" + i + "min";
-        that.vars.chart.yAxis[0].removePlotLine(maxId);
-        that.vars.chart.yAxis[0].removePlotLine(minId);
-        that._hideLoading();
+        that._removeMaxMinLines(i);
       }
     });
     // need to call this to get the scaling factors right. Putting the code starting at the "extremes"
@@ -5900,6 +6009,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._populateGraph();
 
     
+  },
+
+  _alignChannel(index, option) {
+    let offset = that._getOffsetForChannelIndexPostScale(index);
+    if(option ==0){
+      console.log('TOP ALIGN');
+      let max = that._getMaxChannelData(index);
+      let distance = max - offset;
+
+      that._alignYData(index, distance);
+
+      that.vars.chart.redraw();
+    }
+
+    if(option == 1){
+      console.log("MIDDLE ALIGN");
+      let avg = that._getAvgChannelData(index);
+      let distance = avg - offset;
+
+      that._alignYData(index, distance);
+      that.vars.chart.redraw();
+
+    }
+
+    if(option == 2){
+      console.log('BOTTOM ALIGN');
+      console.log(index);
+      let min = that._getMinChannelData(index);
+      let distance = min - offset;
+
+      that._alignYData(index, distance);
+
+      that.vars.chart.redraw();
+
+    }
   },
 
   _addMaxMinLines: function(i){
@@ -5949,6 +6093,15 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     console.log(that.vars.chart.yAxis[0].plotLinesAndBands);
     that._hideLoading();
     
+  },
+
+  _removeMaxMinLines: function(i) {
+    that._showLoading();
+    var maxId = "channel" + i + "max";
+    var minId = "channel" + i + "min";
+    that.vars.chart.yAxis[0].removePlotLine(maxId);
+    that.vars.chart.yAxis[0].removePlotLine(minId);
+    that._hideLoading();
   },
 
   _getMaxRealYData: function(index){
@@ -12763,6 +12916,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let that = this;
     let i = that.vars.selectedChannelIndex;
     that._maskChannelWithIndex(i);
+
+    that._flushAnnotations();
+    that._getAnnotations(
+      that.vars.currentWindowRecording,
+      that.vars.currentWindowStart,
+      that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+    );
   },
 
   _unmaskChannelWithIndex: function(i){
@@ -12805,6 +12965,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._savePreferences({
       maskedChannels: that.options.maskedChannels,
     });
+  },
+
+  _unmaskAllChannels() {
+    let maskedChannels = [...that.options.maskedChannels];
+    maskedChannels.forEach((channelIndex) => {
+      that._unmaskChannelWithIndex(channelIndex);
+    });
+    that._flushAnnotations();
+    that._getAnnotations(
+      that.vars.currentWindowRecording,
+      that.vars.currentWindowStart,
+      that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
+    );
+    that._reloadCurrentWindow();
   },
 
   _addFullRecordingToXAxisScaleOptions:function(){
