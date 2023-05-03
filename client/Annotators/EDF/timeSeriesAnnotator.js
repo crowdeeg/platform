@@ -3926,9 +3926,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       .click(function () {
         console.log(Object.keys(that.options.context.preferences.uploadedPreferences.scalingFactors).length);
         console.log(Object.keys(that.vars.originalScalingFactors).length);
-        console.log(that.options.context.preferences.startTime);
-        console.log(that.options.context.preferences);
-        console.log(that.vars);
         //if the scaling factors length of the uploaded file does not match the scaling 
         //factors of the chart, they they are not compatible
         if(that.options.context.preferences.uploadedPreferences.scalingFactors != null){
