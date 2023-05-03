@@ -3931,6 +3931,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         if(that.options.context.preferences.uploadedPreferences.scalingFactors != null){
           if(Object.keys(that.options.context.preferences.uploadedPreferences.scalingFactors).length != Object.keys(that.vars.originalScalingFactors).length){
             window.alert("The preferences file you uploaded is not compatible with the chart (number of channels do not match). Please choose another file.");
+          } else if (that.options.context.preferences.uploadedPreferences.startTime < 0 || that.options.context.preferences.uploadedPreferences.startTime > that.vars.recordingLengthInSeconds) {
+            window.alert("The preferences file you uploaded has an invalid start time (not in the interval of the time series). Please choose another file.");
           } else {
             that._savePreferences(that.options.context.preferences.uploadedPreferences);
             //reload the screen so we can view the changes
@@ -12711,6 +12713,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       console.log(annotatorConfig);
       if(Object.keys(annotatorConfig.scalingFactors).length != Object.keys(that.vars.originalScalingFactors).length){
         window.alert("The preferences file you wish to upload is not compatible with the chart (number of channels do not match). Please choose another file.");
+      } else if (annotatorConfig.startTime < 0 || annotatorConfig.startTime > that.vars.recordingLengthInSeconds) {
+        window.alert("The preferences file you wish to upload has an invalid start time (not in the interval of the time series). Please choose another file.");
       } else {
         that._savePreferences(annotatorConfig);
         location.reload();
