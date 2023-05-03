@@ -4576,14 +4576,14 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         // fast foward
         e.preventDefault();
         // that._updateChannelGain("step_increase");
-        that._shiftChart(-1);
+        that._shiftChart(-1 * this.options.windowJumpSizeFastForwardBackward);
         return;
       } else if (keyCode == 40) {
         // down arrow
         // fast backward
         e.preventDefault();
         // that._updateChannelGain("step_decrease");
-        that._shiftChart(1);
+        that._shiftChart(this.options.windowJumpSizeFastForwardBackward);
         return;
       } else if (keyCode == 65) { // A
         that._jumpToClosestDisagreementWindow(-1);
