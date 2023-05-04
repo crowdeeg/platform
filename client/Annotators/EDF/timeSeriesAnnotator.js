@@ -94,6 +94,7 @@ let waitForInsertingAnnotationsPromise = async function(data){
     delete newPreferences.createdAt;
     delete newPreferences.revisions;
     delete newPreferences.lastModified;
+    newPreferences["annotatorConfig"]["startTime"] = 0;
     await createPreferences(newPreferences);
 
     var docs = [];
@@ -164,6 +165,7 @@ let sendChanges = async function(data){
   delete newPreferences.revisions;
   delete newPreferences.lastModified;
   console.log(newPreferences);
+  newPreferences["annotatorConfig"]["startTime"] = 0;
   await createPreferences(newPreferences);
 
   await _deleteReviewAnnotations(assignmentId);
