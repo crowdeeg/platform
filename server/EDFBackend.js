@@ -1312,7 +1312,6 @@ Meteor.methods({
           ...annotation,
           _id: undefined,
           assignment: destAssignment._id,
-          user: userId,
           updatedAt: undefined
         }
 
