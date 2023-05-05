@@ -9326,18 +9326,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       }
     }
 
-    if (annotation.metadata.creator !== Meteor.userId()) {
-      let fillColor = annotation.metadata.displayType == "Box" ? that._stringToColour(annotation.metadata.creator) + "50" :
-        that._stringToColour(annotation.metadata.creator);
-      annotation.update({
-        shape: {
-          params: {
-            fill: fillColor
-          }
-        }
-      })
-    }
-
     if (annotation.metadata.displayType === "Box" &&
       annotation.metadata.annotationLabel != undefined &&
       annotation.metadata.annotationLabel != "undefined" &&
@@ -9607,7 +9595,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       that.vars.currentWindowStart,
       that.vars.currentWindowStart + that.vars.xAxisScaleInSeconds
     );
-    console.log("Users", Meteor.users.find({}).fetch());
   },
 
   _saveArtifactAnnotation: function (type) {
@@ -11310,7 +11297,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
             var { height, yValue } =
               that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
 
-
             newAnnotation.update({
               xValue: start_time,
               yValue: yValue,
@@ -12343,20 +12329,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return newAnnotation
   },
 
-  _stringToColour: function (str) {
-    var hash = 0;
-    for (var i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    var colour = '#';
-    for (var i = 0; i < 3; i++) {
-      var value = (hash >> (i * 8)) & 0xFF;
-      colour += ('00' + value.toString(16)).substr(-2);
-    }
-    // console.log(colour);
-    // console.log(this._newColorShade(colour, -150));
-    return colour;
-  },
+  // _stringToColour: function (str) {
+  //   var hash = 0;
+  //   for (var i = 0; i < str.length; i++) {
+  //     hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  //   }
+  //   var colour = '#';
+  //   for (var i = 0; i < 3; i++) {
+  //     var value = (hash >> (i * 8)) & 0xFF;
+  //     colour += ('00' + value.toString(16)).substr(-2);
+  //   }
+  //   // console.log(colour);
+  //   // console.log(this._newColorShade(colour, -150));
+  //   return colour;
+  // },
 
   // _parseAnnotationDocuments: function(documents) {
   //   // Parse annotation documents into object format to be redrawn
