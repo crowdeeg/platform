@@ -102,7 +102,6 @@ let waitForInsertingAnnotationsPromise = async function(data){
       {
         assignment: that.options.context.assignment._id,
         dataFiles: that.options.context.dataset.map((data) => data._id),
-        user: Meteor.userId(),
         type: "SIGNAL_ANNOTATION",
       },
     ).fetch();
@@ -173,7 +172,6 @@ let sendChanges = async function(data){
     {
       assignment: that.options.context.assignment._id,
       dataFiles: that.options.context.dataset.map((data) => data._id),
-      user: Meteor.userId(),
       type: "SIGNAL_ANNOTATION",
     },
   ).fetch();
@@ -1076,6 +1074,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                           <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-label">Label</th>\
                           <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-time">Time<span class="sort-arrow"><i class="fa fa-arrow-down"></i></span></th>\
                           <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-duration">Duration</th>\
+                          <th class="annotation-manager-table-header table-header-sort annotation-manager-table-header-user">Author</th>\
                           <th class="annotation-manager-table-header annotation-manager-table-header-select">Select</th>\
                         </tr>\
                       </thead>\
@@ -1083,6 +1082,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                       </tbody>\
                     </table>\
                   </div>\
+                  <div class="alert alert-info">Click on an author to change the display colour for their annotations.</div>\
                   <div class="dialog-row row">\
                       <ul class="annotation-manager-table-pagination pagination">\
                       </ul>\
@@ -1097,6 +1097,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     <button id="annotation-manager-table-select-all" class="row-btn btn col s4">Select All</button>\
                     <button id="annotation-manager-table-deselect-all" class="row-btn btn col s5">Deselect All</button>\
                     <button id="annotation-manager-table-delete" class="row-btn btn red col s4">Delete</button>\
+                  </div>\
+                </div>\
+                <div id="annotation-user-color-dialog">\
+                  <div class="row">\
+                    <form action="#" class="col s12">\
+                      <div class="row">\
+                        <div class="input-field col s12">\
+                          <input type="color" id="annotation-user-color" value="#ff0000">\
+                          <label for="annotation-user-color" class="active">Max:</label>\
+                        </div>\
+                      </div>\
+                    </form>\
                   </div>\
                 </div>\
                 <div id="annotation-import-dialog">\
@@ -2190,6 +2202,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       width: "auto"
     });
 
+    $("#annotation-user-color-dialog").dialog({
+      autoOpen: false,
+      buttons: [{
+        text: "Close",
+        click: () => {
+          $("#annotation-user-color-dialog").dialog("close");
+        }
+      }],
+      title: "Change User Color",
+      width: "auto"
+    });
+
+    $("#annotation-user-color").off("change.annotationmanager").on("change.annotationmanager", (e) => {
+      let colorPicker = $(e.currentTarget);
+      let color = that._hexToRgba(colorPicker.val(), 0.5);
+      let userId = colorPicker.prop("userId");
+
+      if (userId) {
+        let userPreferences = that._getAnnotationUserPreferences(userId);
+        that._savePreferences({
+          annotationUserPreferences: {
+            ...that.options.context.preferences.annotatorConfig.annotationUserPreferences,
+            [userId]: {
+              ...userPreferences,
+              color: color
+            }
+          }
+        }).then(() => {
+          that._refreshAnnotations();
+        }).catch((err) => {
+
+        });
+      }
+    });
+
     $("#preferences-manager-dialog").dialog({
       autoOpen: false,
       buttons: [{
@@ -2260,6 +2307,24 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (b.position.end - b.position.start) - (a.position.end - a.position.start)});
       } else {
         that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {return (a.position.end - a.position.start) - (b.position.end - b.position.start)});
+      }
+    });
+
+    $(".annotation-manager-table-header-user").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      if ($(e.currentTarget).prop("sortDirection") === "up") {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {
+          let user1 = that._getAnnotationUserPreferences(a.user).username;
+          let user2 = that._getAnnotationUserPreferences(b.user).username;
+          let labelComp = ("" + user2).localeCompare(user1);
+          return labelComp === 0 ? a.position.start - b.position.start : labelComp;
+        });
+      } else {
+        that._populateAnnotationManagerTable(that._getAnnotationsOnly(), (a,b) => {
+          let user1 = that._getAnnotationUserPreferences(a.user).username;
+          let user2 = that._getAnnotationUserPreferences(b.user).username;
+          let labelComp = ("" + user1).localeCompare(user2);
+          return labelComp === 0 ? a.position.start - b.position.start : labelComp;
+        });
       }
     });
 
@@ -6142,6 +6207,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // or refreshing the page, then it's necessary to initialize the plot area
 
     //console.log(that);
+    console.log(that.vars.currentWindowData);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
@@ -6985,13 +7051,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         var channelIndexStart = that._getChannelIndexFromY(clickYValue);
         var channelIndices = [channelIndexStart];
         var featureType = that.vars.activeFeatureType;
+        let annotationUserPreferences = that._getAnnotationUserPreferences(Meteor.userId());
 
         // adds an annotation box
         annotation = that._addAnnotationBox(
           annotationId,
           clickXValue,
           channelIndices,
-          featureType
+          featureType,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          annotationUserPreferences.color
         );
 
         // checks which channels that the annotation is over
@@ -8144,6 +8216,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     confidence,
     comment,
     annotationData,
+    fillColor
   ) {
     var that = this;
     // gets all the annotations
@@ -8185,10 +8258,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       height: height, //the height of the annotation box
     };
 
+    if (!fillColor) {
+      fillColor = "rgba(255, 0, 0, 0.5)"
+    }
     // if there is a timeEnd value
     // if (preliminary) {
     shapeParams.width = 0;
-    shapeParams.fill = "rgba(255, 0, 0, 0.5)";
+    shapeParams.fill = fillColor;
 
     // shapeParams.stroke = that._getFeatureColor(
     //   featureType,
@@ -9252,18 +9328,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           that._updateChangePointLabelLeft(nextVisibleChangePoint);
         }
       }
-    }
-
-    if (annotation.metadata.creator !== Meteor.userId()) {
-      let fillColor = annotation.metadata.displayType == "Box" ? that._stringToColour(annotation.metadata.creator) + "50" :
-        that._stringToColour(annotation.metadata.creator);
-      annotation.update({
-        shape: {
-          params: {
-            fill: fillColor
-          }
-        }
-      })
     }
 
     if (annotation.metadata.displayType === "Box" &&
@@ -10572,21 +10636,26 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     const context = that.options.context;
     that._addArbitrationInformationToObject(modifier);
     modifier = { $set: modifier };
-    Preferences.update(
-      that.options.context.preferences._id,
-      modifier,
-      (error, numPreferencesUpdated) => {
-        if (error) {
-          console.error(error);
-          if (!Roles.userIsInRole(Meteor.userId(), "tester")) {
-            alert(error.message);
+
+    return new Promise((resolve, reject) => {
+      Preferences.update(
+        that.options.context.preferences._id,
+        modifier,
+        (error, numPreferencesUpdated) => {
+          if (error) {
+            console.error(error);
+            if (!Roles.userIsInRole(Meteor.userId(), "tester")) {
+              alert(error.message);
+            }
+            reject(err);
           }
+          that.options.context.preferences = Preferences.findOne(
+            that.options.context.preferences._id
+          );
+          resolve();
         }
-        that.options.context.preferences = Preferences.findOne(
-          that.options.context.preferences._id
-        );
-      }
-    );
+      );
+    });
   },
 
   _saveUserEvent: function (eventType, metadata) {
@@ -10682,6 +10751,30 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._saveUserEventWindow("complete");
   },
 
+  _getAnnotationUserPreferences: function(userId) {
+    if (!that.options.context.preferences.annotatorConfig.annotationUserPreferences) {
+      that.options.context.preferences.annotatorConfig.annotationUserPreferences = {};
+    }
+
+    if (!that.options.context.preferences.annotatorConfig.annotationUserPreferences[userId]) {
+      let user = Meteor.users.findOne({ _id: userId});
+      let userPreferences = {
+        username: user.username,
+        color: "rgba(255, 0, 0, 0.5)"
+      };
+      that._savePreferences({
+        annotationUserPreferences: {
+          ...that.options.context.preferences.annotatorConfig.annotationUserPreferences,
+          [userId]: userPreferences
+        }
+      });
+
+      return userPreferences;
+    } else {
+      return that.options.context.preferences.annotatorConfig.annotationUserPreferences[userId];
+    }
+  },
+
   _getAnnotationsOnly: function () {
     var that = this;
 
@@ -10690,7 +10783,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
       {
         assignment: that.options.context.assignment._id,
         dataFiles: that.options.context.dataset.map((data) => data._id),
-        user: Meteor.userId(),
         type: "SIGNAL_ANNOTATION",
       },
       {
@@ -10769,7 +10861,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           {
             assignment: that.options.context.assignment._id,
             dataFiles: that.options.context.dataset.map((data) => data._id),
-            user: Meteor.userId(),
             type: "SIGNAL_ANNOTATION",
           },
           {
@@ -10800,7 +10891,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           {
             assignment: that.options.context.assignment._id,
             dataFiles: that.options.context.dataset.map((data) => data._id),
-            user: Meteor.userId(),
             type: "SIGNAL_ANNOTATION",
           },
           {
@@ -11158,6 +11248,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
           var featureType = undefined;
           var annotationLabel = annotation.metadata.annotationLabel;
           var user = annotation.user;
+          let userPreferences = that._getAnnotationUserPreferences(user);
           // var user = annotation.
 
           var channelIndices = annotation.position.channels;
@@ -11198,7 +11289,8 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               undefined,
               confidence,
               comment,
-              annotation
+              annotation,
+              userPreferences.color
             );
 
             newAnnotation.metadata.displayType = 'Box';
@@ -11208,7 +11300,6 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
             var { height, yValue } =
               that._getAnnotationBoxHeightAndYValueForChannelIndices(channelIndices);
-
 
             newAnnotation.update({
               xValue: start_time,
@@ -12190,12 +12281,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     let timeStart = obj["Time"];
     var { height, yValue } =
       that._getAnnotationBoxHeightAndYValueForChannelIndices(channels);
+    
+    let annotationUserPreferences = that._getAnnotationUserPreferences(Meteor.userId());
 
     let newAnnotation = that._addAnnotationBox(
       undefined,
       timeStart,
       channels,
       undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      annotationUserPreferences.color
     );
 
     newAnnotation.update({
@@ -12235,20 +12333,20 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     return newAnnotation
   },
 
-  _stringToColour: function (str) {
-    var hash = 0;
-    for (var i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    var colour = '#';
-    for (var i = 0; i < 3; i++) {
-      var value = (hash >> (i * 8)) & 0xFF;
-      colour += ('00' + value.toString(16)).substr(-2);
-    }
-    // console.log(colour);
-    // console.log(this._newColorShade(colour, -150));
-    return colour;
-  },
+  // _stringToColour: function (str) {
+  //   var hash = 0;
+  //   for (var i = 0; i < str.length; i++) {
+  //     hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  //   }
+  //   var colour = '#';
+  //   for (var i = 0; i < 3; i++) {
+  //     var value = (hash >> (i * 8)) & 0xFF;
+  //     colour += ('00' + value.toString(16)).substr(-2);
+  //   }
+  //   // console.log(colour);
+  //   // console.log(this._newColorShade(colour, -150));
+  //   return colour;
+  // },
 
   // _parseAnnotationDocuments: function(documents) {
   //   // Parse annotation documents into object format to be redrawn
@@ -12799,12 +12897,22 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     }
     that.vars.annotationManagerSortFunc = sortFunc;
 
+    let userIds = [...new Set(annotations.map((annotation) => annotation.user))];
+    let userNames = userIds.reduce((acc, userId) => {
+      let userPreferences = that._getAnnotationUserPreferences(userId);
+      return {
+        ...acc,
+        [userId]: userPreferences.username
+      }
+    }, {});
+
     annotations.sort(sortFunc).forEach((annotation,i)=>{
       if(annotation.metadata.annotationLabel != null) {
         tableBody.append(`<tr class="annotation-manager-table-row select-table-row" annotationId=${annotation.id}>
           <td class="annotation-name" startPosition=${annotation.position.start}>${annotation.metadata.annotationLabel}</td>
           <td class="annotation-time">${that._getDisplayTime(annotation.position.start)}-${that._getDisplayTime(annotation.position.end)}</td>
           <td class="annotation-duration">${that._getDisplayTime(annotation.position.end - annotation.position.start)}</td>
+          <td class="annotation-user" userId=${annotation.user}>${userNames[annotation.user]}</td>
           <td class="annotation-select"><p><input type="checkbox" id="annotation-manager-select-${i}" class="annotation-manager-select" /><label for="annotation-manager-select-${i}"></label></p></td>
         </tr>`);
       }
@@ -12821,6 +12929,18 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         parseFloat(startPosition),
         nextWindowSizeInSeconds
       );
+    });
+
+    $(".annotation-manager-table-row .annotation-user").off("click.annotationmanager").on("click.annotationmanager", (e) => {
+      let userId = $(e.currentTarget).attr("userId");
+      let userPreferences = that._getAnnotationUserPreferences(userId);
+      let colorPicker = $("#annotation-user-color");
+      console.log(userPreferences);
+      console.log(that._rgbaToHex(userPreferences.color));
+      colorPicker.prop("userId", userId);
+      colorPicker.val(that._rgbaToHex(userPreferences.color));
+
+      $("#annotation-user-color-dialog").dialog("open");
     });
 
     $(".annotation-manager-table-row .annotation-select input").off("change.annotationmanager").on("change.annotationmanager", (e) => {
@@ -13004,10 +13124,28 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         });
       }
     });
+  },
+
+  _hexToRgba: function(hex, alpha) {
+    if (!alpha) {
+      alpha = 1;
+    }
+
+    let r = parseInt(hex.slice(1, 3), 16);
+    let g = parseInt(hex.slice(3, 5), 16);
+    let b = parseInt(hex.slice(5, 7), 16);
+
+    return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+  },
+
+  _rgbaToHex: function(rgba) {
+    rgba = rgba.split(",").map((str) => str.trim());
+
+    let r = (1 << 8 | parseInt(rgba[0].split("(")[1])).toString(16).slice(-2);
+    let g = (1 << 8 | parseInt(rgba[1])).toString(16).slice(-2);
+    let b = (1 << 8 | parseInt(rgba[2])).toString(16).slice(-2);
+
+    return "#" + r + g + b;
   }
-
-
-
-
 
 });

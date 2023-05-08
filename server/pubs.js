@@ -115,6 +115,13 @@ Meteor.publishComposite('assignment', function(assignmentId) {
                 find(assignment) {
                     return Annotations.find({ assignment: assignment._id }, { fields: annotationFields });
                 },
+                children: [
+                    {
+                        find(annotation, assignment) {
+                            return Meteor.users.find({ _id: annotation.user }, { fields: { _id: 1, username: 1 } });
+                        }
+                    }
+                ]
             },
             {
                 find(assignment) {

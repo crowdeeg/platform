@@ -251,6 +251,14 @@ dialog .input-field input {
   background-color: #999999;
 }
 
+.annotation-manager-table-row .annotation-user {
+  cursor: pointer;
+}
+
+.annotation-manager-table-row .annotation-user:hover {
+  background-color: #999999;
+}
+
 .annotation-manager-table-pagination {
   cursor: default;
   max-width: 50vw;
