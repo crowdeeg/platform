@@ -125,12 +125,19 @@ Template.Annotations.events({
                     });
                 } else {
                     AnnotationFiles.insert({"filename": fileName, "info": info, "annotations": csvAnnotations});
+                    filesSuccessfullyUploaded++;
+                    uploadsEnded++;
+                    if (uploadsEnded === allFiles.length) {
+                      loading.set(false);
+                      window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
+                    }
                     // AnnotationFiles.insert({"filename": fileName, "csvAnnotationInfo": info, "csvAnnotations": csvAnnotations});
                 }
             }
             // need this or the onload wont work
             reader.readAsText(file);
         }
+
         selectedAnnotationsG.set({});
         loading.set(false);
     },
