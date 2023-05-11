@@ -117,6 +117,8 @@ Template.Annotations.events({
                             //AnnotationFiles.insert({"filename": fileName, "csvAnnotationInfo": info, "csvAnnotations": csvAnnotations});
                         } catch (err){
                             console.log(err);
+                            filesUploadFailed += fileName + ": " + err + "\n";
+                            uploadsEnded++;
                             window.prompt("There has been an error, please try again");
                         }
                       } else {
