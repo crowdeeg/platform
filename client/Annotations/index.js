@@ -126,6 +126,8 @@ Template.Annotations.events({
                 } else {
                     AnnotationFiles.insert({"filename": fileName, "info": info, "annotations": csvAnnotations});
                     filesSuccessfullyUploaded++;
+                    filesSuccessfullyUploadedString += fileName + "\n";
+                    console.log(fileName);
                     uploadsEnded++;
                     if (uploadsEnded === allFiles.length) {
                       loading.set(false);
@@ -137,7 +139,6 @@ Template.Annotations.events({
             // need this or the onload wont work
             reader.readAsText(file);
         }
-
         selectedAnnotationsG.set({});
         loading.set(false);
     },
