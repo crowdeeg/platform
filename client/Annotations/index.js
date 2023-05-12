@@ -117,6 +117,8 @@ Template.Annotations.events({
                             //AnnotationFiles.insert({"filename": fileName, "csvAnnotationInfo": info, "csvAnnotations": csvAnnotations});
                         } catch (err){
                             console.log(err);
+                            filesUploadFailed += fileName + ": " + err + "\n";
+                            uploadsEnded++;
                             window.prompt("There has been an error, please try again");
                         }
                       } else {
@@ -125,6 +127,14 @@ Template.Annotations.events({
                     });
                 } else {
                     AnnotationFiles.insert({"filename": fileName, "info": info, "annotations": csvAnnotations});
+                    filesSuccessfullyUploaded++;
+                    filesSuccessfullyUploadedString += fileName + "\n";
+                    console.log(fileName);
+                    uploadsEnded++;
+                    if (uploadsEnded === allFiles.length) {
+                      loading.set(false);
+                      window.alert(`${allFiles.length - filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
+                    }
                     // AnnotationFiles.insert({"filename": fileName, "csvAnnotationInfo": info, "csvAnnotations": csvAnnotations});
                 }
             }
