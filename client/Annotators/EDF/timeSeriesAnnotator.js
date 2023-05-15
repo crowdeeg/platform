@@ -6207,7 +6207,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     // or refreshing the page, then it's necessary to initialize the plot area
 
     //console.log(that);
-    console.log(that.vars.currentWindowData);
+    // console.log(that.vars.currentWindowData);
     var index = -1;
     // Iterate through channel names
     for (let i = 0; i < that.vars.currentWindowData.channels.length; i++){
@@ -6220,7 +6220,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     if (index != -1){
       that.vars.currentWindowData.channels.splice(index, 1);
     }
-    console.log(index);
+    // console.log(index);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
