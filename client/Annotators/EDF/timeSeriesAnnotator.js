@@ -6208,6 +6208,19 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
 
     //console.log(that);
     console.log(that.vars.currentWindowData);
+    var index = -1;
+    // Iterate through channel names
+    for (let i = 0; i < that.vars.currentWindowData.channels.length; i++){
+      // Find EDF Annotations if exists
+      if (that.vars.currentWindowData.channels[i].name == "EDF Annotations"){
+        index = i;
+      }
+    }
+    // Remove EDF Annotations from channels if exist
+    if (index != -1){
+      that.vars.currentWindowData.channels.splice(index, 1);
+    }
+    console.log(index);
     // updates the data that will be displayed in the chart
     // by storing the new data in this.vars.chart.series
     that._updateChannelDataInSeries(that.vars.chart.series, that.vars.currentWindowData,that.vars.real);
