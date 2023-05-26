@@ -94,20 +94,12 @@ Template.Assignment.onRendered(function() {
           reviewing: Meteor.userId(),
         };
         Meteor.call("deleteAssignmentForReview", info);
+        Meteor.call('updateAssignmentWithoutHook', data.assignment._id, { $set: { status: 'Review' } });
     // if the reviewer opens a completed file, then the mark it as under review, and the annotator should be able to open it again
-    } else if(data.assignment.status === "Completed") {
-        users = [];
-        console.log("HERE");
-        users.push(data.assignment.reviewing);
-        const info = {
-          task: data.assignment.task,
-          dataFiles: data.assignment.dataFiles,
-          users: users,
-          reviewer: Meteor.userId(),
-        };
-        Meteor.call('updateAssignmentWithDataQuery', info, { $set: { status: 'Review', canBeReopenedAfterCompleting: true} })
+    } else if(data.assignment.status != "Completed") {
+        Meteor.call('updateAssignmentWithoutHook', data.assignment._id, { $set: { status: 'In Progress' } });
     }
-    Meteor.call('updateAssignmentWithoutHook', data.assignment._id, { $set: { status: 'In Progress' } });
+    
     let messageToDisplayBeforeStart = data.assignment.messageToDisplayBeforeStart;
     let messageDisplayedBeforeStart;
     if (messageToDisplayBeforeStart) {

@@ -951,6 +951,9 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
                     <button type="button" class="btn btn-default reject" id="reject_button" aria-label="Reject"> \
                     Reject\
                     </button> \
+                    <button type="button" class="btn btn-default revoke" id="revoke_button" aria-label="Revoke"> \
+                    Send Back to Review\
+                    </button> \
                     <button type="button" class="btn btn-default sendChanges" id="sendChanges_button" aria-label="Send Changes"> \
                     Send Changes\
                     </button> \
@@ -2082,6 +2085,7 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
     that._setupLatestClick();
     that._setupTitleButton();
     that._setupRejectButton();
+    that._setupRevokeButton();
     that._setupSendChangesButton();
     that._setupFeedbackButton();
     that._setupPreferencesPanel();
@@ -3726,6 +3730,41 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
         sendChanges(data);
       });
     }
+  },
+
+  _setupRevokeButton: function(){
+    var that = this;
+    var element = $(that.element);
+    // if the user is not the reviewer then hide the reject button
+    if(that.options.context.assignment.reviewing === undefined || that.options.context.assignment.status != "Completed"){
+      $('#revoke_button').hide();
+    } else {
+      // otherwise ask the user for feedback and reject the assignment
+      element.find("#revoke_button").click(function (){
+        that._showLoading();
+        users = [];
+        users.push(that.options.context.assignment.reviewing);
+        const data = {
+          "task": that.options.context.assignment.task,
+          "dataFiles": that.options.context.assignment.dataFiles,
+          "users": users,
+          "arbitration": that.options.context.assignment.arbitration,
+          "reviewer": Meteor.userId(),
+        };
+        // prompt the user for feedback and save it
+        let feedback = prompt("Feedback:", "No feedback")
+        if(feedback==null){
+          // This is for when the user clicks cancel, just stop the process (dont do anything cuz they cancelled)
+          //feedback = "No feedback";
+          
+        } else {
+          Assignments.update({_id: that.options.context.assignment._id}, {$set: {status: "Review"}});
+          _updateReviewAssignment(data, { $set: { feedback: feedback, status: 'Review'}});
+          window.location.href='/';
+        }
+      })
+    }
+
   },
 
   _setupRejectButton: function(){
