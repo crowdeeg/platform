@@ -30,7 +30,7 @@ const runWFDBCommand = (command, runInDirectory = "") => {
 	}
 	//console.log("WFDBCommand:", WFDBCommand);
 	const output = runCommand(WFDBCommand, {
-		maxBuffer: 2048 * 500 * 10,
+		maxBuffer: 2048 * 500 * 10 * 20,
 		cwd: EDFDir,
 	});
 	// console.timeEnd("runWFDBCommand");
