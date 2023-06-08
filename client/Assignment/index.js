@@ -84,7 +84,7 @@ Template.Assignment.onRendered(function() {
     console.log('data: ', data)
     Session.set('numPendingItemsToSave', 0); 
     // when we open a file that is in review:
-    if( data.assignment.reviewing === undefined){
+    if( data.assignment.reviewing === undefined && data.assignment.status == "Review"){
         users = [];
         users.push(data.assignment.reviewer);
         const info = {
