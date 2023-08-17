@@ -2488,7 +2488,11 @@ Arbitrations.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInCl
 Arbitrations.attachCollectionRevisions();
 exports.Arbitrations = Arbitrations;
 
+CollectionRevisions.meteorusers = {
+    keep:250
+}
 Meteor.users.attachCollectionRevisions();
+Meteor.users.attachCollectionRevisions(CollectionRevisions.meteorusers);
 
 // Documentation: https://github.com/yogiben/meteor-admin
 // The admin management page
