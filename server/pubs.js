@@ -9,7 +9,7 @@ Meteor.publish('all', function() {
     // we want people to be able to access the preferences dir in the annotator (there is no update or delete there)
     if (!Roles.userIsInRole(this.userId, 'admin')) return [PreferencesFiles.find({})];
     return [
-        Meteor.users.find({}),
+        Meteor.users.find({}, {fields: { revisions: 0}}),
         Patients.find({}),
         Data.find({}),
         Tasks.find({}),
