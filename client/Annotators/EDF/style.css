@@ -277,7 +277,7 @@ dialog .input-field input {
   margin-left: -1px;
 }
 
-.annotation_manager_big_div{
+.graph_navigation_manager{
   display:flex;
   width:100%;
 }
