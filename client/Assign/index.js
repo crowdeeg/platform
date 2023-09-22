@@ -105,7 +105,7 @@ Template.Assign.events({
                             assignments = assignments.filter((assignment) => {
                                 const othersAssignments = Assignments.find({
                                     users: { $nin: selectedAssigneesToCopyDataFromIds },
-                                    data: assignment.data,
+                                    dataFiles: assignment.dataFiles,
                                     task: assignment.task,
                                 }).fetch().filter((othersAssignment) => {
                                     return !othersAssignment.users.every(user => Roles.userIsInRole(user, 'tester'));
@@ -214,7 +214,7 @@ Template.Assign.events({
                             const duplicateAssignment = Assignments.findOne({
                                 task: task._id,
                                 users: assignee._id,
-                                data: d._id,
+                                dataFiles: [d._id],
                             });
                             if (duplicateAssignment) {
                                 doAssign = false;
@@ -269,7 +269,7 @@ Template.Assign.events({
                                 Assignments.insert({
                                     users: [ assigneeId ],
                                     task: task._id,
-                                    data: assignment.data._id,
+                                    dataFiles: [assignment.data._id],
                                 });
                             });
                         });

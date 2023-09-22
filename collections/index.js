@@ -1,7 +1,8 @@
 import { Match } from 'meteor/check'
-import moment from 'moment'
+import moment, { relativeTimeRounding } from 'moment'
 import swal from 'sweetalert2'
 import seedrandom from 'seedrandom'
+
 
 function formatDurationInSeconds(durationInSeconds) {
     return moment('1970-01-01').startOf('day').seconds(durationInSeconds).format('H:mm:ss');
@@ -159,6 +160,21 @@ const SchemaHelpers = {
             'Questionnaire',
         ],
     },
+    dataSource: {
+        type: String,
+        label: 'Source',
+        allowedValues: [
+            'PSG',
+            'watchpat',
+            'ANNE',
+            'MUSE',
+            'Apnealink',
+            'GENEActiv',
+            'AX3',
+            'Actical',
+            'Other'
+        ],
+    },
     annotator: {
         type: String,
         label: 'Annotator',
@@ -241,6 +257,7 @@ const SchemaHelpers = {
                                 break;
                             case 'data':
                                 label = doc.pathAndLengthFormatted();
+                                // label = {};
                                 break;
                             case 'assignments':
                                 label = doc.userNames() + ' - ' + doc.taskDoc().name + ' for ' + doc.dataDoc().path;
@@ -355,9 +372,14 @@ Schemas.Data = new SimpleSchema({
         label: 'Name',
     },
     type: SchemaHelpers.dataType,
-    patient: SchemaHelpers.fromCollection(Patients, {
-        optional: true,
-    }),
+    source: SchemaHelpers.dataSource,
+    patient: {
+        type: String,
+        label: 'Name',
+    },
+    // SchemaHelpers.fromCollection(Patients, {
+    //     optional: true,
+    // }),
     path: {
         type: String,
         label: 'Path',
@@ -394,6 +416,7 @@ Data.helpers({
         if (lengthFormatted == '') {
             return this.path;
         }
+        console.log(this.path + ' (' + lengthFormatted + ')');
         return this.path + ' (' + lengthFormatted + ')';
     },
     pathLengthAndPatientInfoFormatted() {
@@ -409,7 +432,7 @@ Data.helpers({
     },
     assignmentsCursor(filter, options) {
         filter = filter || {};
-        filter = _.extend({}, filter, { data: this._id });
+        filter = _.extend({}, filter, { dataFiles: [this._id] });
         const assignments = Assignments.find(filter, options);
         return assignments;
     },
@@ -456,6 +479,8 @@ Data.helpers({
 });
 Data.attachSchema(Schemas.Data);
 Data.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
+Data.permit(['insert']);
+
 Data.attachCollectionRevisions();
 exports.Data = Data;
 
@@ -683,9 +708,13 @@ Schemas.Assignments = new SimpleSchema({
     task: SchemaHelpers.fromCollection(Tasks, {
         optional: true,
     }),
-    data: SchemaHelpers.fromCollection(Data, {
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 0,
         optional: true,
-    }),
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     name: {
         type: String,
         label: 'Name',
@@ -778,18 +807,26 @@ Assignments.helpers({
     return task.name;
   },
   dataDoc() {
-    return Data.findOne(this.data) || false;
+    // only return the first data in dataFiles
+    let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    return Data.findOne({ $or: queryArray }) || false;
+  },
+  dataDocs() {
+    let queryArray = this.dataFiles.map((dataId) => { return { _id: dataId }; });
+    return Data.find({ $or: queryArray }) || false;
   },
   patientDoc() {
-    const data = this.dataDoc();
-    if (!data) return false;
-    return data.patientDoc();
+    // only return the patient of the first data in dataFiles
+    const data = this.dataDocs().fetch();
+    if (!data.length) return false;
+    return data.map(data => data.patientDoc());
   },
   nameOrAnonymizedPatientDescription() {
     if (this.name) return this.name;
-    const patientDoc = this.patientDoc();
-    if (!patientDoc) return 'Loading ...';
-    return patientDoc.anonymizedDescription();
+    const patientDocs = this.patientDoc();
+    if (!patientDocs.length) return 'Loading ...';
+    let patientDocDescriptions = patientDocs.map(patientDoc => patientDoc.anonymizedDescription());
+    return patientDocDescriptions.join(' + ');
   },
   nameOrAnonymizedPatientDescriptionWithAdjudicationInformation() {
     let description = this.nameOrAnonymizedPatientDescription();
@@ -800,7 +837,7 @@ Assignments.helpers({
   },
   arbitrationDoc() {
     if (!this.arbitration) return false;
-    return Arbitrations.findOne(this.arbitration) || false;    
+    return Arbitrations.findOne(this.arbitration) || false;
   },
   annotationDocs(filter, options) {
     filter = filter || {};
@@ -816,24 +853,29 @@ Assignments.helpers({
     return this.annotationDocs(filter, options).length;
   },
   patientId() {
-    const patient = this.patientDoc();
-    if (!patient) return 'Loading ...';
-    return patient.id;
+    const patients = this.patientDoc();
+    if (!patients.length) return 'Loading ...';
+    return patients.map(patient => patient.id).join('\n');
   },
   dataPath() {
-    const data = this.dataDoc();
+    const data = this.dataDocs().fetch();
     if (!data) return 'Loading ...';
-    return data.path;
+    return data.map((data) => data.path).join('\n');
+  },
+  dataIds() {
+    return this.dataFiles;
   },
   dataLengthInSeconds() {
-    const data = this.dataDoc();
-    if (!data) return 'Loading ...';
-    return data.lengthInSeconds();
+    const data = this.dataDocs().fetch();
+    if (!data.length) return 'Loading ...';
+    return Math.max(...data.map(data => data.lengthInSeconds()));
   },
   dataLengthFormatted() {
-    const data = this.dataDoc();
-    if (!data) return 'Loading ...';
-    return data.lengthFormatted();
+    const data = this.dataDocs().fetch();
+    if (!data.length) return 'Loading ...';
+    let dataLength = data.map(data => data.lengthInSeconds());
+    let i = dataLength.indexOf(Math.max(...dataLength));
+    return data[i].lengthFormatted();
   },
   userDocs() {
     return Meteor.users.find({ _id: { $in: this.users } } ).fetch();
@@ -888,7 +930,7 @@ Assignments.helpers({
   isLeafAssignment() {
     return (
             this.task
-        &&  this.data
+        &&  this.dataFiles.length
         &&  (
                 !this.childAssignments
             ||  !this.childAssignments.length
@@ -1135,7 +1177,7 @@ Assignments.helpers({
     if (source.userId) {
         return Assignments.find({
             users: source.userId,
-            data: this.data,
+            dataFiles: this.dataFiles,
         }, {
             limit: 1,
         });
@@ -1325,7 +1367,12 @@ Schemas.Annotations = new SimpleSchema({
     updatedAt: SchemaHelpers.updatedAt,
     assignment: SchemaHelpers.fromCollection(Assignments),
     user: SchemaHelpers.fromCollection(Meteor.users),
-    data: SchemaHelpers.fromCollection(Meteor.data),
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 1
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     type: SchemaHelpers.annotationType,
     value: {
         type: Match.OneOf(Boolean, Number, String, Object),
@@ -1572,7 +1619,7 @@ Annotations.helpers({
 });
 Annotations.attachSchema(Schemas.Annotations);
 Annotations.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
-Annotations.permit(['insert', 'update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
+Annotations.permit(['insert', 'update', 'remove']).ifForOwnAssignment().allowInClientCode();
 Annotations.attachCollectionRevisions(CollectionRevisions.Annotations);
 exports.Annotations = Annotations;
 
@@ -1582,7 +1629,12 @@ Schemas.Preferences = new SimpleSchema({
     updatedAt: SchemaHelpers.updatedAt,
     assignment: SchemaHelpers.fromCollection(Assignments),
     user: SchemaHelpers.fromCollection(Meteor.users),
-    data: SchemaHelpers.fromCollection(Meteor.data),
+    dataFiles: {
+        type: Array,
+        label: 'Data file',
+        minCount: 1
+    },
+    'dataFiles.$': SchemaHelpers.fromCollection(Data),
     annotatorConfig: SchemaHelpers.annotatorConfig,
     arbitration: SchemaHelpers.fromCollection(Arbitrations, {
         optional: true,
@@ -1597,7 +1649,7 @@ Schemas.Preferences = new SimpleSchema({
 ensureIndicesForCollection(Preferences, ['assignment', 'user', 'data', 'arbitration']);
 Preferences.attachSchema(Schemas.Preferences);
 Preferences.permit(['insert', 'update', 'remove']).ifHasRole('admin').allowInClientCode();
-Preferences.permit(['insert']).ifForOwnAssignment().allowInClientCode();
+Preferences.permit(['insert', 'update']).ifForOwnAssignment().allowInClientCode();
 Preferences.permit(['update', 'remove']).ifNotTester().ifForOwnAssignment().allowInClientCode();
 exports.Preferences = Preferences;
 
@@ -1983,20 +2035,20 @@ Arbitrations.helpers({
     let message;
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2060,20 +2112,20 @@ Arbitrations.helpers({
     let message;
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2253,20 +2305,20 @@ Arbitrations.helpers({
     options = options || {};
     let alertFn, confirmFn, chooseFn;
     if (options.outputToConsole || options.suppressConfirmation) {
-        alertFn = console.log;
+        alertFn = //console.log;
         confirmFn = (question, okCallback) => {
-            console.log(question);
-            console.log('Assuming the user is OK with this.');
+            //console.log(question);
+            //console.log('Assuming the user is OK with this.');
             okCallback();
         };
         chooseFn = (question, options, callback) => {
-            console.log(question);
+            //console.log(question);
             options = options || [];
             const defaultValue = options.filter(o => o.default)[0];
             if (defaultValue === undefined) {
-                console.log('No default value defined. Stopping here ...');
+                //console.log('No default value defined. Stopping here ...');
             }
-            console.log('Assuming the user chose the default value: ' + defaultValue);
+            //console.log('Assuming the user chose the default value: ' + defaultValue);
             callback(defaultValue);
         };
     }
@@ -2331,6 +2383,7 @@ exports.Arbitrations = Arbitrations;
 Meteor.users.attachCollectionRevisions();
 
 // Documentation: https://github.com/yogiben/meteor-admin
+// The admin management page
 AdminConfig = {
     name: 'crowdEEG',
     skin: 'blue',
@@ -2361,8 +2414,8 @@ AdminConfig = {
                 { label: 'Path', name: 'path' },
             ],
             omitFields: [ 'metadata' ],
-            showEditColumn: false,
-            showDelColumn: false,
+            showEditColumn: true,
+            showDelColumn: true,
         },
         Tasks: {
             icon: 'cog',
@@ -2371,32 +2424,32 @@ AdminConfig = {
                 { label: 'Name', name: 'name' },
                 { label: 'Annotator', name: 'annotator' },
             ],
-            omitFields: [ 'annotatorConfig' ],
-            showEditColumn: false,
-            showDelColumn: false,
+            // omitFields: [ 'annotatorConfig' ],
+            showEditColumn: true,
+            showDelColumn: true,
         },
-        Guidelines: {
-            icon: 'list-ul',
-            collectionObject: Guidelines,
-            tableColumns: [
-                { label: 'Name', name: 'name' },
-                { label: 'Version', name: 'version' },
-            ],
-        },
-        Instructions: {
-            icon: 'sticky-note',
-            collectionObject: Instructions,
-            tableColumns: [
-                { label: 'Text', name: 'text' },
-            ],
-        },
-        Propositions: {
-            icon: 'question-circle',
-            collectionObject: Propositions,
-            tableColumns: [
-                { label: 'Description', name: 'description' },
-            ],
-        },
+        // Guidelines: {
+        //     icon: 'list-ul',
+        //     collectionObject: Guidelines,
+        //     tableColumns: [
+        //         { label: 'Name', name: 'name' },
+        //         { label: 'Version', name: 'version' },
+        //     ],
+        // },
+        // Instructions: {
+        //     icon: 'sticky-note',
+        //     collectionObject: Instructions,
+        //     tableColumns: [
+        //         { label: 'Text', name: 'text' },
+        //     ],
+        // },
+        // Propositions: {
+        //     icon: 'question-circle',
+        //     collectionObject: Propositions,
+        //     tableColumns: [
+        //         { label: 'Description', name: 'description' },
+        //     ],
+        // },
         Assignments: {
             icon: 'tasks',
             collectionObject: Assignments,
@@ -2405,27 +2458,69 @@ AdminConfig = {
                 { label: 'Assignee Name', name: 'userNames()' },
                 { label: 'Task ID', name: 'task' },
                 { label: 'Task Name', name: 'taskName()' },
-                { label: 'Data ID', name: 'data' },
+                { label: 'Data IDs', name: 'dataFiles' },
                 { label: 'Data Path', name: 'dataPath()' },
                 { label: 'Status', name: 'status' },
                 { label: 'Annotations Imported', name: 'annotationsImported' },
             ],
         },
-        Arbitrations: {
-            icon: 'gavel',
-            collectionObject: Arbitrations,
-            tableColumns: [
-                { label: 'Data ID', name: 'data' },
-                { label: 'Data Path', name: 'dataPath()' },
-                { label: 'Task ID', name: 'task' },
-                { label: 'Task Name', name: 'taskName()' },
-                { label: 'Status', name: 'status' },
-                { label: 'Current Round Number', name: 'currentRoundNumber' },
-                { label: 'Max Num Rounds', name: 'maxNumRounds' },
-            ],
-        },
+        // Arbitrations: {
+        //     icon: 'gavel',
+        //     collectionObject: Arbitrations,
+        //     tableColumns: [
+        //         { label: 'Data ID', name: 'data' },
+        //         { label: 'Data Path', name: 'dataPath()' },
+        //         { label: 'Task ID', name: 'task' },
+        //         { label: 'Task Name', name: 'taskName()' },
+        //         { label: 'Status', name: 'status' },
+        //         { label: 'Current Round Number', name: 'currentRoundNumber' },
+        //         { label: 'Max Num Rounds', name: 'maxNumRounds' },
+        //     ],
+        // },
     },
 };
+
+//function to read .environment file from platforma and return the string in i 
+// File upload schema initializations
+
+env_p = new Promise ((resolve,reject)=>{
+    // Both the client and the server gets a copy of the collections file, so we need to handle both cases separately, as the backend cannot call another backend process through
+    // Meteor's websocket based API.
+    if (Meteor.isClient) {
+        Meteor.call("get.environment.edf.dir", null, (error, results) => {
+            if (error){
+                throw new Error("Could not get environment edf_dir because of " + error);
+            }
+            return resolve(results);
+        })
+        
+    } else {
+        return resolve(process.env.EDF_DIR);
+    }
+   
+})
+
+// We chain the then blocks, as we cannot instantiate EDFFile before we have edf_dir
+exports.EDFFile = env_p.then(result =>{
+        console.log(result);
+        var edf_dir = result;
+    
+        console.log(edf_dir);
+
+        const EDFFile = new FilesCollection({
+            debug: true,
+            collectionName: 'EDFFile',
+            allowClientCode: false, // Disallow remove files from Client
+            storagePath: edf_dir + '/uploaded'//'/home/youngjae/platform/galaxy-app/edf/uploaded/'
+        });
+
+        // console.log(EDFFile);
+
+        return EDFFile;
+        
+    })
+    .catch(error => console.log(error))
+
 
 Meteor.startup(() => {
     AdminTables.Users.options.columns.splice(1, 0, { title: 'Username', data: 'username' });

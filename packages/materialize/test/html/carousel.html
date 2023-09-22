@@ -67,14 +67,14 @@
 
       $('.collapsible').collapsible({
         onOpen: function(el) {
-          console.log("OPEN", el);
+          //console.log("OPEN", el);
           var carousel = el.find('.carousel');
           if (carousel.length) {
             carousel.trigger('carouselNext', [0.000001]);
           }
         },
         onClose: function(el) {
-          console.log("CLOSE", el);
+          //console.log("CLOSE", el);
         }
       });
 
