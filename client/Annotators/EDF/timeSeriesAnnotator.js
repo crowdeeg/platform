@@ -1279,11 +1279,13 @@ $.widget("crowdeeg.TimeSeriesAnnotator", {
               <div class = "annotation_manager_big_div">\
                 <div style = "margin-bottom:10px" class = "annotation_manager_container">\
                 </div>\
-                <div style="margin-bottom: 10px" class= "annotation_manager_delete_btn_container">\
+                <div style="margin-bottom: 10px" class= "annotation_manager_btn_container">\
                   <button type = "button" class = "btn annotation_manager_delete_btn">DELETE</button>\
-                </div>\
-                <div style="margin-bottom: 10px" class= "annotation_manager_view_btn_container">\
                   <button type = "button" class = "btn annotation_manager_view_btn">VIEW</button>\
+                </div>\
+                <div style="margin-bottom: 10px" class= "jump_to_time_container">\
+                <input type = "text" class = jump_to_time_input name = "time" pattern = "([01]\d|2[0-3]):([0-5]\d):([0-5]\d)" placeholder = "HH:MM:SS">\
+                  <button type = "button" class = "btn jump_to_time_btn">JUMP TO TIME</button>\
                 </div>\
               </div>\
               <div class="graph_control"> \
