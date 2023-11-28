@@ -1,6 +1,11 @@
-import { Data, Tasks, Assignments } from '/collections';
+import { Data, Tasks, Assignments, Patients } from '/collections';
 import moment from 'moment';
 import { MaterializeModal } from '/client/Modals/modal.js'
+import {EDFFile} from '/collections';
+
+// double dictionary for task inference
+let taskDictionary = {};
+let dataDictionary = {};
 
 let renderDate = (dateValue) => {
     if (dateValue instanceof Date) {
@@ -10,11 +15,264 @@ let renderDate = (dateValue) => {
     }
 }
 
+let getSignalNameSet = (fileMetadata) => {
+    let set = new Set();
+    fileMetadata.Groups.forEach(element => {
+        Object.keys(element.SignalsByName).forEach(element => {
+            set.add(element);
+        })
+    });
+    return set;
+}
+
+let assembleTaskObj = (signalNameSet, source, file) => {
+    if (source === "Other") {
+        // Create a task displaying all channels.
+        let taskDocument = {
+            name: "edf annotation from template: " + file,
+            allowedDataTypes: ["EDF"],
+            annotator: "EDF",
+            annotatorConfig: {
+              defaultMontage: source, 
+              channelsDisplayed: {
+                "Other": {
+                    "Other": Array.from(signalNameSet).map(element => {
+                        return "'" + element + "'";
+                    })
+                }
+              },
+              channelGains: {
+                    "Other": new Array(signalNameSet.size).fill(1)
+              }, 
+              staticFrequencyFiltersByDataModality: {
+                "'F4-A1'": { highpass: 0.3, lowpass: 35 },
+                "'C4-A1'": { highpass: 0.3, lowpass: 35 },
+                "'O2-A1'": { highpass: 0.3, lowpass: 35 },
+                "'Chin1-Chin2'": { highpass: 10, lowpass: 100 },
+                "'LOC-O2'": { highpass: 0.3, lowpass: 35 },
+                "'ECG'": { highpass: 0.3, lowpass: 70 },
+                "'Leg/L'": { highpass: 10, lowpass: 100 },
+                "'Leg/R'": { highpass: 10, lowpass: 100 },
+                "'Snore'": { highpass: 10, lowpass: 100 },
+                "'Airflow'": { highpass: 0.01, lowpass: 15 },
+                "Nasal Pressure": { highpass: 0.01, lowpass: 15 },
+                "'Thor'": { highpass: 0.01, lowpass: 15 },
+                "'Abdo'": { highpass: 0.01, lowpass: 15 },
+
+                "'EEG'": { highpass: 0.3, lowpass: 35 },
+                "'EOG'": { highpass: 0.3, lowpass: 35 },
+                "'EMG'": { highpass: 10, lowpass: 100 },
+                "'RESP'": { highpass: 0.01, lowpass: 15 },
+
+                "'A1'": { highpass: 0.3, lowpass: 35 },
+                "'A2'": { highpass: 0.3, lowpass: 35 },
+
+                "'ROC'": { highpass: 0.3, lowpass: 35 },
+
+                "'Chin 2'": { highpass: 10, lowpass: 100 },
+
+                "'eeg-ch1 - eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch4 - eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch1'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch4'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch1-eeg-ch4'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch4-eeg-ch3'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch3'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch2'": { highpass: 0.3, lowpass: 35 },
+                "'eeg-ch3'": { highpass: 0.3, lowpass: 35 },
+                "'ppg-ch2'": { highpass: 0.1, lowpass: 5 },
+                "'Temp'": { highpass: 10, lowpass: 100 },
+                "'light'": { highpass: 10, lowpass: 100 },
+                "'ENMO'": { highpass: 10, lowpass: 100 },
+                "'z - angle'": { highpass: 10, lowpass: 100 },
+              }, //
+              frequencyFilters: [
+                {
+                  title: "Notch",
+                  type: "notch",
+                  options: [
+                    {
+                      name: "60 Hz",
+                      value: 60,
+                    },
+                    {
+                      name: "50 Hz",
+                      value: 50,
+                    },
+                    {
+                      name: "off",
+                      value: undefined,
+                      default: true,
+                    },
+                  ],
+                },
+              ],
+              targetSamplingRate: 32,
+              useHighPrecisionSampling: false,
+              startTime: 0,
+              windowSizeInSeconds: 30,
+              preloadEntireRecording: false,
+              showReferenceLines: false,
+              showSleepStageButtons: false,
+              showChannelGainAdjustmentButtons: false,
+              showBackToLastActiveWindowButton: false,
+              showInputPanelContainer: false,
+              showBookmarkCurrentPageButton: false,
+              showFastForwardButton: true,
+              showFastBackwardButton: true,
+              graph: {
+                height: 530,
+                enableMouseTracking: true,
+              },
+              features: {
+                order: ["sleep_spindle", "k_complex", "rem", "vertex_wave"],
+                options: {},
+              },
+            },
+          }
+        return taskDocument;
+
+    }
+}
+
+
 Template.Data.events({
     'click .btn.download': function() {
         $(Template.instance().find('table.reactive-table')).table2csv();
     },
+    'click .btn.upload': function() {
+        const files = document.getElementById("File");
+        const folderFiles = document.getElementById("Folder");
+
+        const allFiles = Array.from(files.files).concat(Array.from(folderFiles.files).filter(fileObj => fileObj.name.split('.')[1].toLowerCase()==="edf"));
+
+
+        console.log(allFiles);
+
+        window.alert(`You are uploading ${allFiles.length} file(s), press OK to proceed.\n\nPlease do not close this tab until you are notified that all uploading processes have terminated!`);
+
+        let filesSuccessfullyUploaded = 0;
+        let filesUploadFailed = "";
+        let uploadsEnded = 0;
+        let filesSuccessfullyUploadedString = "";
+
+        for (let i = 0; i < allFiles.length; i++) {
+
+            const input = allFiles[i];
+      
+
+            if (input) {
+                const reader = new FileReader();
+        
+                reader.onload = function (e) {
+                
+                    console.log("initiating file upload");
+                    console.log(EDFFile);
+
+                    // Since EDFFile is a promise, we need to handle it as such
+                    EDFFile.then(result => {
+                        var uploadInstance = result.insert({
+                            file: input,
+                            chunkSize: 'dynamic',
+                            fileName: input.name,
+                            fileId: input.name.split('.')[0].replace(/\W/g, ''),
+                            }, false);
+                    
+                            uploadInstance.on('end', function(error, fileObj) {
+                            
+                            console.log(fileObj);
+                            if (error) {
+                
+                                window.alert(`Error uploading ${fileObj.name}: ` + error.reason);
+                                filesUploadFailed += fileObj.name + ": " + error.reason + "\n";
+                                uploadsEnded ++;
+                                if (uploadsEnded === allFiles.length) {
+                                    window.alert(`${allFiles.length-filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
+                                }
+                            } else {
+                                // window.alert('File "' + fileObj.name + '" successfully uploaded');
+                                console.log(uploadInstance.config.fileId);
+                
+                                const recordingPath = `/uploaded/${uploadInstance.config.fileId}.edf`;
+        
+                                let promise = new Promise((resolve, reject) => {
+                                    Meteor.call("get.edf.metadata", recordingPath,
+                                        (error, results) => {
+                                            if (error) {
+                                            throw new Error("Cannot get recording metadata\n" + error);
+                                            }
+                                            
+                                            return resolve(results);
+                                        }
+                                    );
+                                });
+        
+                                promise.then(result => {
+                                    console.log(result);
+                                    patientId = Patients.insert({
+                                        id: "Unspecified Patient - " + fileObj.name,
+                                    });
+                                    // Data object creation
+                                    var dataDocument = {
+                                        name: fileObj.name,
+                                        type: "EDF",
+                                        source: "Other",
+                                        patient: patientId,
+                                        path: recordingPath,
+                                        metadata: {wfdbdesc: result},
+                                    }
+                    
+                                    var dataId = Data.insert(dataDocument);
+                                    console.log(dataId);
+        
+                                    let signalNameSet = getSignalNameSet(result);
+                                    let signalNameString = [...signalNameSet].join(' ');
+        
+                                    dataDictionary[dataId] = signalNameString;
+        
+                                    let temp = taskDictionary[signalNameString];
+        
+                                    if (!temp) {
+                                        let taskDocument = assembleTaskObj(signalNameSet, "Other", fileObj.name);
+                                        console.log(taskDocument);
+                                        let taskID = Tasks.insert(taskDocument);
+                                        console.log(taskID);
+        
+                                        taskDictionary[signalNameString] = taskID
+                                    }
+                                    filesSuccessfullyUploaded ++;
+                                    filesSuccessfullyUploadedString += fileObj.name + "\n";
+                                    uploadsEnded ++;
+        
+                                    if (uploadsEnded === allFiles.length) {
+                                        window.alert(`${allFiles.length-filesSuccessfullyUploaded}/${allFiles.length} files failed to upload:\n${filesUploadFailed}\n\n${filesSuccessfullyUploaded}/${allFiles.length} files successfully uploaded:\n${filesSuccessfullyUploadedString}`);
+                                    }
+                                    
+                                })
+        
+                                
+                            }
+        
+        
+                        });
+                    
+                        uploadInstance.start();
+                    }).catch( error => {
+                        console.log("Upload Process Failed")
+                    })
+        
+                
+                };
+                reader.readAsText(input);
+            }
+        }
+        
+        
+            
+    },
     'autocompleteselect input.task' (event, template, task) {
+        console.log(task);
         template.selectedTask.set(task);
     },
     'autocompleteselect input.assignee' (event, template, user) {
@@ -58,7 +316,7 @@ Template.Data.events({
                             const duplicateAssignment = Assignments.findOne({
                                 task: task._id,
                                 users: assignee._id,
-                                data: d._id,
+                                dataFiles: [d._id],
                             });
                             if (duplicateAssignment) {
                                 doAssign = false;
@@ -113,7 +371,7 @@ Template.Data.events({
                                 Assignments.insert({
                                     users: [ assigneeId ],
                                     task: task._id,
-                                    data: assignment.data._id,
+                                    dataFiles: [assignment.data._id],
                                 });
                             });
                         });
@@ -302,7 +560,7 @@ Template.Data.helpers({
                     collection: Meteor.users,
                     field: 'username',
                     matchAll: true,
-                    template: Template.userAutocomplete
+                    template: Template.userAutocomplete,
                 }
             ]
         }
@@ -321,6 +579,29 @@ Template.Data.events({
         if (isSelected) {
             const data = Data.findOne(dataId);
             selectedData[dataId] = data;
+            
+            let signalNameString = dataDictionary[dataId];
+            // console.log(signalNameString);
+            // console.log(dataDictionary);
+            // console.log(dataId);
+            if (signalNameString) {
+                let taskId = taskDictionary[signalNameString];
+                // console.log(taskId);
+                // console.log(taskDictionary);
+                if (taskId) {
+                    const task = Tasks.findOne(taskId);
+                    // console.log(task);
+                    template.selectedTask.set(task);
+                }
+            }
+            let user = Meteor.user();
+
+            console.log(user);
+
+            let selectedAssignees = template.selectedAssignees.get();
+            selectedAssignees[user._id] = user;
+            template.selectedAssignees.set(selectedAssignees);
+
         }
         else {
             delete selectedData[dataId];
@@ -333,4 +614,5 @@ Template.Data.onCreated(function() {
     this.selectedTask = new ReactiveVar(false);
     this.selectedData = new ReactiveVar({});
     this.selectedAssignees = new ReactiveVar({});
+    
 });

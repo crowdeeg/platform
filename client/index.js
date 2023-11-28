@@ -8,7 +8,7 @@ Accounts.ui.config({
 
 accountsUIBootstrap3.logoutCallback = function(error) {
     if (error) {
-        console.log("Error:" + error);
+        //console.log("Error:" + error);
     }
     Router.go('/');
 }
@@ -18,26 +18,26 @@ toggleImpersonate = (username) => {
     if (Impersonate._active.get()) {
         Impersonate.undo((error) => {
             if (error) {
-                console.log(error);
+                //console.log(error);
                 return;
             }
-            console.log('No longer impersonating anyone.');
+            //console.log('No longer impersonating anyone.');
         });
         return;
     }
     check(username, String);
     user = Meteor.users.findOne({ username: username });
     if (!user) {
-        console.log('Could not find user ' + username + '.');
+        //console.log('Could not find user ' + username + '.');
         return;
     }
     Impersonate.do(user._id, (error, userId) => {
         if (error) {
-            console.log(error);
+            //console.log(error);
             return;
         }
         user = Meteor.users.findOne({ _id: userId });
-        console.log('Now impersonating ' + (user.username || user.emails[0].address) + '!');
+        //console.log('Now impersonating ' + (user.username || user.emails[0].address) + '!');
     });
 }
 

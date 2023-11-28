@@ -11,4 +11,14 @@ settings.json
 Dockerfile.local
 
 edf_files/
+# galaxy-app/edf/physionet/edfx/*
 **/.DS_Store
+
+# VSCode Files
+.vscode/*
+jsconfig.json
+galaxy-app/edf/uploaded/.fuse_hidden0000815a00000002
+galaxy-app/edf/uploaded/.fuse_hidden0000815b00000001
+*.edf
+*.dat
+*.hea
